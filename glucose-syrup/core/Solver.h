@@ -57,8 +57,9 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "core/BoundedQueue.h"
 #include "core/Constants.h"
 #include "mtl/Clone.h"
+#include <unordered_map>
 
-
+class ExternalPropagator;
 namespace Glucose {
 
 //=================================================================================================
@@ -105,6 +106,15 @@ public:
     bool    solve        (Lit p, Lit q);            // Search for a model that respects two assumptions.
     bool    solve        (Lit p, Lit q, Lit r);     // Search for a model that respects three assumptions.
     bool    okay         () const;                  // FALSE means solver is in a conflicting state
+
+    // External propagator
+    CRef externalPropagation(Var var, bool negated);
+    void clearReasonClause(){reasonClause.clear();}
+    void addLiteralToReason(Var lit,bool negated);
+    CRef storePropagatorReason(int literal);
+    void removePropagationClauseForLiteral(int literal);
+    void printLearntClauses();
+
 
        // Convenience versions of 'toDimacs()':
     void    toDimacs     (FILE* f, const vec<Lit>& assumps);            // Write CNF to file in DIMACS-format.
@@ -344,6 +354,13 @@ protected:
     double totalTime4Sat,totalTime4Unsat;
     int nbSatCalls,nbUnsatCalls;
     vec<int> assumptionPositions,initialPositions;
+
+    //External propagators
+    vec<ExternalPropagator> propagators;
+    vec<Lit> reasonClause;
+    std::unordered_map<int,std::pair<CRef,int>> literalToClause;
+    int conflictLiteral;
+    
 
 
     // Main internal methods:

@@ -1,0 +1,22 @@
+c description: Random 3-CNF over 30 variables and 15 clauses
+c generator: CNFgen (0.9.0)
+c copyright: (C) 2012-2020 Massimo Lauria <massimo.lauria@uniroma1.it>
+c url: https://massimolauria.net/cnfgen
+c command line: cnfgen randkcnf 3 30 15
+c
+p cnf 30 15
+13 -21 28 0
+24 -27 -29 0
+-21 26 30 0
+-16 17 22 0
+2 -8 -16 0
+-14 -17 -23 0
+9 10 -23 0
+5 -12 25 0
+-3 -8 19 0
+-14 -22 -26 0
+6 16 -23 0
+18 20 -22 0
+17 24 -27 0
+-10 -11 25 0
+-3 -5 -7 0

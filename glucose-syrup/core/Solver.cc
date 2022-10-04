@@ -53,6 +53,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "mtl/Sort.h"
 #include "core/Solver.h"
 #include "core/Constants.h"
+#include "../simp/ExternalPropagator.h"
 
 using namespace Glucose;
 
@@ -171,6 +172,7 @@ verbosity(0)
     trailQueue.initSize(sizeTrailQueue);
     sumLBD = 0;
     nbclausesbeforereduce = firstReduceDB;
+    propagators.push(ExternalPropagator());
 }
 
 //-------------------------------------------------------
@@ -276,6 +278,7 @@ Solver::Solver(const Solver &s) :
 
     s.lbdQueue.copyTo(lbdQueue);
     s.trailQueue.copyTo(trailQueue);
+    s.propagators.copyTo(propagators);
 
 }
 
@@ -370,7 +373,7 @@ bool Solver::addClause_(vec<Lit>& ps) {
         fprintf(certifiedOutput, "0\n");
     }
 
-
+    
     if (ps.size() == 0)
         return ok = false;
     else if (ps.size() == 1) {
@@ -598,10 +601,18 @@ void Solver::minimisationWithBinaryResolution(vec<Lit> &out_learnt) {
 //
 
 void Solver::cancelUntil(int level) {
+    printf("Cancel until %d from %d\n",level,decisionLevel());
+    printLearntClauses();
+
+    if (conflictLiteral != -1 ){
+        conflictLiteral=-1;
+    }
     if (decisionLevel() > level) {
         for (int c = trail.size() - 1; c >= trail_lim[level]; c--) {
             Var x = var(trail[c]);
             assigns [x] = l_Undef;
+            int literal = sign(trail[c]) ? -(x+1): x+1;
+            propagators[0].onLiteralUndef(literal);
             if (phase_saving > 1 || ((phase_saving == 1) && c > trail_lim.last())) {
                 polarity[x] = sign(trail[c]);
             }
@@ -611,6 +622,8 @@ void Solver::cancelUntil(int level) {
         trail.shrink(trail.size() - trail_lim[level]);
         trail_lim.shrink(trail_lim.size() - level);
     }
+    printf("Remaining learnt clauses %d\n",learnts.size());
+    printLearntClauses();
 }
 
 
@@ -912,6 +925,74 @@ void Solver::analyzeFinal(Lit p, vec<Lit>& out_conflict) {
 
     seen[var(p)] = 0;
 }
+void Solver::addLiteralToReason(Var var, bool negated){
+    reasonClause.push(mkLit(var,negated));
+}
+
+//TODO map literal -> cref,index
+CRef Solver::storePropagatorReason(int literal){
+
+    auto it = literalToClause.find(literal);
+    if(it == literalToClause.end()){
+        CRef cr = ca.alloc(reasonClause, true);
+        // ca[cr].setLBD(nblevels);
+        // ca[cr].setOneWatched(false);
+        // ca[cr].setSizeWithoutSelectors(szWithoutSelectors);
+        // if (nblevels <= 2) nbDL2++; // stats
+        // if (ca[cr].size() == 2) nbBin++; // stats
+        literalToClause[literal]=std::make_pair(cr,learnts.size());
+        learnts.push(cr);
+        attachClause(cr);
+        lastLearntClause = cr; // Use in multithread (to hard to put inside ParallelSolver)
+        parallelExportClauseDuringSearch(ca[cr]);
+        claBumpActivity(ca[cr]);
+        // uncheckedEnqueue(learnt_clause[0], cr);
+        
+        printf("Adding clause");
+        for(int i=0;i<reasonClause.size(); i++){
+            printf(" %d",sign(reasonClause[i]) ? -(var(reasonClause[i])+1) : var(reasonClause[i])+1);        
+        }
+        printf(" 0\n");
+        return cr;
+    }
+    return it->second.first;
+    
+}
+
+CRef Solver::externalPropagation(Var var, bool negated){
+    int literal = negated ? -(var+1) : var+1;
+    CRef propagationClause = storePropagatorReason(literal);
+    if(value(var) != l_Undef && toInt(value(var)) != negated){
+        //conflict detected
+        printf("conflict detected in propagator\n");
+        conflictLiteral=literal;
+        return propagationClause;
+    }
+    uncheckedEnqueue(mkLit(var,negated),propagationClause);
+    return CRef_Undef;
+}
+
+void Solver::removePropagationClauseForLiteral(int literal){
+    auto it = literalToClause.find(literal);
+    if(it != literalToClause.end()){
+        if(it->second.second < learnts.size()-1)
+            learnts[it->second.second]=learnts.last();
+        learnts.pop();
+        literalToClause.erase(it);
+    }
+}
+
+void Solver::printLearntClauses(){
+    printf("learnt clauses %d\n",learnts.size());
+    for(int i=0; i < learnts.size(); i++){
+        Clause& c = ca[learnts[i]];
+        printf("clause %d",i);
+        for(int j=0;j<c.size();j++){
+            printf(" %d", sign(c[j]) ? -(var(c[j])+1) : var(c[j])+1);
+        }
+        printf(" 0\n");
+    }
+}
 
 void Solver::uncheckedEnqueue(Lit p, CRef from) {
     assert(value(p) == l_Undef);
@@ -940,6 +1021,13 @@ CRef Solver::propagate() {
     unaryWatches.cleanAll();
     while (qhead < trail.size()) {
         Lit p = trail[qhead++]; // 'p' is enqueued fact to propagate.
+        int lit = !sign(p) ? var(p)+1 : -(var(p)+1); 
+        printf("Propagating var: %d\n",var(p));
+        conflictLiteral=-1;
+        confl = propagators[0].onLiteralTrue(lit,this);
+        if(confl != CRef_Undef){
+            return confl;
+        }
         vec<Watcher>& ws = watches[p];
         Watcher *i, *j, *end;
         num_props++;
@@ -1270,6 +1358,7 @@ lbool Solver::search(int nof_conflicts) {
     unsigned int nblevels,szWithoutSelectors = 0;
     bool blocked = false;
     starts++;
+    printf("Searching nVars: %d\n",nVars());
     for (;;) {
         if (decisionLevel() == 0) { // We import clauses FIXME: ensure that we will import clauses enventually (restart after some point)
             parallelImportUnaryClauses();
@@ -1280,7 +1369,12 @@ lbool Solver::search(int nof_conflicts) {
         }
         CRef confl = propagate();
 
+        /*
+            learnt nogood: not schermo_lockato, stanza_vuota, not codice_importante_non_committato
+        */
+
         if (confl != CRef_Undef) {
+            printf("Conflict detected at level %d\n",decisionLevel());
             if(parallelJobIsFinished())
                 return l_Undef;
             
@@ -1320,7 +1414,7 @@ lbool Solver::search(int nof_conflicts) {
             selectors.clear();
 
             analyze(confl, learnt_clause, selectors, backtrack_level, nblevels,szWithoutSelectors);
-
+            
             lbdQueue.push(nblevels);
             sumLBD += nblevels;
 
@@ -1342,7 +1436,7 @@ lbool Solver::search(int nof_conflicts) {
                 CRef cr = ca.alloc(learnt_clause, true);
                 ca[cr].setLBD(nblevels);
                 ca[cr].setOneWatched(false);
-		ca[cr].setSizeWithoutSelectors(szWithoutSelectors);
+		        ca[cr].setSizeWithoutSelectors(szWithoutSelectors);
                 if (nblevels <= 2) nbDL2++; // stats
                 if (ca[cr].size() == 2) nbBin++; // stats
                 learnts.push(cr);
