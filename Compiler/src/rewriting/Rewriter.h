@@ -16,14 +16,18 @@ class Rewriter{
         const aspc::Program& getSingleHeadProgram()const {return singleHeadForPredicate;}
         const aspc::Program& getGeneratorProgram()const {return generatorProgram;}
         const aspc::Program& getPropagatorsProgram()const {return propagatorsProgram;}
+
+        const std::vector<bool>& getPropagatorRuleLabeling()const {return labeledPropgatorRules;}
     private:
         aspc::Program program;
         std::vector<std::string> predicateNames;
         std::unordered_map<std::string,unsigned> predicateId;
         
         aspc::Program singleHeadForPredicate;
+        std::vector<bool> labeledSingleHeadRules;
         aspc::Program generatorProgram;
         aspc::Program propagatorsProgram;
+        std::vector<bool> labeledPropgatorRules;
 
         std::vector<std::string> supportPredicates;
         std::unordered_map<std::string,unsigned> supportPredicateId;

@@ -39,7 +39,9 @@ void Rewriter::reduceToSigleHeadForPredicate(){
                     {},
                     false);
                 singleHeadForPredicate.addRule(constraint);
+                labeledSingleHeadRules.push_back(true);
                 singleHeadForPredicate.addRule(r);
+                labeledSingleHeadRules.push_back(false);
 
                 // adding rule a :- sup in generator only
                 aspc::Rule supRule(
@@ -61,9 +63,18 @@ void Rewriter::reduceToSigleHeadForPredicate(){
                 constraintLiterals,
                 {},
                 false);
+            constraint.setSupportAtom(0);
             singleHeadForPredicate.addRule(constraint);
+            labeledSingleHeadRules.push_back(false);
         }else if(rules.size() == 1){
             singleHeadForPredicate.addRule(program.getRule(rules[0]));
+            labeledSingleHeadRules.push_back(false);
+        }
+    }
+    for(unsigned ruleId = 0; ruleId < program.getRulesSize(); ruleId++){
+        if(program.getRule(ruleId).isConstraint()){
+            singleHeadForPredicate.addRule(program.getRule(ruleId));
+            labeledSingleHeadRules.push_back(false);
         }
     }
 }
@@ -82,6 +93,7 @@ void Rewriter::computeCompletion(){
         aspc::Rule rule = singleHeadForPredicate.getRule(i);
         if(rule.isConstraint()) {
             propagatorsProgram.addRule(rule);
+            labeledPropgatorRules.push_back(labeledSingleHeadRules[i]);
             continue;
         }
         aspc::Atom head = rule.getHead()[0];
@@ -156,23 +168,27 @@ void Rewriter::computeCompletion(){
                     false
                 );
                 //Adding head :- aux both in generator and propagator
+                originalRule.setSupportAtom(originalRule.getBodySize());
                 propagatorsProgram.addRule(originalRule);
+                labeledPropgatorRules.push_back(false);
                 generatorProgram.addRule(originalRule);                
             }else{
-
                 // Adding head :- body in generator only 
                 // head works as aux atom 
                 generatorProgram.addRule(rule);
             }
+            int supAtom = buildingAux ? -1 :0;
             for(unsigned k=0;k<bodyLiterals.size();k++){
                 // Adding :- aux, not l in propagator only
                 aspc::Rule constraint(
                     {},
-                    {aspc::Literal(false,aspc::Atom(predicate,terms)),aspc::Literal(true,bodyLiterals[k].getAtom())},
+                    {aspc::Literal(false,aspc::Atom(predicate,terms)),aspc::Literal(!bodyLiterals[k].isNegated(),bodyLiterals[k].getAtom())},
                     {},
                     false
                 );
+                constraint.setSupportAtom(supAtom);
                 propagatorsProgram.addRule(constraint);
+                labeledPropgatorRules.push_back(false);
             }
             bodyLiterals.push_back(aspc::Literal(true,aspc::Atom(predicate,terms)));
             // Adding :- body, not aux.
@@ -183,11 +199,16 @@ void Rewriter::computeCompletion(){
                 false
             );
             propagatorsProgram.addRule(constraint);
+            labeledPropgatorRules.push_back(true);
+
         }else{
             // Body of length at most one 
             // Adding orginal rule to both generator and propagator program
             generatorProgram.addRule(rule);
+            rule.setSupportAtom(rule.getBodySize());
             propagatorsProgram.addRule(rule);
+            labeledPropgatorRules.push_back(false);
+
         }
     }
 }

@@ -6,9 +6,7 @@
 #include "compilers/GeneratorCompiler.h"
 #include "compilers/PropagatorCompiler.h"
 #include "datastructures/TupleFactory.h"
-#include "solver/Generator.h"
 #include "rewriting/Rewriter.h"
-#include "solver/AuxMapHandler.h"
 #include <fstream>
 #include <climits>
 
@@ -50,9 +48,9 @@ int main(int argc, char *argv[])
 			}
 		}
 		DataStructureCompiler dc;
-		GeneratorCompiler genCompiler (r.getGeneratorProgram(),executablePath,r.getPredicateNames(),r.getPredicateId(),&dc);
+		GeneratorCompiler genCompiler (r.getGeneratorProgram(),executablePath,r.getPredicateNames(),r.getPredicateId(),&dc,listener.getProgram().isStratified());
 		genCompiler.compile();
-		PropagatorCompiler propCompiler (r.getPropagatorsProgram(),executablePath,r.getPredicateNames(),r.getPredicateId(),&dc);
+		PropagatorCompiler propCompiler (r.getPropagatorsProgram(),executablePath,r.getPropagatorRuleLabeling(),&dc);
 		propCompiler.compile();
 		dc.buildAuxMapHandler(executablePath,r.getPredicateNames());
 	#endif
@@ -61,35 +59,42 @@ int main(int argc, char *argv[])
 			TupleFactory::getInstance().addPredicate();
 		{
 			TupleLight* t = TupleFactory::getInstance().addNewInternalTuple({1,2},AuxMapHandler::getInstance().get_e());
-			AuxMapHandler::getInstance().get_ue_()->insert2Vec(*t);
-			AuxMapHandler::getInstance().get_ue_0_()->insert2Vec(*t);
+			AuxMapHandler::getInstance().get_pe_()->insert2Vec(*t);
+			AuxMapHandler::getInstance().get_pe_0_()->insert2Vec(*t);
 		}
 		{
 			TupleLight* t = TupleFactory::getInstance().addNewInternalTuple({2,3},AuxMapHandler::getInstance().get_e());
-			AuxMapHandler::getInstance().get_ue_()->insert2Vec(*t);
-			AuxMapHandler::getInstance().get_ue_0_()->insert2Vec(*t);
+			t->setStatus(True);
+			AuxMapHandler::getInstance().get_pe_()->insert2Vec(*t);
+			AuxMapHandler::getInstance().get_pe_0_()->insert2Vec(*t);
 		}
 		{
 			TupleLight* t = TupleFactory::getInstance().addNewInternalTuple({1,4},AuxMapHandler::getInstance().get_e());
-			AuxMapHandler::getInstance().get_ue_()->insert2Vec(*t);
-			AuxMapHandler::getInstance().get_ue_0_()->insert2Vec(*t);
+			t->setStatus(True);
+			AuxMapHandler::getInstance().get_pe_()->insert2Vec(*t);
+			AuxMapHandler::getInstance().get_pe_0_()->insert2Vec(*t);
 		}
 		{
 			TupleLight* t = TupleFactory::getInstance().addNewInternalTuple({4,5},AuxMapHandler::getInstance().get_e());
-			AuxMapHandler::getInstance().get_ue_()->insert2Vec(*t);
-			AuxMapHandler::getInstance().get_ue_0_()->insert2Vec(*t);
+			t->setStatus(True);
+			AuxMapHandler::getInstance().get_pe_()->insert2Vec(*t);
+			AuxMapHandler::getInstance().get_pe_0_()->insert2Vec(*t);
 		}
 		{
 			TupleLight* t = TupleFactory::getInstance().addNewInternalTuple({3,6},AuxMapHandler::getInstance().get_e());
-			AuxMapHandler::getInstance().get_ue_()->insert2Vec(*t);
-			AuxMapHandler::getInstance().get_ue_0_()->insert2Vec(*t);
+			t->setStatus(True);
+			AuxMapHandler::getInstance().get_pe_()->insert2Vec(*t);
+			AuxMapHandler::getInstance().get_pe_0_()->insert2Vec(*t);
 		}
 		{
 			TupleLight* t = TupleFactory::getInstance().addNewInternalTuple({5,6},AuxMapHandler::getInstance().get_e());
-			AuxMapHandler::getInstance().get_ue_()->insert2Vec(*t);
-			AuxMapHandler::getInstance().get_ue_0_()->insert2Vec(*t);
+			t->setStatus(True);
+			AuxMapHandler::getInstance().get_pe_()->insert2Vec(*t);
+			AuxMapHandler::getInstance().get_pe_0_()->insert2Vec(*t);
 		}
 		Generator gen;
 		gen.generate();
+		Propagator prop;
+		prop.propagateAtLevel0();
 	#endif
 }

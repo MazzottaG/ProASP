@@ -115,7 +115,7 @@ public:
     std::cout << "Tight: " << (program.isTight() ? "Yes" : "No") << std::endl;
     program.setStratified(checkStratified());
     std::cout << "Stratified: " << (program.isStratified() ? "Yes" : "No") << std::endl;
-    // program.print();
+    program.print();
 
   }
 
@@ -150,7 +150,7 @@ public:
       exit(180);
     }
     addDependencies(rule);    
-    rule.print();
+    // rule.print();
     program.addRule(rule);
     buildingAtoms.clear();
     buildingExpression.clear();
@@ -284,7 +284,10 @@ public:
   virtual void enterAtom(ASPCore2Parser::AtomContext * /*ctx*/) override { 
   }
   virtual void exitAtom(ASPCore2Parser::AtomContext * /*ctx*/) override {
-
+    for(int i=0;i<buildingExpression.size();i++){
+      std::cout << buildingExpression[i].getStringRep() << std::endl;
+    }
+    std::cout << "------------"<<std::endl;
     if(terminals.size() > 0){
       std::string predicateName = terminals[0];
       auto it = predicateId.emplace(predicateName,predicateNames.size());
@@ -297,6 +300,12 @@ public:
       int expTermId=0;
       for(int i = 1; i < terminals.size(); i++){
         if(terminals[i]==""){
+          aspc::ArithmeticExpression* exp = &buildingExpression[expTermId];
+          if(exp->isSingleTerm()){
+            terms.push_back(exp->getTerm1());
+            expTermId++;
+            continue;
+          }
           std::string freshVar = "E_"+std::to_string(freshvariables.size());
           freshvariables.push_back(freshVar); 
           terms.push_back(freshVar);
@@ -308,6 +317,7 @@ public:
       }
       aspc::Atom a(predicateName,terms);
       buildingAtoms.push_back(a);
+      buildingExpression.clear();
       addedAtom=true;
       terminals.clear();
 

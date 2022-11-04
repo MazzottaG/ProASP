@@ -117,6 +117,9 @@ namespace aspc {
             return false;
         }
         void updateJoinTupleName(unsigned int formulaIndex,std::string joinTupleName);
+        int getSupportAtom()const {return supportAtom;}
+        void setSupportAtom(int id){supportAtom=id;}
+        
     private:
         std::vector<aspc::Atom> head;
         std::vector<aspc::Literal> bodyLiterals;
@@ -128,6 +131,8 @@ namespace aspc {
 
         std::unordered_map<unsigned, std::vector<const aspc::Formula*> > orderedBodyByStarters;
         std::unordered_map<unsigned, std::vector<unsigned> > orderedBodyIndexesByStarters;
+
+        int supportAtom;
     };
 }
 

@@ -11,7 +11,7 @@ void DataStructureCompiler::printAuxMap()const{
 }
 void DataStructureCompiler::buildAuxMapHandler(std::string executablePath,const std::vector<std::string>& predNames){
     Indentation ind(0);
-    std::string executorPath = executablePath + "/../src/solver/AuxMapHandler.h";
+    std::string executorPath = executablePath + "/../../glucose-4.2.1/sources/simp/solver/AuxMapHandler.h";
     std::ofstream outfile(executorPath);
 	if(!outfile.is_open()){
 		std::cout << "Error unable to open AuxMapHandler file "<<executorPath<<std::endl;
@@ -21,12 +21,12 @@ void DataStructureCompiler::buildAuxMapHandler(std::string executablePath,const 
     outfile << ind << "#define AUXMAPHANDLER_H\n";
 
     outfile << ind << "#include <vector>\n";
-    outfile << ind << "#include \"../datastructures/TupleLight.h\"\n";
     outfile << ind << "#include \"../datastructures/AuxiliaryMapSmart.h\"\n";
+    outfile << ind << "#include \"../utils/ConstantsManager.h\"\n";
+    outfile << ind << "#include \"../datastructures/TupleFactory.h\"\n";
     outfile << ind << "typedef TupleLight Tuple;\n";
     outfile << ind << "template<size_t S>\n";
     outfile << ind << "using AuxMap = AuxiliaryMapSmart<S> ;\n";
-    outfile << ind << "typedef std::vector<const Tuple* > Tuples;\n";
     
     outfile << ind++ << "class AuxMapHandler{\n";
         outfile << ind++ << "public:\n";
@@ -37,38 +37,78 @@ void DataStructureCompiler::buildAuxMapHandler(std::string executablePath,const 
             for(const std::pair<std::string,std::set<std::vector<unsigned>>>& pair : getAuxMapNameForPredicate()){
                 for(const std::vector<unsigned>& indices : pair.second){
                     int BITSETSIZE=indices.size()*CHAR_BIT*sizeof(int);
-                    outfile << ind << "AuxMap<"<<BITSETSIZE<<">* get_u" << pair.first << "_";
-                    for(unsigned k : indices) outfile << k << "_";
-                    outfile << "(){return ";
-                    outfile << "&u" << pair.first << "_";
-                    for(unsigned k : indices) outfile << k << "_";
-                    outfile<<";}"<<std::endl;
+                    for(char sign : {'u','f','p'}){
+                        outfile << ind << "AuxMap<"<<BITSETSIZE<<">* get_"<<sign << pair.first << "_";
+                        for(unsigned k : indices) outfile << k << "_";
+                        outfile << "(){return ";
+                        outfile << "&"<<sign << pair.first << "_";
+                        for(unsigned k : indices) outfile << k << "_";
+                        outfile<<";}"<<std::endl;
+                    }
                 }
             }
             for(std::string pred : predNames){
                 outfile << ind << "int get_"<< pred << "()const { return _"<<pred<<";}\n";
             }
+            outfile << ind++ << "int getPredicateId(const std::string& predicateName) {\n";
+                outfile << ind << "auto pair = predicateIds.emplace(predicateName,predicateNames.size());\n";
+                outfile << ind << "if(pair.second) TupleFactory::getInstance().addPredicate();\n";
+                outfile << ind << "return pair.first->second;\n";
+            outfile << --ind << "}\n";
             outfile << ind << "std::string unmapPredicate(int predicateId)const {return predicateNames[predicateId];}\n";
             outfile << ind << "unsigned predicateCount()const {return predicateNames.size();}\n";
+            for(auto pair : std::unordered_map<std::string,char>({{"Undef",'u'},{"True",'p'},{"False",'f'}})){
+                outfile << ind++ << "void insert"<<pair.first<<"(const std::pair<const Tuple *, bool>& insertResult){\n";
+                    bool firstIf=true;
+                    const auto& auxMaps = getAuxMapNameForPredicate();
+                    for(const std::string& predicate: predNames){
+                        std::string printElse = !firstIf ? "else " : "";
+                        auto it = auxMaps.find(predicate);
+                        if(it!=auxMaps.end()){
+                            outfile << ind++ << printElse << "if(insertResult.first->getPredicateName() == AuxMapHandler::getInstance().get_"<<predicate<<"()){\n";
+                            for(const std::vector<unsigned>& indices : it->second){
+                                outfile << ind << "AuxMapHandler::getInstance().get_"<<pair.second<< predicate << "_";
+                                for(unsigned k :indices) outfile << k << "_";
+                                outfile <<"()->insert2Vec(*insertResult.first);\n";
+                            }
+                            outfile << --ind << "}\n";
+                            firstIf=false;        
+                        }
+                    }
+                outfile << --ind <<"}\n";
+            }
+            outfile << ind++ << "void printTuple(const Tuple* t){\n";
+                // outfile << ind << "if(t->isFalse()) std::cout << \"not \";\n";
+                // outfile << ind << "if(t->isUndef()) std::cout << \"undef \";\n";
+                outfile << ind << "std::cout << unmapPredicate(t->getPredicateName()) << \"(\";\n";
+                outfile << ind++ << "for(int i=0;i<t->size();i++){\n";
+                    outfile << ind << "if(i>0) std::cout << \",\";\n";
+                    outfile << ind << "std::cout << ConstantsManager::getInstance().unmapConstant(t->at(i));\n";
+                outfile << --ind << "}\n";
+                outfile << ind << "std::cout << \"). \";\n";
+            outfile << --ind << "}\n";
+            
         ind--;
         outfile << ind++ << "private:\n";
-            outfile << ind << "AuxMapHandler()";
+            outfile << ind++ << "AuxMapHandler()";
             bool first=true;
             for(const std::pair<std::string,std::set<std::vector<unsigned>>>& pair : getAuxMapNameForPredicate()){
                 for(const std::vector<unsigned>& indices : pair.second){
                     int BITSETSIZE = indices.size()*CHAR_BIT*sizeof(int);
-                    outfile << (first ? ": " : ", ") << "u" << pair.first << "_";
-                    for(unsigned k : indices) outfile << k << "_";
+                    for(char sign : {'u','f','p'}){
+                        outfile << (first ? ": " : ", ") << sign << pair.first << "_";
+                        for(unsigned k : indices) outfile << k << "_";
 
-                    outfile << "({";
-                    for (unsigned k = 0; k < indices.size(); k++) {
-                        if (k > 0) {
-                            outfile << ",";
+                        outfile << "({";
+                        for (unsigned k = 0; k < indices.size(); k++) {
+                            if (k > 0) {
+                                outfile << ",";
+                            }
+                            outfile << indices[k];
                         }
-                        outfile << indices[k];
+                        outfile << "})";
+                        first=false;
                     }
-                    outfile << "})";
-                    first=false;
                 }
             }
             outfile << (first ? ": " : ", ") << "predicateNames({";
@@ -78,19 +118,29 @@ void DataStructureCompiler::buildAuxMapHandler(std::string executablePath,const 
                 outfile << "\"" << pred << "\"";
                 first=false;
             }
-            outfile << "}){}\n";
+            outfile << "}){\n";
+                for(unsigned predId=0;predId < predNames.size(); predId++){
+                    outfile << ind << "predicateIds[\""<<predNames[predId]<<"\"]="<<predId<<";\n";
+                }
+                outfile << ind++ << "for(unsigned i=0;i<predicateCount();i++)\n";
+			        outfile << ind-- << "TupleFactory::getInstance().addPredicate();\n";
+
+            outfile << --ind <<"}\n";
             for(const std::pair<std::string,std::set<std::vector<unsigned>>>& pair : getAuxMapNameForPredicate()){
                 for(const std::vector<unsigned>& indices : pair.second){
                     int BITSETSIZE=indices.size()*CHAR_BIT*sizeof(int);
-                    outfile << ind << "AuxMap<"<<BITSETSIZE<<"> u" << pair.first << "_";
-                    for(unsigned k : indices) outfile << k << "_";
-                    outfile << ";"<<std::endl;
+                    for(char sign : {'u','f','p'}){
+                        outfile << ind << "AuxMap<"<<BITSETSIZE<<"> "<< sign << pair.first << "_";
+                        for(unsigned k : indices) outfile << k << "_";
+                        outfile << ";"<<std::endl;
+                    }
                 }
             }
             for(unsigned k=0; k<predNames.size(); k++){
                 outfile << ind << "int _"<<predNames[k] << " = " << k << ";\n";
             }
             outfile << ind << "std::vector<std::string> predicateNames;\n";
+            outfile << ind << "std::unordered_map<std::string,unsigned> predicateIds;\n";
     ind--;
     outfile << --ind << "};\n";
     outfile << ind << "#endif\n";
@@ -110,8 +160,7 @@ std::pair<std::vector<std::vector<unsigned>>,std::vector<std::vector<unsigned>>>
 
         aspc::Literal lit(false,head[starter]);
         lit.addVariablesToSet(boundVars);
-        auxMapNameForPredicate[lit.getPredicateName()].insert({});
-
+        auxMapNameForPredicate[lit.getPredicateName()].insert(std::vector<unsigned>({}));
         unsigned selectedFormula=0;
         std::vector<unsigned>* currentOrdering=&orderByStartersHead.back();
         while (selectedFormula < body.size()){

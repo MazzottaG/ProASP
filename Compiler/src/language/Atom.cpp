@@ -48,7 +48,7 @@ aspc::Atom::Atom(const aspc::Atom& b) : predicateName(b.predicateName), terms(b.
 
 }
 
-aspc::Atom::Atom() : predicateName(""), terms({}) {
+aspc::Atom::Atom() : predicateName(ConstantsManager::getInstance().getPredicateName("")),terms({}) {
 
 }
 aspc::Atom::~Atom() {

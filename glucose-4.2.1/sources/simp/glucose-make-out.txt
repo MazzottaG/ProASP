@@ -1,0 +1,590 @@
+Making dependencies /Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/datastructures /Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/files /Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/generators /Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators /Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/solver /Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/test-souffle /Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/utils
+Compiling: /Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/Main.o
+Compiling: simp/generators/Generator.o
+Compiling: simp/propagators/Propagator.o
+In file included from /Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/generators/Generator.cc:1:
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/generators/../solver/Generator.h:14:17: warning: delete called on 'AbstractGenerator' that is abstract but has non-virtual destructor [-Wdelete-abstract-non-virtual-dtor]
+                delete gen;
+                ^
+In file included from /Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/Propagator.cc:1:
+In file included from /Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../solver/Propagator.h:6:
+In file included from /Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../solver/AuxMapHandler.h:4:
+In file included from /Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../solver/../datastructures/AuxiliaryMapSmart.h:50:
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../solver/../datastructures/TupleLight.h:40:38: warning: initializer order does not match the declaration order [-Wreorder-ctor]
+    TupleLight() : predicateName(-1),waspID(0),id(-INT_MAX),size_(0),content(NULL),status(UNKNOWN),collisionsListsSize(0) {
+                                     ^~~~~~~~~              ~~~~~~~~               ~~~~~~~~~~~~~~~
+                                     status(UNKNOWN)        waspID(0)              size_(0)
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../solver/../datastructures/TupleLight.h:40:38: note: field 'waspID' will be initialized after field 'id'
+    TupleLight() : predicateName(-1),waspID(0),id(-INT_MAX),size_(0),content(NULL),status(UNKNOWN),collisionsListsSize(0) {
+                                     ^~~~~~~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../solver/../datastructures/TupleLight.h:40:61: note: field 'size_' will be initialized after field 'content'
+    TupleLight() : predicateName(-1),waspID(0),id(-INT_MAX),size_(0),content(NULL),status(UNKNOWN),collisionsListsSize(0) {
+                                                            ^~~~~~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../solver/../datastructures/TupleLight.h:40:70: note: field 'content' will be initialized after field 'status'
+    TupleLight() : predicateName(-1),waspID(0),id(-INT_MAX),size_(0),content(NULL),status(UNKNOWN),collisionsListsSize(0) {
+                                                                     ^~~~~~~~~~~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../solver/../datastructures/TupleLight.h:43:105: warning: initializer order does not match the declaration order [-Wreorder-ctor]
+    TupleLight(int predicateName, bool negated = false, int waspID = 0) : predicateName(predicateName), waspID(waspID),id(-INT_MAX),size_(0),content(NULL),status(UNKNOWN),collisionsListsSize(0) {
+                                                                                                        ^~~~~~~~~~~~~~              ~~~~~~~~               ~~~~~~~~~~~~~~~
+                                                                                                        status(UNKNOWN)             waspID(waspID)         size_(0)
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../solver/../datastructures/TupleLight.h:43:105: note: field 'waspID' will be initialized after field 'id'
+    TupleLight(int predicateName, bool negated = false, int waspID = 0) : predicateName(predicateName), waspID(waspID),id(-INT_MAX),size_(0),content(NULL),status(UNKNOWN),collisionsListsSize(0) {
+                                                                                                        ^~~~~~~~~~~~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../solver/../datastructures/TupleLight.h:43:133: note: field 'size_' will be initialized after field 'content'
+    TupleLight(int predicateName, bool negated = false, int waspID = 0) : predicateName(predicateName), waspID(waspID),id(-INT_MAX),size_(0),content(NULL),status(UNKNOWN),collisionsListsSize(0) {
+                                                                                                                                    ^~~~~~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../solver/../datastructures/TupleLight.h:43:142: note: field 'content' will be initialized after field 'status'
+    TupleLight(int predicateName, bool negated = false, int waspID = 0) : predicateName(predicateName), waspID(waspID),id(-INT_MAX),size_(0),content(NULL),status(UNKNOWN),collisionsListsSize(0) {
+                                                                                                                                             ^~~~~~~~~~~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../solver/../datastructures/TupleLight.h:45:148: warning: initializer order does not match the declaration order [-Wreorder-ctor]
+    TupleLight(int predicateName,std::vector<int> v, bool negated = false, int waspID = 0) : predicateName(predicateName),/*std::vector<int>(v),*/ waspID(waspID),id(-INT_MAX),size_(v.size()),status(UNKNOWN),collisionsListsSize(0) {
+                                                                                                                                                   ^~~~~~~~~~~~~~              ~~~~~~~~~~~~~~~ ~~~~~~~~~~~~~~~
+                                                                                                                                                   status(UNKNOWN)             waspID(waspID)  size_(v.size())
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../solver/../datastructures/TupleLight.h:45:148: note: field 'waspID' will be initialized after field 'id'
+    TupleLight(int predicateName,std::vector<int> v, bool negated = false, int waspID = 0) : predicateName(predicateName),/*std::vector<int>(v),*/ waspID(waspID),id(-INT_MAX),size_(v.size()),status(UNKNOWN),collisionsListsSize(0) {
+                                                                                                                                                   ^~~~~~~~~~~~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../solver/../datastructures/TupleLight.h:45:176: note: field 'size_' will be initialized after field 'status'
+    TupleLight(int predicateName,std::vector<int> v, bool negated = false, int waspID = 0) : predicateName(predicateName),/*std::vector<int>(v),*/ waspID(waspID),id(-INT_MAX),size_(v.size()),status(UNKNOWN),collisionsListsSize(0) {
+                                                                                                                                                                               ^~~~~~~~~~~~~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../solver/../datastructures/TupleLight.h:50:42: warning: initializer order does not match the declaration order [-Wreorder-ctor]
+    TupleLight(const TupleLight& orig) : size_(orig.size()), /*std::vector<int>(orig),*/ predicateName(orig.predicateName), id(orig.id), waspID(orig.waspID),status(orig.status),collisionsListsSize(orig.collisionsListsSize) {
+                                         ^~~~~~~~~~~~~~~~~~                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~                                   ~~~~~~~~~~~~~~~~~~~
+                                         predicateName(orig.predicateName)               status(orig.status)                                                 size_(orig.size())
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../solver/../datastructures/TupleLight.h:50:42: note: field 'size_' will be initialized after field 'predicateName'
+    TupleLight(const TupleLight& orig) : size_(orig.size()), /*std::vector<int>(orig),*/ predicateName(orig.predicateName), id(orig.id), waspID(orig.waspID),status(orig.status),collisionsListsSize(orig.collisionsListsSize) {
+                                         ^~~~~~~~~~~~~~~~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../solver/../datastructures/TupleLight.h:50:138: note: field 'waspID' will be initialized after field 'status'
+    TupleLight(const TupleLight& orig) : size_(orig.size()), /*std::vector<int>(orig),*/ predicateName(orig.predicateName), id(orig.id), waspID(orig.waspID),status(orig.status),collisionsListsSize(orig.collisionsListsSize) {
+                                                                                                                                         ^~~~~~~~~~~~~~~~~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../solver/../datastructures/TupleLight.h:62:30: warning: initializer order does not match the declaration order [-Wreorder-ctor]
+    /*std::vector<int>(l),*/ size_(l.size()), predicateName(-1), waspID(waspID),id(-INT_MAX),status(UNKNOWN),collisionsListsSize(0) {
+                             ^~~~~~~~~~~~~~~  ~~~~~~~~~~~~~~~~~  ~~~~~~~~~~~~~~ ~~~~~~~~~~~~ ~~~~~~~~~~~~~~~
+                             predicateName(-1)status(UNKNOWN)    id(-INT_MAX)   waspID(waspID) size_(l.size())
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../solver/../datastructures/TupleLight.h:62:30: note: field 'size_' will be initialized after field 'predicateName'
+    /*std::vector<int>(l),*/ size_(l.size()), predicateName(-1), waspID(waspID),id(-INT_MAX),status(UNKNOWN),collisionsListsSize(0) {
+                             ^~~~~~~~~~~~~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../solver/../datastructures/TupleLight.h:62:66: note: field 'waspID' will be initialized after field 'id'
+    /*std::vector<int>(l),*/ size_(l.size()), predicateName(-1), waspID(waspID),id(-INT_MAX),status(UNKNOWN),collisionsListsSize(0) {
+                                                                 ^~~~~~~~~~~~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../solver/../datastructures/TupleLight.h:62:81: note: field 'id' will be initialized after field 'status'
+    /*std::vector<int>(l),*/ size_(l.size()), predicateName(-1), waspID(waspID),id(-INT_MAX),status(UNKNOWN),collisionsListsSize(0) {
+                                                                                ^~~~~~~~~~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../solver/../datastructures/TupleLight.h:68:25: warning: initializer order does not match the declaration order [-Wreorder-ctor]
+    /*vector<int>(l),*/ size_(l.size()), predicateName(predicateName), waspID(waspID),id(-INT_MAX),status(UNKNOWN),collisionsListsSize(0) {
+                        ^~~~~~~~~~~~~~~  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~  ~~~~~~~~~~~~~~ ~~~~~~~~~~~~ ~~~~~~~~~~~~~~~
+                        predicateName(predicateName) status(UNKNOWN)   id(-INT_MAX)   waspID(waspID) size_(l.size())
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../solver/../datastructures/TupleLight.h:68:25: note: field 'size_' will be initialized after field 'predicateName'
+    /*vector<int>(l),*/ size_(l.size()), predicateName(predicateName), waspID(waspID),id(-INT_MAX),status(UNKNOWN),collisionsListsSize(0) {
+                        ^~~~~~~~~~~~~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../solver/../datastructures/TupleLight.h:68:72: note: field 'waspID' will be initialized after field 'id'
+    /*vector<int>(l),*/ size_(l.size()), predicateName(predicateName), waspID(waspID),id(-INT_MAX),status(UNKNOWN),collisionsListsSize(0) {
+                                                                       ^~~~~~~~~~~~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../solver/../datastructures/TupleLight.h:68:87: note: field 'id' will be initialized after field 'status'
+    /*vector<int>(l),*/ size_(l.size()), predicateName(predicateName), waspID(waspID),id(-INT_MAX),status(UNKNOWN),collisionsListsSize(0) {
+                                                                                      ^~~~~~~~~~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../solver/../datastructures/TupleLight.h:74:25: warning: initializer order does not match the declaration order [-Wreorder-ctor]
+    /*vector<int>(l),*/ size_(l.size()), predicateName(predicateName), waspID(waspID),id(-INT_MAX),status(UNKNOWN),collisionsListsSize(0) {
+                        ^~~~~~~~~~~~~~~  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~  ~~~~~~~~~~~~~~ ~~~~~~~~~~~~ ~~~~~~~~~~~~~~~
+                        predicateName(predicateName) status(UNKNOWN)   id(-INT_MAX)   waspID(waspID) size_(l.size())
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../solver/../datastructures/TupleLight.h:74:25: note: field 'size_' will be initialized after field 'predicateName'
+    /*vector<int>(l),*/ size_(l.size()), predicateName(predicateName), waspID(waspID),id(-INT_MAX),status(UNKNOWN),collisionsListsSize(0) {
+                        ^~~~~~~~~~~~~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../solver/../datastructures/TupleLight.h:74:72: note: field 'waspID' will be initialized after field 'id'
+    /*vector<int>(l),*/ size_(l.size()), predicateName(predicateName), waspID(waspID),id(-INT_MAX),status(UNKNOWN),collisionsListsSize(0) {
+                                                                       ^~~~~~~~~~~~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../solver/../datastructures/TupleLight.h:74:87: note: field 'id' will be initialized after field 'status'
+    /*vector<int>(l),*/ size_(l.size()), predicateName(predicateName), waspID(waspID),id(-INT_MAX),status(UNKNOWN),collisionsListsSize(0) {
+                                                                                      ^~~~~~~~~~~~
+In file included from /Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/Main.cc:62:
+In file included from /Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/datastructures/TupleFactory.h:23:
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/datastructures/TupleLight.h:40:38: warning: initializer order does not match the declaration order [-Wreorder-ctor]
+    TupleLight() : predicateName(-1),waspID(0),id(-INT_MAX),size_(0),content(NULL),status(UNKNOWN),collisionsListsSize(0) {
+                                     ^~~~~~~~~              ~~~~~~~~               ~~~~~~~~~~~~~~~
+                                     status(UNKNOWN)        waspID(0)              size_(0)
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/datastructures/TupleLight.h:40:38: note: field 'waspID' will be initialized after field 'id'
+    TupleLight() : predicateName(-1),waspID(0),id(-INT_MAX),size_(0),content(NULL),status(UNKNOWN),collisionsListsSize(0) {
+                                     ^~~~~~~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/datastructures/TupleLight.h:40:61: note: field 'size_' will be initialized after field 'content'
+    TupleLight() : predicateName(-1),waspID(0),id(-INT_MAX),size_(0),content(NULL),status(UNKNOWN),collisionsListsSize(0) {
+                                                            ^~~~~~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/datastructures/TupleLight.h:40:70: note: field 'content' will be initialized after field 'status'
+    TupleLight() : predicateName(-1),waspID(0),id(-INT_MAX),size_(0),content(NULL),status(UNKNOWN),collisionsListsSize(0) {
+                                                                     ^~~~~~~~~~~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../solver/../datastructures/TupleLight.h:81:25: warning: initializer order does not match the declaration order [-Wreorder-ctor]
+    /*vector<int>(l),*/ size_(size), predicateName(predicateName), waspID(waspID),id(-INT_MAX),status(UNKNOWN),collisionsListsSize(0){
+                        ^~~~~~~~~~~  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~  ~~~~~~~~~~~~~~ ~~~~~~~~~~~~ ~~~~~~~~~~~~~~~
+                        predicateName(predicateName) status(UNKNOWN) id(-INT_MAX) waspID(waspID) size_(size)
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../solver/../datastructures/TupleLight.h:81:25: note: field 'size_' will be initialized after field 'predicateName'
+    /*vector<int>(l),*/ size_(size), predicateName(predicateName), waspID(waspID),id(-INT_MAX),status(UNKNOWN),collisionsListsSize(0){
+                        ^~~~~~~~~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../solver/../datastructures/TupleLight.h:81:68: note: field 'waspID' will be initialized after field 'id'
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/datastructures/TupleLight.h:43:105: warning: initializer order does not match the declaration order [-Wreorder-ctor]    /*vector<int>(l),*/ size_(size), predicateName(predicateName), waspID(waspID),id(-INT_MAX),status(UNKNOWN),collisionsListsSize(0){
+                                                                   ^~~~~~~~~~~~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../solver/../datastructures/TupleLight.h:81:83: note: field 'id' will be initialized after field 'status'
+
+    /*vector<int>(l),*/ size_(size), predicateName(predicateName), waspID(waspID),id(-INT_MAX),status(UNKNOWN),collisionsListsSize(0){
+                                                                                  ^~~~~~~~~~~~
+    TupleLight(int predicateName, bool negated = false, int waspID = 0) : predicateName(predicateName), waspID(waspID),id(-INT_MAX),size_(0),content(NULL),status(UNKNOWN),collisionsListsSize(0) {
+                                                                                                        ^~~~~~~~~~~~~~              ~~~~~~~~               ~~~~~~~~~~~~~~~
+                                                                                                        status(UNKNOWN)             waspID(waspID)         size_(0)
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/datastructures/TupleLight.h:43:105: note: field 'waspID' will be initialized after field 'id'
+    TupleLight(int predicateName, bool negated = false, int waspID = 0) : predicateName(predicateName), waspID(waspID),id(-INT_MAX),size_(0),content(NULL),status(UNKNOWN),collisionsListsSize(0) {
+                                                                                                        ^~~~~~~~~~~~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/datastructures/TupleLight.h:43:133: /Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../solver/../datastructures/TupleLight.h:85:25: warning: initializer order does not match the declaration order [-Wreorder-ctor]
+note: field 'size_' will be initialized after field 'content'
+    /*vector<int>(l),*/ size_(l.size()), waspID(waspID),id(-INT_MAX),status(UNKNOWN),collisionsListsSize(0) {
+                        ^~~~~~~~~~~~~~~  ~~~~~~~~~~~~~~ ~~~~~~~~~~~~ ~~~~~~~~~~~~~~~
+                        status(UNKNOWN)  id(-INT_MAX)   waspID(waspID) size_(l.size())
+    TupleLight(int predicateName, bool negated = false, int waspID = 0) : predicateName(predicateName), waspID(waspID),id(-INT_MAX),size_(0),content(NULL),status(UNKNOWN),collisionsListsSize(0) {
+                                                                                                                                    ^~~~~~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/datastructures/TupleLight.h:43/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../solver/../datastructures/TupleLight.h::142: note: field 'content' will be initialized after field 'status'
+    TupleLight(int predicateName, bool negated = false, int waspID = 0) : predicateName(predicateName), waspID(waspID),id(-INT_MAX),size_(0),content(NULL),status(UNKNOWN),collisionsListsSize(0) {
+                                                                                                                                             ^~~~~~~~~~~~~
+85:25: note: field 'size_' will be initialized after field 'waspID'
+    /*vector<int>(l),*/ size_(l.size()), waspID(waspID),id(-INT_MAX),status(UNKNOWN),collisionsListsSize(0) {
+                        ^~~~~~~~~~~~~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../solver/../datastructures/TupleLight.h:85:42: note: field 'waspID' will be initialized after field 'id'
+    /*vector<int>(l),*/ size_(l.size()), waspID(waspID),id(-INT_MAX),status(UNKNOWN),collisionsListsSize(0) {
+                                         ^~~~~~~~~~~~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../solver/../datastructures/TupleLight.h:85:57: note: field 'id' will be initialized after field 'status'
+    /*vector<int>(l),*/ size_(l.size()), waspID(waspID),id(-INT_MAX),status(UNKNOWN),collisionsListsSize(0) {
+                                                        ^~~~~~~~~~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/datastructures/TupleLight.h:45:148: warning: initializer order does not match the declaration order [-Wreorder-ctor]
+    TupleLight(int predicateName,std::vector<int> v, bool negated = false, int waspID = 0) : predicateName(predicateName),/*std::vector<int>(v),*/ waspID(waspID),id(-INT_MAX),size_(v.size()),status(UNKNOWN),collisionsListsSize(0) {
+                                                                                                                                                   ^~~~~~~~~~~~~~              ~~~~~~~~~~~~~~~ ~~~~~~~~~~~~~~~
+                                                                                                                                                   status(UNKNOWN)             waspID(waspID)  size_(v.size())
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/datastructures/TupleLight.h:45:148: note: field 'waspID' will be initialized after field 'id'
+    TupleLight(int predicateName,std::vector<int> v, bool negated = false, int waspID = 0) : predicateName(predicateName),/*std::vector<int>(v),*/ waspID(waspID),id(-INT_MAX),size_(v.size()),status(UNKNOWN),collisionsListsSize(0) {
+                                                                                                                                                   ^~~~~~~~~~~~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/datastructures/TupleLight.h:45:176: note: field 'size_' will be initialized after field 'status'
+    TupleLight(int predicateName,std::vector<int> v, bool negated = false, int waspID = 0) : predicateName(predicateName),/*std::vector<int>(v),*/ waspID(waspID),id(-INT_MAX),size_(v.size()),status(UNKNOWN),collisionsListsSize(0) {
+                                                                                                                                                                               ^~~~~~~~~~~~~~~
+In file included from /Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/generators/Generator.cc:3:
+In file included from /Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/generators/../generators/Comp_4_Gen.h:4:
+In file included from /Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/generators/../datastructures/TupleFactory.h:23:
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/generators/../datastructures/TupleLight.h:40:38: warning: initializer order does not match the declaration order [-Wreorder-ctor]
+    TupleLight() : predicateName(-1),waspID(0),id(-INT_MAX),size_(0),content(NULL),status(UNKNOWN),collisionsListsSize(0) {
+                                     ^~~~~~~~~              ~~~~~~~~               ~~~~~~~~~~~~~~~
+                                     status(UNKNOWN)        waspID(0)              size_(0)
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/generators/../datastructures/TupleLight.h:40:38: note: field 'waspID' will be initialized after field 'id'
+    TupleLight() : predicateName(-1),waspID(0),id(-INT_MAX),size_(0),content(NULL),status(UNKNOWN),collisionsListsSize(0) {
+                                     ^~~~~~~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/generators/../datastructures/TupleLight.h:40:61: note: field 'size_' will be initialized after field 'content'
+    TupleLight() : predicateName(-1),waspID(0),id(-INT_MAX),size_(0),content(NULL),status(UNKNOWN),collisionsListsSize(0) {
+                                                            ^~~~~~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/generators/../datastructures/TupleLight.h:40:70: note: field 'content' will be initialized after field 'status'
+    TupleLight() : predicateName(-1),waspID(0),id(-INT_MAX),size_(0),content(NULL),status(UNKNOWN),collisionsListsSize(0) {
+                                                                     ^~~~~~~~~~~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/generators/../datastructures/TupleLight.h:43:105: warning: initializer order does not match the declaration order [-Wreorder-ctor]
+    TupleLight(int predicateName, bool negated = false, int waspID = 0) : predicateName(predicateName), waspID(waspID),id(-INT_MAX),size_(0),content(NULL),status(UNKNOWN),collisionsListsSize(0) {
+                                                                                                        ^~~~~~~~~~~~~~              ~~~~~~~~               ~~~~~~~~~~~~~~~
+                                                                                                        status(UNKNOWN)             waspID(waspID)         size_(0)
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/generators/../datastructures/TupleLight.h:43:105: note: field 'waspID' will be initialized after field 'id'
+    TupleLight(int predicateName, bool negated = false, int waspID = 0) : predicateName(predicateName), waspID(waspID),id(-INT_MAX),size_(0),content(NULL),status(UNKNOWN),collisionsListsSize(0) {
+                                                                                                        ^~~~~~~~~~~~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/generators/../datastructures/TupleLight.h:43:133: note: field 'size_' will be initialized after field 'content'
+    TupleLight(int predicateName, bool negated = false, int waspID = 0) : predicateName(predicateName), waspID(waspID),id(-INT_MAX),size_(0),content(NULL),status(UNKNOWN),collisionsListsSize(0) {
+                                                                                                                                    ^~~~~~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/generators/../datastructures/TupleLight.h:43:142: note: field 'content' will be initialized after field 'status'
+    TupleLight(int predicateName, bool negated = false, int waspID = 0) : predicateName(predicateName), waspID(waspID),id(-INT_MAX),size_(0),content(NULL),status(UNKNOWN),collisionsListsSize(0) {
+                                                                                                                                             ^~~~~~~~~~~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/datastructures/TupleLight.h:50:42: warning: initializer order does not match the declaration order [-Wreorder-ctor]
+    TupleLight(const TupleLight& orig) : size_(orig.size()), /*std::vector<int>(orig),*/ predicateName(orig.predicateName), id(orig.id), waspID(orig.waspID),status(orig.status),collisionsListsSize(orig.collisionsListsSize) {
+                                         ^~~~~~~~~~~~~~~~~~                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~                                   ~~~~~~~~~~~~~~~~~~~
+                                         predicateName(orig.predicateName)               status(orig.status)                                                 size_(orig.size())
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/datastructures/TupleLight.h:50:42: note: field 'size_' will be initialized after field 'predicateName'
+    TupleLight(const TupleLight& orig) : size_(orig.size()), /*std::vector<int>(orig),*/ predicateName(orig.predicateName), id(orig.id), waspID(orig.waspID),status(orig.status),collisionsListsSize(orig.collisionsListsSize) {
+                                         ^~~~~~~~~~~~~~~~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/datastructures/TupleLight.h:50:138: note: field 'waspID' will be initialized after field 'status'
+    TupleLight(const TupleLight& orig) : size_(orig.size()), /*std::vector<int>(orig),*/ predicateName(orig.predicateName), id(orig.id), waspID(orig.waspID),status(orig.status),collisionsListsSize(orig.collisionsListsSize) {
+                                                                                                                                         ^~~~~~~~~~~~~~~~~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/datastructures/TupleLight.h:62:30: warning: initializer order does not match the declaration order [-Wreorder-ctor]
+    /*std::vector<int>(l),*/ size_(l.size()), predicateName(-1), waspID(waspID),id(-INT_MAX),status(UNKNOWN),collisionsListsSize(0) {
+                             ^~~~~~~~~~~~~~~  ~~~~~~~~~~~~~~~~~  ~~~~~~~~~~~~~~ ~~~~~~~~~~~~ ~~~~~~~~~~~~~~~
+                             predicateName(-1)status(UNKNOWN)    id(-INT_MAX)   waspID(waspID) size_(l.size())
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/datastructures/TupleLight.h:62:30: note: field 'size_' will be initialized after field 'predicateName'
+    /*std::vector<int>(l),*/ size_(l.size()), predicateName(-1), waspID(waspID),id(-INT_MAX),status(UNKNOWN),collisionsListsSize(0) {
+                             ^~~~~~~~~~~~~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/datastructures/TupleLight.h:62:66: note: field 'waspID' will be initialized after field 'id'
+    /*std::vector<int>(l),*/ size_(l.size()), predicateName(-1), waspID(waspID),id(-INT_MAX),status(UNKNOWN),collisionsListsSize(0) {
+                                                                 ^~~~~~~~~~~~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/datastructures/TupleLight.h:62:81: note: field 'id' will be initialized after field 'status'
+    /*std::vector<int>(l),*/ size_(l.size()), predicateName(-1), waspID(waspID),id(-INT_MAX),status(UNKNOWN),collisionsListsSize(0) {
+                                                                                ^~~~~~~~~~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/datastructures/TupleLight.h:68:25: warning: initializer order does not match the declaration order [-Wreorder-ctor]
+    /*vector<int>(l),*/ size_(l.size()), predicateName(predicateName), waspID(waspID),id(-INT_MAX),status(UNKNOWN),collisionsListsSize(0) {
+                        ^~~~~~~~~~~~~~~  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~  ~~~~~~~~~~~~~~ ~~~~~~~~~~~~ ~~~~~~~~~~~~~~~
+                        predicateName(predicateName) status(UNKNOWN)   id(-INT_MAX)   waspID(waspID) size_(l.size())
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/datastructures/TupleLight.h:68:25: note: field 'size_' will be initialized after field 'predicateName'
+    /*vector<int>(l),*/ size_(l.size()), predicateName(predicateName), waspID(waspID),id(-INT_MAX),status(UNKNOWN),collisionsListsSize(0) {
+                        ^~~~~~~~~~~~~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/datastructures/TupleLight.h:68:72: note: field 'waspID' will be initialized after field 'id'
+    /*vector<int>(l),*/ size_(l.size()), predicateName(predicateName), waspID(waspID),id(-INT_MAX),status(UNKNOWN),collisionsListsSize(0) {
+                                                                       ^~~~~~~~~~~~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/datastructures/TupleLight.h:68:87: note: field 'id' will be initialized after field 'status'
+    /*vector<int>(l),*/ size_(l.size()), predicateName(predicateName), waspID(waspID),id(-INT_MAX),status(UNKNOWN),collisionsListsSize(0) {
+                                                                                      ^~~~~~~~~~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/datastructures/TupleLight.h:74:25: warning: initializer order does not match the declaration order [-Wreorder-ctor]
+    /*vector<int>(l),*/ size_(l.size()), predicateName(predicateName), waspID(waspID),id(-INT_MAX),status(UNKNOWN),collisionsListsSize(0) {
+                        ^~~~~~~~~~~~~~~  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~  ~~~~~~~~~~~~~~ ~~~~~~~~~~~~ ~~~~~~~~~~~~~~~
+                        predicateName(predicateName) status(UNKNOWN)   id(-INT_MAX)   waspID(waspID) size_(l.size())
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/datastructures/TupleLight.h:74:25: note: field 'size_' will be initialized after field 'predicateName'
+    /*vector<int>(l),*/ size_(l.size()), predicateName(predicateName), waspID(waspID),id(-INT_MAX),status(UNKNOWN),collisionsListsSize(0) {
+                        ^~~~~~~~~~~~~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/datastructures/TupleLight.h:74:72: note: field 'waspID' will be initialized after field 'id'
+    /*vector<int>(l),*/ size_(l.size()), predicateName(predicateName), waspID(waspID),id(-INT_MAX),status(UNKNOWN),collisionsListsSize(0) {
+                                                                       ^~~~~~~~~~~~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/datastructures/TupleLight.h:74:87: note: field 'id' will be initialized after field 'status'
+    /*vector<int>(l),*/ size_(l.size()), predicateName(predicateName), waspID(waspID),id(-INT_MAX),status(UNKNOWN),collisionsListsSize(0) {
+                                                                                      ^~~~~~~~~~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/datastructures/TupleLight.h:81:25: warning: initializer order does not match the declaration order [-Wreorder-ctor]
+    /*vector<int>(l),*/ size_(size), predicateName(predicateName), waspID(waspID),id(-INT_MAX),status(UNKNOWN),collisionsListsSize(0){
+                        ^~~~~~~~~~~  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~  ~~~~~~~~~~~~~~ ~~~~~~~~~~~~ ~~~~~~~~~~~~~~~
+                        predicateName(predicateName) status(UNKNOWN) id(-INT_MAX) waspID(waspID) size_(size)
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/datastructures/TupleLight.h:81:25: note: field 'size_' will be initialized after field 'predicateName'
+    /*vector<int>(l),*/ size_(size), predicateName(predicateName), waspID(waspID),id(-INT_MAX),status(UNKNOWN),collisionsListsSize(0){
+                        ^~~~~~~~~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/datastructures/TupleLight.h:81:68: note: field 'waspID' will be initialized after field 'id'
+    /*vector<int>(l),*/ size_(size), predicateName(predicateName), waspID(waspID),id(-INT_MAX),status(UNKNOWN),collisionsListsSize(0){
+                                                                   ^~~~~~~~~~~~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/datastructures/TupleLight.h:81:83: note: field 'id' will be initialized after field 'status'
+    /*vector<int>(l),*/ size_(size), predicateName(predicateName), waspID(waspID),id(-INT_MAX),status(UNKNOWN),collisionsListsSize(0){
+                                                                                  ^~~~~~~~~~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/datastructures/TupleLight.h:85:25: warning: initializer order does not match the declaration order [-Wreorder-ctor]
+    /*vector<int>(l),*/ size_(l.size()), waspID(waspID),id(-INT_MAX),status(UNKNOWN),collisionsListsSize(0) {
+                        ^~~~~~~~~~~~~~~  ~~~~~~~~~~~~~~ ~~~~~~~~~~~~ ~~~~~~~~~~~~~~~
+                        status(UNKNOWN)  id(-INT_MAX)   waspID(waspID) size_(l.size())
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/datastructures/TupleLight.h:85:25: note: field 'size_' will be initialized after field 'waspID'
+    /*vector<int>(l),*/ size_(l.size()), waspID(waspID),id(-INT_MAX),status(UNKNOWN),collisionsListsSize(0) {
+                        ^~~~~~~~~~~~~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/datastructures/TupleLight.h:85:42: note: field 'waspID' will be initialized after field 'id'
+    /*vector<int>(l),*/ size_(l.size()), waspID(waspID),id(-INT_MAX),status(UNKNOWN),collisionsListsSize(0) {
+                                         ^~~~~~~~~~~~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/datastructures/TupleLight.h:85:57: note: field 'id' will be initialized after field 'status'
+    /*vector<int>(l),*/ size_(l.size()), waspID(waspID),id(-INT_MAX),status(UNKNOWN),collisionsListsSize(0) {
+                                                        ^~~~~~~~~~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/generators/../datastructures/TupleLight.h:45:148: warning: initializer order does not match the declaration order [-Wreorder-ctor]
+    TupleLight(int predicateName,std::vector<int> v, bool negated = false, int waspID = 0) : predicateName(predicateName),/*std::vector<int>(v),*/ waspID(waspID),id(-INT_MAX),size_(v.size()),status(UNKNOWN),collisionsListsSize(0) {
+                                                                                                                                                   ^~~~~~~~~~~~~~              ~~~~~~~~~~~~~~~ ~~~~~~~~~~~~~~~
+                                                                                                                                                   status(UNKNOWN)             waspID(waspID)  size_(v.size())
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/generators/../datastructures/TupleLight.h:45:148: note: field 'waspID' will be initialized after field 'id'
+    TupleLight(int predicateName,std::vector<int> v, bool negated = false, int waspID = 0) : predicateName(predicateName),/*std::vector<int>(v),*/ waspID(waspID),id(-INT_MAX),size_(v.size()),status(UNKNOWN),collisionsListsSize(0) {
+                                                                                                                                                   ^~~~~~~~~~~~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/generators/../datastructures/TupleLight.h:45:176: note: field 'size_' will be initialized after field 'status'
+    TupleLight(int predicateName,std::vector<int> v, bool negated = false, int waspID = 0) : predicateName(predicateName),/*std::vector<int>(v),*/ waspID(waspID),id(-INT_MAX),size_(v.size()),status(UNKNOWN),collisionsListsSize(0) {
+                                                                                                                                                                               ^~~~~~~~~~~~~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/generators/../datastructures/TupleLight.h:50:42: warning: initializer order does not match the declaration order [-Wreorder-ctor]
+    TupleLight(const TupleLight& orig) : size_(orig.size()), /*std::vector<int>(orig),*/ predicateName(orig.predicateName), id(orig.id), waspID(orig.waspID),status(orig.status),collisionsListsSize(orig.collisionsListsSize) {
+                                         ^~~~~~~~~~~~~~~~~~                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~                                   ~~~~~~~~~~~~~~~~~~~
+                                         predicateName(orig.predicateName)               status(orig.status)                                                 size_(orig.size())
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/generators/../datastructures/TupleLight.h:50:42: note: field 'size_' will be initialized after field 'predicateName'
+    TupleLight(const TupleLight& orig) : size_(orig.size()), /*std::vector<int>(orig),*/ predicateName(orig.predicateName), id(orig.id), waspID(orig.waspID),status(orig.status),collisionsListsSize(orig.collisionsListsSize) {
+                                         ^~~~~~~~~~~~~~~~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/generators/../datastructures/TupleLight.h:50:138: note: field 'waspID' will be initialized after field 'status'
+    TupleLight(const TupleLight& orig) : size_(orig.size()), /*std::vector<int>(orig),*/ predicateName(orig.predicateName), id(orig.id), waspID(orig.waspID),status(orig.status),collisionsListsSize(orig.collisionsListsSize) {
+                                                                                                                                         ^~~~~~~~~~~~~~~~~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/generators/../datastructures/TupleLight.h:62:30: warning: initializer order does not match the declaration order [-Wreorder-ctor]
+    /*std::vector<int>(l),*/ size_(l.size()), predicateName(-1), waspID(waspID),id(-INT_MAX),status(UNKNOWN),collisionsListsSize(0) {
+                             ^~~~~~~~~~~~~~~  ~~~~~~~~~~~~~~~~~  ~~~~~~~~~~~~~~ ~~~~~~~~~~~~ ~~~~~~~~~~~~~~~
+                             predicateName(-1)status(UNKNOWN)    id(-INT_MAX)   waspID(waspID) size_(l.size())
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/generators/../datastructures/TupleLight.h:62:30: note: field 'size_' will be initialized after field 'predicateName'
+    /*std::vector<int>(l),*/ size_(l.size()), predicateName(-1), waspID(waspID),id(-INT_MAX),status(UNKNOWN),collisionsListsSize(0) {
+                             ^~~~~~~~~~~~~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/generators/../datastructures/TupleLight.h:62:66: note: field 'waspID' will be initialized after field 'id'
+    /*std::vector<int>(l),*/ size_(l.size()), predicateName(-1), waspID(waspID),id(-INT_MAX),status(UNKNOWN),collisionsListsSize(0) {
+                                                                 ^~~~~~~~~~~~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/generators/../datastructures/TupleLight.h:62:81: note: field 'id' will be initialized after field 'status'
+    /*std::vector<int>(l),*/ size_(l.size()), predicateName(-1), waspID(waspID),id(-INT_MAX),status(UNKNOWN),collisionsListsSize(0) {
+                                                                                ^~~~~~~~~~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/generators/../datastructures/TupleLight.h:68:25: warning: initializer order does not match the declaration order [-Wreorder-ctor]
+    /*vector<int>(l),*/ size_(l.size()), predicateName(predicateName), waspID(waspID),id(-INT_MAX),status(UNKNOWN),collisionsListsSize(0) {
+                        ^~~~~~~~~~~~~~~  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~  ~~~~~~~~~~~~~~ ~~~~~~~~~~~~ ~~~~~~~~~~~~~~~
+                        predicateName(predicateName) status(UNKNOWN)   id(-INT_MAX)   waspID(waspID) size_(l.size())
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/generators/../datastructures/TupleLight.h:68:25: note: field 'size_' will be initialized after field 'predicateName'
+    /*vector<int>(l),*/ size_(l.size()), predicateName(predicateName), waspID(waspID),id(-INT_MAX),status(UNKNOWN),collisionsListsSize(0) {
+                        ^~~~~~~~~~~~~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/generators/../datastructures/TupleLight.h:68:72: note: field 'waspID' will be initialized after field 'id'
+    /*vector<int>(l),*/ size_(l.size()), predicateName(predicateName), waspID(waspID),id(-INT_MAX),status(UNKNOWN),collisionsListsSize(0) {
+                                                                       ^~~~~~~~~~~~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/generators/../datastructures/TupleLight.h:68:87: note: field 'id' will be initialized after field 'status'
+    /*vector<int>(l),*/ size_(l.size()), predicateName(predicateName), waspID(waspID),id(-INT_MAX),status(UNKNOWN),collisionsListsSize(0) {
+                                                                                      ^~~~~~~~~~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/generators/../datastructures/TupleLight.h:74:25: warning: initializer order does not match the declaration order [-Wreorder-ctor]
+    /*vector<int>(l),*/ size_(l.size()), predicateName(predicateName), waspID(waspID),id(-INT_MAX),status(UNKNOWN),collisionsListsSize(0) {
+                        ^~~~~~~~~~~~~~~  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~  ~~~~~~~~~~~~~~ ~~~~~~~~~~~~ ~~~~~~~~~~~~~~~
+                        predicateName(predicateName) status(UNKNOWN)   id(-INT_MAX)   waspID(waspID) size_(l.size())
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/generators/../datastructures/TupleLight.h:74:25: note: field 'size_' will be initialized after field 'predicateName'
+    /*vector<int>(l),*/ size_(l.size()), predicateName(predicateName), waspID(waspID),id(-INT_MAX),status(UNKNOWN),collisionsListsSize(0) {
+                        ^~~~~~~~~~~~~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/generators/../datastructures/TupleLight.h:74:72: note: field 'waspID' will be initialized after field 'id'
+    /*vector<int>(l),*/ size_(l.size()), predicateName(predicateName), waspID(waspID),id(-INT_MAX),status(UNKNOWN),collisionsListsSize(0) {
+                                                                       ^~~~~~~~~~~~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/generators/../datastructures/TupleLight.h:74:87: note: field 'id' will be initialized after field 'status'
+    /*vector<int>(l),*/ size_(l.size()), predicateName(predicateName), waspID(waspID),id(-INT_MAX),status(UNKNOWN),collisionsListsSize(0) {
+                                                                                      ^~~~~~~~~~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/generators/../datastructures/TupleLight.h:81:25: warning: initializer order does not match the declaration order [-Wreorder-ctor]
+    /*vector<int>(l),*/ size_(size), predicateName(predicateName), waspID(waspID),id(-INT_MAX),status(UNKNOWN),collisionsListsSize(0){
+                        ^~~~~~~~~~~  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~  ~~~~~~~~~~~~~~ ~~~~~~~~~~~~ ~~~~~~~~~~~~~~~
+                        predicateName(predicateName) status(UNKNOWN) id(-INT_MAX) waspID(waspID) size_(size)
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/generators/../datastructures/TupleLight.h:81:25: note: field 'size_' will be initialized after field 'predicateName'
+    /*vector<int>(l),*/ size_(size), predicateName(predicateName), waspID(waspID),id(-INT_MAX),status(UNKNOWN),collisionsListsSize(0){
+                        ^~~~~~~~~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/generators/../datastructures/TupleLight.h:81:68: note: field 'waspID' will be initialized after field 'id'
+    /*vector<int>(l),*/ size_(size), predicateName(predicateName), waspID(waspID),id(-INT_MAX),status(UNKNOWN),collisionsListsSize(0){
+                                                                   ^~~~~~~~~~~~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/generators/../datastructures/TupleLight.h:81:83: note: field 'id' will be initialized after field 'status'
+    /*vector<int>(l),*/ size_(size), predicateName(predicateName), waspID(waspID),id(-INT_MAX),status(UNKNOWN),collisionsListsSize(0){
+                                                                                  ^~~~~~~~~~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/generators/../datastructures/TupleLight.h:85:25: warning: initializer order does not match the declaration order [-Wreorder-ctor]
+    /*vector<int>(l),*/ size_(l.size()), waspID(waspID),id(-INT_MAX),status(UNKNOWN),collisionsListsSize(0) {
+                        ^~~~~~~~~~~~~~~  ~~~~~~~~~~~~~~ ~~~~~~~~~~~~ ~~~~~~~~~~~~~~~
+                        status(UNKNOWN)  id(-INT_MAX)   waspID(waspID) size_(l.size())
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/generators/../datastructures/TupleLight.h:85:25: note: field 'size_' will be initialized after field 'waspID'
+    /*vector<int>(l),*/ size_(l.size()), waspID(waspID),id(-INT_MAX),status(UNKNOWN),collisionsListsSize(0) {
+                        ^~~~~~~~~~~~~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/generators/../datastructures/TupleLight.h:85:42: note: field 'waspID' will be initialized after field 'id'
+    /*vector<int>(l),*/ size_(l.size()), waspID(waspID),id(-INT_MAX),status(UNKNOWN),collisionsListsSize(0) {
+                                         ^~~~~~~~~~~~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/generators/../datastructures/TupleLight.h:85:57: note: field 'id' will be initialized after field 'status'
+    /*vector<int>(l),*/ size_(l.size()), waspID(waspID),id(-INT_MAX),status(UNKNOWN),collisionsListsSize(0) {
+                                                        ^~~~~~~~~~~~
+In file included from /Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/Main.cc:62:
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/datastructures/TupleFactory.h:309:21: warning: variable 'minLoadedBucket' set but not used [-Wunused-but-set-variable]
+                int minLoadedBucket=0;
+                    ^
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/datastructures/TupleFactory.h:307:21: warning: variable 'mostLoadedBucket' set but not used [-Wunused-but-set-variable]
+                int mostLoadedBucket=0;
+                    ^
+In file included from /Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/generators/Generator.cc:3:
+In file included from /Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/generators/../generators/Comp_4_Gen.h:4:
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/generators/../datastructures/TupleFactory.h:309:21: warning: variable 'minLoadedBucket' set but not used [-Wunused-but-set-variable]
+                int minLoadedBucket=0;
+                    ^
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/generators/../datastructures/TupleFactory.h:307:21: warning: variable 'mostLoadedBucket' set but not used [-Wunused-but-set-variable]
+                int mostLoadedBucket=0;
+                    ^
+In file included from /Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/Propagator.cc:1:
+In file included from /Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../solver/Propagator.h:6:
+In file included from /Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../solver/AuxMapHandler.h:6:
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../solver/../datastructures/TupleFactory.h:309:21: warning: variable 'minLoadedBucket' set but not used [-Wunused-but-set-variable]
+                int minLoadedBucket=0;
+                    ^
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../solver/../datastructures/TupleFactory.h:307:21: warning: variable 'mostLoadedBucket' set but not used [-Wunused-but-set-variable]
+                int mostLoadedBucket=0;
+                    ^
+In file included from /Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/Main.cc:64:
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/solver/Generator.h:14:17: warning: delete called on 'AbstractGenerator' that is abstract but has non-virtual destructor [-Wdelete-abstract-non-virtual-dtor]
+                delete gen;
+                ^
+In file included from /Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/Propagator.cc:1:
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../solver/Propagator.h:19:17: warning: delete called on 'AbstractPropagator' that is abstract but has non-virtual destructor [-Wdelete-abstract-non-virtual-dtor]
+                delete prop;
+                ^
+In file included from /Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/Propagator.cc:3:
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../propagators/Rule_0_Propagator.h:55:36: warning: unused variable 'tuple_1' [-Wunused-variable]
+                            Tuple* tuple_1=boundBody;
+                                   ^
+In file included from /Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/generators/Generator.cc:9:
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/generators/../generators/Comp_1_Gen.h:22:29: warning: unused variable 'X_0' [-Wunused-variable]
+                        int X_0 = tuple_0->at(0);
+                            ^
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/generators/../generators/Comp_1_Gen.h:23:29: warning: unused variable 'X_2' [-Wunused-variable]
+                        int X_2 = tuple_0->at(1);
+                            ^
+In file included from /Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/Main.cc:65:
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/solver/Propagator.h:19:17: warning: delete called on 'AbstractPropagator' that is abstract but has non-virtual destructor [-Wdelete-abstract-non-virtual-dtor]
+                delete prop;
+                ^
+In file included from /Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/Propagator.cc:5:
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../propagators/Rule_1_Propagator.h:55:36: warning: unused variable 'tuple_1' [-Wunused-variable]
+                            Tuple* tuple_1=boundBody;
+                                   ^
+In file included from /Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/Propagator.cc:7:
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../propagators/Rule_2_Propagator.h:53:33: warning: unused variable 'X_2' [-Wunused-variable]
+                            int X_2 = tuple_0->at(0);
+                                ^
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../propagators/Rule_2_Propagator.h:54:33: warning: unused variable 'X_0' [-Wunused-variable]
+                            int X_0 = tuple_0->at(1);
+                                ^
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../propagators/Rule_2_Propagator.h:55:33: warning: unused variable 'X_1' [-Wunused-variable]
+                            int X_1 = tuple_0->at(2);
+                                ^
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../propagators/Rule_2_Propagator.h:34:28: warning: unused variable 'tuple_1' [-Wunused-variable]
+                    Tuple* tuple_1=boundBody;
+                           ^
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../propagators/Rule_2_Propagator.h:94:21: warning: unused variable 'X_1' [-Wunused-variable]
+                int X_1 = starter->at(2);
+                    ^
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../propagators/Rule_2_Propagator.h:93:21: warning: unused variable 'X_0' [-Wunused-variable]
+                int X_0 = starter->at(1);
+                    ^
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../propagators/Rule_2_Propagator.h:92:21: warning: unused variable 'X_2' [-Wunused-variable]
+                int X_2 = starter->at(0);
+                    ^
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../propagators/Rule_2_Propagator.h:157:25: warning: unused variable 'X_2' [-Wunused-variable]
+                    int X_2 = tuple_0->at(0);
+                        ^
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../propagators/Rule_2_Propagator.h:158:25: warning: unused variable 'X_0' [-Wunused-variable]
+                    int X_0 = tuple_0->at(1);
+                        ^
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../propagators/Rule_2_Propagator.h:159:25: warning: unused variable 'X_1' [-Wunused-variable]
+                    int X_1 = tuple_0->at(2);
+                        ^
+In file included from /Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/Propagator.cc:9:
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../propagators/Rule_3_Propagator.h:55:36: warning: unused variable 'tuple_1' [-Wunused-variable]
+                            Tuple* tuple_1=boundBody;
+                                   ^
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../propagators/Rule_3_Propagator.h:38:29: warning: unused variable 'X_2' [-Wunused-variable]
+                        int X_2 = tuple_0->at(0);
+                            ^
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../propagators/Rule_3_Propagator.h:40:29: warning: unused variable 'X_1' [-Wunused-variable]
+                        int X_1 = tuple_0->at(2);
+                            ^
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../propagators/Rule_3_Propagator.h:92:21: warning: unused variable 'X_2' [-Wunused-variable]
+                int X_2 = starter->at(0);
+                    ^
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../propagators/Rule_3_Propagator.h:94:21: warning: unused variable 'X_1' [-Wunused-variable]
+                int X_1 = starter->at(2);
+                    ^
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../propagators/Rule_3_Propagator.h:162:37: warning: unused variable 'X_1' [-Wunused-variable]
+                                int X_1 = tuple_0->at(2);
+                                    ^
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../propagators/Rule_3_Propagator.h:160:33: warning: unused variable 'X_2' [-Wunused-variable]
+                            int X_2 = tuple_0->at(0);
+                                ^
+In file included from /Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/Propagator.cc:11:
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../propagators/Rule_4_Propagator.h:85:44: warning: unused variable 'tuple_3' [-Wunused-variable]
+                                    Tuple* tuple_3=boundBody;
+                                           ^
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../propagators/Rule_4_Propagator.h:70:40: warning: unused variable 'tuple_2' [-Wunused-variable]
+                                Tuple* tuple_2=boundBody;
+                                       ^
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../propagators/Rule_4_Propagator.h:34:28: warning: unused variable 'tuple_1' [-Wunused-variable]
+                    Tuple* tuple_1=boundBody;
+                           ^
+In file included from /Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/Propagator.cc:13:
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../propagators/Rule_5_Propagator.h:55:36: warning: unused variable 'tuple_1' [-Wunused-variable]
+                            Tuple* tuple_1=boundBody;
+                                   ^
+In file included from /Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/Propagator.cc:15:
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../propagators/Rule_6_Propagator.h:38:45: warning: explicitly assigning value of variable of type 'int' to itself [-Wself-assign]
+                                        var = var;
+                                        ~~~ ^ ~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../propagators/Rule_6_Propagator.h:93:41: warning: explicitly assigning value of variable of type 'int' to itself [-Wself-assign]
+                                    var = var;
+                                    ~~~ ^ ~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../propagators/Rule_6_Propagator.h:154:45: warning: explicitly assigning value of variable of type 'int' to itself [-Wself-assign]
+                                        var = var;
+                                        ~~~ ^ ~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../propagators/Rule_6_Propagator.h:215:29: warning: explicitly assigning value of variable of type 'int' to itself [-Wself-assign]
+                        var = var;
+                        ~~~ ^ ~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../propagators/Rule_6_Propagator.h:246:37: warning: explicitly assigning value of variable of type 'int' to itself [-Wself-assign]
+                                var = var;
+                                ~~~ ^ ~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../propagators/Rule_6_Propagator.h:196:21: warning: unused variable 'X_0' [-Wunused-variable]
+                int X_0 = starter->at(0);
+                    ^
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../propagators/Rule_6_Propagator.h:197:21: warning: unused variable 'X_2' [-Wunused-variable]
+                int X_2 = starter->at(1);
+                    ^
+In file included from /Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/Propagator.cc:17:
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../propagators/Rule_7_Propagator.h:54:36: warning: unused variable 'tuple_1' [-Wunused-variable]
+                            Tuple* tuple_1=boundBody;
+                                   ^
+In file included from /Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/Propagator.cc:19:
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../propagators/Rule_8_Propagator.h:53:33: warning: unused variable 'X_0' [-Wunused-variable]
+                            int X_0 = tuple_0->at(0);
+                                ^
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../propagators/Rule_8_Propagator.h:54:33: warning: unused variable 'X_2' [-Wunused-variable]
+                            int X_2 = tuple_0->at(1);
+                                ^
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../propagators/Rule_8_Propagator.h:34:28: warning: unused variable 'tuple_1' [-Wunused-variable]
+                    Tuple* tuple_1=boundBody;
+                           ^
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../propagators/Rule_8_Propagator.h:91:21: warning: unused variable 'X_0' [-Wunused-variable]
+                int X_0 = starter->at(0);
+                    ^
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../propagators/Rule_8_Propagator.h:92:21: warning: unused variable 'X_2' [-Wunused-variable]
+                int X_2 = starter->at(1);
+                    ^
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../propagators/Rule_8_Propagator.h:155:25: warning: unused variable 'X_0' [-Wunused-variable]
+                    int X_0 = tuple_0->at(0);
+                        ^
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../propagators/Rule_8_Propagator.h:156:25: warning: unused variable 'X_2' [-Wunused-variable]
+                    int X_2 = tuple_0->at(1);
+                        ^
+In file included from /Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/Propagator.cc:21:
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../propagators/Rule_9_Propagator.h:70:44: warning: unused variable 'tuple_2' [-Wunused-variable]
+                                    Tuple* tuple_2=boundBody;
+                                           ^
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../propagators/Rule_9_Propagator.h:34:28: warning: unused variable 'tuple_1' [-Wunused-variable]
+                    Tuple* tuple_1=boundBody;
+                           ^
+In file included from /Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/Propagator.cc:23:
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../propagators/Rule_10_Propagator.h:70:40: warning: unused variable 'tuple_2' [-Wunused-variable]
+                                Tuple* tuple_2=boundBody;
+                                       ^
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../propagators/Rule_10_Propagator.h:55:36: warning: unused variable 'tuple_1' [-Wunused-variable]
+                            Tuple* tuple_1=boundBody;
+                                   ^
+In file included from /Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/Propagator.cc:25:
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../propagators/Rule_11_Propagator.h:49:32: warning: unused variable 'tuple_1' [-Wunused-variable]
+                        Tuple* tuple_1=boundBody;
+                               ^
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../propagators/Rule_11_Propagator.h:34:28: warning: unused variable 'tuple_0' [-Wunused-variable]
+                    Tuple* tuple_0=boundBody;
+                           ^
+In file included from /Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/Propagator.cc:27:
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../propagators/Rule_12_Propagator.h:49:32: warning: unused variable 'tuple_1' [-Wunused-variable]
+                        Tuple* tuple_1=boundBody;
+                               ^
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../propagators/Rule_12_Propagator.h:34:28: warning: unused variable 'tuple_0' [-Wunused-variable]
+                    Tuple* tuple_0=boundBody;
+                           ^
+In file included from /Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/Propagator.cc:29:
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../propagators/Rule_13_Propagator.h:64:36: warning: unused variable 'tuple_2' [-Wunused-variable]
+                            Tuple* tuple_2=boundBody;
+                                   ^
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../propagators/Rule_13_Propagator.h:49:32: warning: unused variable 'tuple_1' [-Wunused-variable]
+                        Tuple* tuple_1=boundBody;
+                               ^
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../propagators/Rule_13_Propagator.h:34:28: warning: unused variable 'tuple_0' [-Wunused-variable]
+                    Tuple* tuple_0=boundBody;
+                           ^
+In file included from /Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/Propagator.cc:31:
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../propagators/Rule_14_Propagator.h:64:36: warning: unused variable 'tuple_2' [-Wunused-variable]
+                            Tuple* tuple_2=boundBody;
+                                   ^
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../propagators/Rule_14_Propagator.h:49:32: warning: unused variable 'tuple_1' [-Wunused-variable]
+                        Tuple* tuple_1=boundBody;
+                               ^
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../propagators/Rule_14_Propagator.h:34:28: warning: unused variable 'tuple_0' [-Wunused-variable]
+                    Tuple* tuple_0=boundBody;
+                           ^
+In file included from /Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/Propagator.cc:33:
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../propagators/Rule_15_Propagator.h:36:28: warning: explicitly assigning value of variable of type 'int' to itself [-Wself-assign]
+                    if(X_0 = X_0){
+                       ~~~ ^ ~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../propagators/Rule_15_Propagator.h:56:41: warning: unused variable 'X_1' [-Wunused-variable]
+                                    int X_1 = tuple_0->at(1);
+                                        ^
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../propagators/Rule_15_Propagator.h:34:28: warning: unused variable 'tuple_1' [-Wunused-variable]
+                    Tuple* tuple_1=boundBody;
+                           ^
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../propagators/Rule_15_Propagator.h:117:32: warning: explicitly assigning value of variable of type 'int' to itself [-Wself-assign]
+                        if(X_0 = X_0){
+                           ~~~ ^ ~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../propagators/Rule_15_Propagator.h:98:21: warning: unused variable 'X_1' [-Wunused-variable]
+                int X_1 = starter->at(1);
+                    ^
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../propagators/Rule_15_Propagator.h:149:20: warning: explicitly assigning value of variable of type 'int' to itself [-Wself-assign]
+            if(X_0 = X_0){
+               ~~~ ^ ~~~
+/Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/../simp/propagators/../propagators/Rule_15_Propagator.h:170:33: warning: unused variable 'X_1' [-Wunused-variable]
+                            int X_1 = tuple_0->at(1);
+                                ^
+14 warnings generated.
+13 warnings generated.
+71 warnings generated.
+Linking: glucose ( /Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/Main.o /Users/giuseppe/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/SimpSolver.o simp/datastructures/AuxiliaryMapSmart.o simp/datastructures/SmartTuple.o simp/datastructures/TupleFactory.o simp/datastructures/TupleLight.o simp/generators/Generator.o simp/propagators/Propagator.o simp/utils/ConstantsManager.o simp/utils/FilesManagement.o simp/utils/GraphWithTarjanAlgorithm.o simp/utils/Indentation.o simp/utils/SharedFunctions.o utils/Options.o utils/System.o core/Solver.o core/lcm.o )

@@ -45,13 +45,13 @@ unsigned aspc::Rule::rulesCounter = 0;
 unsigned aspc::Rule::rulesCounterRewriting = 0;
 string aspc::Rule::inequalityStrings[] = {">=", "<=", ">", "<", "!=", "=="};
 
-aspc::Rule::Rule(const vector<aspc::Atom> & head, const vector<aspc::Literal> & body, const vector<aspc::ArithmeticRelation> & arithmeticRelations, const vector<aspc::ArithmeticRelationWithAggregate> & arithmeticRelationsWithAggregate,bool rewriting) : head(head), bodyLiterals(body), arithmeticRelations(arithmeticRelations),arithmeticRelationsWithAggregate(arithmeticRelationsWithAggregate) {
+aspc::Rule::Rule(const vector<aspc::Atom> & head, const vector<aspc::Literal> & body, const vector<aspc::ArithmeticRelation> & arithmeticRelations, const vector<aspc::ArithmeticRelationWithAggregate> & arithmeticRelationsWithAggregate,bool rewriting) : head(head), bodyLiterals(body), arithmeticRelations(arithmeticRelations),arithmeticRelationsWithAggregate(arithmeticRelationsWithAggregate),supportAtom(-1) {
     if(rewriting == 0)
         ruleId = rulesCounterRewriting++;
     else
         ruleId = rulesCounter++;
 }
-aspc::Rule::Rule(const vector<aspc::Atom> & head, const vector<aspc::Literal> & body, const vector<aspc::ArithmeticRelation> & arithmeticRelations, const vector<aspc::ArithmeticRelationWithAggregate> & arithmeticRelationsWithAggregate) : head(head), bodyLiterals(body), ruleId(rulesCounter), arithmeticRelations(arithmeticRelations),arithmeticRelationsWithAggregate(arithmeticRelationsWithAggregate) {
+aspc::Rule::Rule(const vector<aspc::Atom> & head, const vector<aspc::Literal> & body, const vector<aspc::ArithmeticRelation> & arithmeticRelations, const vector<aspc::ArithmeticRelationWithAggregate> & arithmeticRelationsWithAggregate) : head(head), bodyLiterals(body), ruleId(rulesCounter), arithmeticRelations(arithmeticRelations),arithmeticRelationsWithAggregate(arithmeticRelationsWithAggregate),supportAtom(-1) {
     rulesCounter++;
 }
 
@@ -60,6 +60,7 @@ aspc::Rule::Rule(const vector<Atom>& head, const vector<Literal> & body, const v
     //        std::random_shuffle(bodyLiterals.begin(), bodyLiterals.end());
     //        
     //    }
+    supportAtom=-1;
     for (unsigned i = 0; i < bodyLiterals.size(); i++) {
         formulas.push_back(new Literal(bodyLiterals.at(i)));
 
@@ -74,7 +75,7 @@ aspc::Rule::Rule(const vector<Atom>& head, const vector<Literal> & body, const v
 aspc::Rule::Rule(const std::vector<aspc::Atom> & head, const std::vector<aspc::Literal> & body, const std::vector<ArithmeticRelation> & inequalities,const std::vector<ArithmeticRelationWithAggregate> & inequalitiesWithAggregate, bool, bool rewriting): Rule(head, body, inequalities,inequalitiesWithAggregate,rewriting){
     
     
-    
+    supportAtom=-1;
     for (unsigned i = 0; i < bodyLiterals.size(); i++) {
         formulas.push_back(new Literal(bodyLiterals.at(i)));
 
@@ -113,6 +114,7 @@ head(other.head), bodyLiterals(other.bodyLiterals), ruleId(other.ruleId), arithm
         }
         formulas.push_back(new ArithmeticRelationWithAggregate(arithmeticRelationsWithAggregate[i]));
     }
+    supportAtom=other.supportAtom;
 }
 
 aspc::Rule::~Rule() {

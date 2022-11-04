@@ -6,7 +6,7 @@ void GeneratorCompiler::compile(){
 void GeneratorCompiler::buildComponentGenerator(int componentId){
     Indentation ind(0);
     std::string className="Comp_"+std::to_string(componentId)+"_Gen";
-    std::string executorPath = executablePath + "/../src/generators/"+className+".h";
+    std::string executorPath = executablePath + "/../../glucose-4.2.1/sources/simp/generators/"+className+".h";
     std::ofstream outfile(executorPath);
     if(!outfile.is_open()){
         std::cout << "Error unable to open "+className+" file "<<executorPath<<std::endl;
@@ -26,39 +26,10 @@ void GeneratorCompiler::buildComponentGenerator(int componentId){
     outfile << ind << "using AuxMap = AuxiliaryMapSmart<S> ;\n";
     outfile << ind << "typedef std::vector<const Tuple* > Tuples;\n";
 
-    outfile << ind++ << "void insertUndef"<<className<<"(const std::pair<const Tuple *, bool>& insertResult){\n";
-        bool firstIf=true;
-        const auto& auxMaps = auxMapCompiler->getAuxMapNameForPredicate();
-        for(const std::string& predicate: components[componentId]){
-            std::string printElse = !firstIf ? "else " : "";
-            auto it = auxMaps.find(predicate);
-            if(it!=auxMaps.end()){
-                outfile << ind++ << printElse << "if(insertResult.first->getPredicateName() == AuxMapHandler::getInstance().get_"<<predicate<<"()){\n";
-                for(const std::vector<unsigned>& indices : it->second){
-                    outfile << ind << "AuxMapHandler::getInstance().get_u"<< predicate << "_";
-                    for(unsigned k :indices) outfile << k << "_";
-                    outfile <<"()->insert2Vec(*insertResult.first);\n";
-                }
-                outfile << --ind << "}\n";
-                firstIf=false;        
-            }
-        }
-    outfile << --ind <<"}\n";
-    outfile << ind++ << "void printTuple_"<<className<<"(const Tuple* t){\n";
-        outfile << ind << "if(t->isFalse()) std::cout << \"not \";\n";
-        outfile << ind << "if(t->isUndef()) std::cout << \"undef \";\n";
-        outfile << ind << "std::cout << AuxMapHandler::getInstance().unmapPredicate(t->getPredicateName()) << \"(\";\n";
-        outfile << ind++ << "for(int i=0;i<t->size();i++){\n";
-            outfile << ind << "if(i>0) std::cout << \",\";\n";
-            outfile << ind << "std::cout << ConstantsManager::getInstance().unmapConstant(t->at(i));\n";
-        outfile << --ind << "}\n";
-        outfile << ind << "std::cout << \")\"<<std::endl;\n";
-    outfile << --ind << "}\n";
-    
     outfile << ind << "class "<<className<<": public AbstractGenerator{\n";
     outfile << ++ind << "public:\n";
     ind++;
-        outfile << ind++ << "void generate()override {\n";
+        outfile << ind++ << "void generate(Glucose::Solver* solver)override {\n";
             bool isRecursive = components[componentId].size() > 1;
             if(!isRecursive){
                 std::string predicate = *components[componentId].begin();
@@ -162,10 +133,11 @@ void GeneratorCompiler::compileComponentRules(std::ofstream& outfile,Indentation
                 }
                 closingPars++;
             }else{
-                std::string mapName = "AuxMapHandler::getInstance().get_u"+lit->getPredicateName()+"_";
+                std::string prefix = "AuxMapHandler::getInstance().get_";
+                std::string mapName = lit->getPredicateName()+"_";
                 std::string terms = "";
                 std::unordered_set<int> boundIndices;
-                
+
                 for(unsigned k=0; k<lit->getAriety(); k++){
                     if(!lit->isVariableTermAt(k) || boundVars.count(lit->getTermAt(k))){
                         std::string term = lit->isVariableTermAt(k) || isInteger(lit->getTermAt(k)) ? lit->getTermAt(k) : "ConstantsManager::getInstance().mapConstant(\""+lit->getTermAt(k)+"\")";
@@ -174,10 +146,11 @@ void GeneratorCompiler::compileComponentRules(std::ofstream& outfile,Indentation
                         boundIndices.insert(k);
                     }
                 }
-                outfile << ind << "const std::vector<int>* tuplesU_"<<index<<" = &"<<mapName<<"()->getValuesVec({"<<terms<<"});\n";
-                outfile << ind++ << "for(unsigned i=0; i<tuplesU_"<<index<<"->size(); i++){\n";
+                outfile << ind << "const std::vector<int>* tuplesU_"<<index<<" = &"<<prefix<<"u"<<mapName<<"()->getValuesVec({"<<terms<<"});\n";
+                outfile << ind << "const std::vector<int>* tuples_"<<index<<" = &"<<prefix<<"p"<<mapName<<"()->getValuesVec({"<<terms<<"});\n";
+                outfile << ind++ << "for(unsigned i=0; i<tuples_"<<index<<"->size()+tuplesU_"<<index<<"->size(); i++){\n";
                 closingPars++;
-                    outfile << ind << "Tuple* tuple_"<<index<<"=TupleFactory::getInstance().getTupleFromInternalID(tuplesU_"<<index<<"->at(i));\n";
+                    outfile << ind << "Tuple* tuple_"<<index<<"= i<tuples_"<<index<<"->size() ? TupleFactory::getInstance().getTupleFromInternalID(tuples_"<<index<<"->at(i)) : TupleFactory::getInstance().getTupleFromInternalID(tuplesU_"<<index<<"->at(i-tuples_"<<index<<"->size()));\n";
                     outfile << ind++ << "if(tuple_"<<index<<"!= NULL){\n";
                     closingPars++;
                 for(unsigned k=0; k<lit->getAriety(); k++){
@@ -195,7 +168,7 @@ void GeneratorCompiler::compileComponentRules(std::ofstream& outfile,Indentation
         }else{
             const aspc::ArithmeticRelation* ineq = (const aspc::ArithmeticRelation*) f;
             if(f->isBoundedValueAssignment(boundVars)){
-                outfile << ind << "int "<<ineq->getAssignmentStringRep(boundVars)<<std::endl;
+                outfile << ind << "int "<<ineq->getAssignmentStringRep(boundVars)<<";"<<std::endl;
                 boundVars.insert(ineq->getAssignedVariable(boundVars));
             }else{
                 outfile << ind++ << "if("<<ineq->getStringRep()<<"){"<<std::endl;
@@ -215,9 +188,10 @@ void GeneratorCompiler::compileComponentRules(std::ofstream& outfile,Indentation
         outfile << "}, AuxMapHandler::getInstance().get_"<<atom->getPredicateName()<<"());\n";
         outfile << ind << "const auto& insertResult = head_"<<index<<"->setStatus(Undef);\n";
         outfile << ind++ << "if(insertResult.second){\n";
-            outfile << ind << "std::cout << \"Added tuple \";printTuple_"<<className<<"(head_"<<index<<");\n";
+            outfile << ind << "std::cout << \"Added tuple \";AuxMapHandler::getInstance().printTuple(head_"<<index<<");\n";
             outfile << ind << "TupleFactory::getInstance().removeFromCollisionsList(head_"<<index<<"->getId());\n";
-            outfile << ind << "insertUndef"<<className<<"(insertResult);\n";
+            outfile << ind << "AuxMapHandler::getInstance().insertUndef(insertResult);\n";
+            outfile << ind << "while (head_"<<index<<"->getId() >= solver->nVars()) solver->newVar();\n";
             if(isRecursive){
                 outfile << ind << "stack.push_back(head_"<<index<<"->getId());\n";
             }                                
@@ -231,7 +205,7 @@ void GeneratorCompiler::compileComponentRules(std::ofstream& outfile,Indentation
 void GeneratorCompiler::buildGenerator(){
     computeSCC();
     Indentation ind(0);
-    std::string executorPath = executablePath + "/../src/generators/Generator.cpp";
+    std::string executorPath = executablePath + "/../../glucose-4.2.1/sources/simp/generators/Generator.cc";
     std::ofstream outfile(executorPath);
     if(!outfile.is_open()){
         std::cout << "Error unable to open Generator file "<<executorPath<<std::endl;
@@ -248,6 +222,7 @@ void GeneratorCompiler::buildGenerator(){
         buildComponentGenerator(componentId);
         std::string className="Comp_"+std::to_string(componentId)+"_Gen";
         outfile << ind << "generators.push_back(new "<<className<<"());\n";
+        outfile << ind << "solvedByGenerator = " << (solvedByGenerator ? "true" : "false")<<";\n";
     }
     outfile << --ind << "}\n";
     outfile.close();

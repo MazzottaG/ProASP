@@ -1,0 +1,122 @@
+Added tuple aux_1(2). Added tuple aux_1(6). Added tuple p_0(). Generator Comp_2_Gen
+Added tuple aux_0(3). Generator Comp_1_Gen
+Added tuple p_1(3,4,4). Generator Comp_0_Gen
+ starter 0
+Propagator 4: Propagating 6 p_2(0,4). 
+Propagator 5: Propagating 6 p_2(0,4). 
+Propagator 6: Propagating 6 p_2(0,4). 
+ starter 0
+Propagator 7: Propagating 6 p_2(0,4). 
+ starter 0
+Propagator 8: Propagating 6 p_2(0,4). 
+ starter 0
+Propagator 9: Propagating 6 p_2(0,4). 
+Propagator 10: Propagating 6 p_2(0,4). 
+Propagator 11: Propagating 6 p_2(0,4). 
+Adding facts in glucose
+uncheckedEnqueue 7 true
+Propagator 0: Propagating 7 p_2(3,1). 
+Propagator 1: Propagating 7 p_2(3,1). 
+Propagator 2: Propagating 7 p_2(3,1). 
+Propagator 3: Propagating 7 p_2(3,1). 
+ starter 0
+Propagator 4: Propagating 7 p_2(3,1). 
+Propagator 5: Propagating 7 p_2(3,1). 
+Propagator 6: Propagating 7 p_2(3,1). 
+ starter 0
+Violated constraint
+p_2(3,1). Conflict detected in the solver
+Warning violated constraint into propagators
+Propagator 7: Propagating 7 p_2(3,1). 
+ starter 0
+Propagator 8: Propagating 7 p_2(3,1). 
+ starter 0
+Propagator 9: Propagating 7 p_2(3,1). 
+Propagator 10: Propagating 7 p_2(3,1). 
+Propagator 11: Propagating 7 p_2(3,1). 
+Adding facts in glucose
+uncheckedEnqueue 8 true
+Propagator 0: Propagating 8 p_2(3,3). 
+Propagator 1: Propagating 8 p_2(3,3). 
+Propagator 2: Propagating 8 p_2(3,3). 
+Propagator 3: Propagating 8 p_2(3,3). 
+ starter 0
+Propagator 4: Propagating 8 p_2(3,3). 
+Propagator 5: Propagating 8 p_2(3,3). 
+Propagator 6: Propagating 8 p_2(3,3). 
+ starter 0
+Violated constraint
+p_2(3,3). Conflict detected in the solver
+Warning violated constraint into propagators
+Propagator 7: Propagating 8 p_2(3,3). 
+ starter 0
+Propagator 8: Propagating 8 p_2(3,3). 
+ starter 0
+Propagator 9: Propagating 8 p_2(3,3). 
+Propagator 10: Propagating 8 p_2(3,3). 
+Propagator 11: Propagating 8 p_2(3,3). 
+Adding facts in glucose
+uncheckedEnqueue 9 true
+Propagator 0: Propagating 9 p_1(5,1,2). 
+Propagator 1: Propagating 9 p_1(5,1,2). 
+Propagator 2: Propagating 9 p_1(5,1,2). 
+Propagator 3: Propagating 9 p_1(5,1,2). 
+Propagator 4: Propagating 9 p_1(5,1,2). 
+Propagator 5: Propagating 9 p_1(5,1,2). 
+Propagator 6: Propagating 9 p_1(5,1,2). 
+Propagator 7: Propagating 9 p_1(5,1,2). 
+Propagator 8: Propagating 9 p_1(5,1,2). 
+Propagator 9: Propagating 9 p_1(5,1,2). 
+Propagator 10: Propagating 9 p_1(5,1,2). 
+ starter 0
+ starter 1
+Propagator 11: Propagating 9 p_1(5,1,2). 
+propagate at level 0
+PropagateAtLevel0 0
+PropagateAtLevel0 1
+PropagateAtLevel0 2
+PropagateAtLevel0 3
+PropagateAtLevel0 4
+PropagateAtLevel0 5
+Building unit clause for level 0
+Propagate -10 aux_1(2). 
+Propagating body literal as false
+Building unit clause for level 0
+Propagate -11 aux_1(6). 
+Propagating body literal as false
+PropagateAtLevel0 6
+Conflict detected at level 0
+Violated constraint
+p_2(3,1). Conflict detected at level 0
+Violated constraint
+p_2(3,3). PropagateAtLevel0 7
+PropagateAtLevel0 8
+PropagateAtLevel0 9
+PropagateAtLevel0 10
+PropagateAtLevel0 11
+End intial propagation
+c |  Number of variables:            14                                                                   |
+c |  Number of clauses:               0                                                                   |
+c |  Parse time:                   0.00 s                                                                 |
+c |                                                                                                       |
+c |                                                                                                       |
+c =========================================================================================================
+Solved by simplification
+c restarts              : 0 (0 conflicts in avg)
+c blocked restarts      : 0 (multiple: 0) 
+c last block at restart : 0
+c nb ReduceDB           : 0
+c nb removed Clauses    : 0
+c average learnt size   : 0
+c nb learnts DL2        : 0
+c nb learnts size 2     : 0
+c nb learnts size 1     : 0
+c conflicts             : 0              (0 /sec)
+c decisions             : 0              ( nan % random) (0 /sec)
+c propagations          : 12             (6386 /sec)
+c nb reduced Clauses    : 0
+c LCM                   : 0 / 0 
+c CPU time              : 0.001879 s
+
+s UNSATISFIABLE
+Destroying propagators

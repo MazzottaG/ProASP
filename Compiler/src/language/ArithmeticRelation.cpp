@@ -38,7 +38,7 @@ using namespace std;
 
 std::map<aspc::ComparisonType, std::string> aspc::ArithmeticRelation::comparisonType2String = {
     {GT, ">"},
-    {EQ, "="},
+    {EQ, "=="},
     {LT, "<"},
     {GTE, ">="},
     {LTE, "<="},
