@@ -319,7 +319,6 @@ int main(int argc, char** argv)
             }            
             std::cout << "propagate at level 0"<<std::endl;
             Propagator::getInstance().propagateAtLevel0(solver,lits);
-            TupleFactory::getInstance().printAvgWatcherSize(ConstantsManager::getInstance().mapConstant("g"));
         }
         std::cout << "End intial propagation"<<std::endl;        
         if (S.verbosity > 0){
