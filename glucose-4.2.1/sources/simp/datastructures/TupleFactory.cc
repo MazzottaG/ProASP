@@ -18,3 +18,4 @@
 #include "TupleFactory.h"
 
 TupleLight TupleFactory::bufferTuple;
+std::vector<AbstractPropagator*> TupleFactory::EMPTY_WATCHER;

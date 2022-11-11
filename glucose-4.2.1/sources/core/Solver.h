@@ -370,7 +370,6 @@ protected:
 
     // External Propagator
     vec<Lit> reasonClause;
-    std::unordered_map<int,std::pair<CRef,int>> literalToClause;
     int conflictLiteral;
 
     // UPDATEVARACTIVITY trick (see competition'09 companion paper)

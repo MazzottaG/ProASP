@@ -443,7 +443,9 @@ bool Solver::addClause_(vec <Lit> &ps) {
         return ok = false;
     else if(ps.size() == 1) {
         uncheckedEnqueue(ps[0]);
-        // std::cout << "propagate from addClause"<<std::endl;
+        #ifdef DEBUG_PROP
+        std::cout << "propagate from addClause"<<std::endl;
+        #endif
         return ok = (propagate() == CRef_Undef);
     } else {
         CRef cr = ca.alloc(ps, false);
@@ -457,7 +459,9 @@ bool Solver::addClause_(vec <Lit> &ps) {
 
 
 void Solver::attachClause(CRef cr) {
+    #ifdef DEBUG_PROP
     std::cout << "Attach Clause ";printClause(cr);std::cout << std::endl;
+    #endif
     const Clause &c = ca[cr];
 
     assert(c.size() > 1);
@@ -609,11 +613,10 @@ void Solver::cancelUntil(int level) {
         for(int c = trail.size() - 1; c >= trail_lim[level]; c--) {
             Var x = var(trail[c]);
             assigns[x] = l_Undef;
-            std::cout << "Unrolling "<<x<<std::endl;
-            int lit = x;
-            literalToClause.erase(lit);
-            literalToClause.erase(-lit);
-            Propagator::getInstance().unrollLiteral(x);
+            #ifdef DEBUG_PROP
+            std::cout << "DEBUG:   Unrolling ";AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(x));std::cout<<std::endl;
+            #endif
+            // Propagator::getInstance().unrollLiteral(x);
             
             if(phase_saving > 1 || ((phase_saving == 1) && c > trail_lim.last())) {
                 polarity[x] = sign(trail[c]);
@@ -697,11 +700,15 @@ void Solver::analyze(CRef confl, vec <Lit> &out_learnt, vec <Lit> &selectors, in
     //
     out_learnt.push(); // (leave room for the asserting literal)
     int index = trail.size() - 1;
+    #ifdef DEBUG_PROP
     std::cout << "Analyzing conflict "; printClause(confl);
+    #endif
     do {
         if(p != lit_Undef){
             int lit = !sign(p) ? var(p): -var(p); 
+            #ifdef DEBUG_PROP
             std::cout << "Navigating "<<var(p)<< (!sign(p) ? " true" : " false")<<std::endl;
+            #endif
         }
         assert(confl != CRef_Undef); // (otherwise should be UIP)
         Clause &c = ca[confl];
@@ -963,7 +970,9 @@ void Solver::analyzeFinal(Lit p, vec <Lit> &out_conflict) {
 
 
 void Solver::uncheckedEnqueue(Lit p, CRef from) {
+    #ifdef DEBUG_PROP
     std::cout << "uncheckedEnqueue " << var(p) << (!sign(p) ? " true" : " false");if(from != CRef_Undef) printClause(from); std::cout << std::endl;
+    #endif
     assert(value(p) == l_Undef);
     assigns[var(p)] = lbool(!sign(p));
     vardata[var(p)] = mkVarData(from, decisionLevel());
@@ -1000,7 +1009,10 @@ CRef Solver::propagate() {
         int lit = !sign(p) ? var(p): -var(p); 
         if(var(p)>0){
             conflictLiteral=-1;
-            confl = Propagator::getInstance().propagateLiteral(this,lits,lit);
+            #ifdef DEBUG_PROP
+            std::cout << "Propagate ";AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(var(p)));std::cout << std::endl;
+            #endif
+            // confl = Propagator::getInstance().propagateLiteral(this,lits,lit);
         }
             
         if(confl != CRef_Undef){
@@ -1022,7 +1034,6 @@ CRef Solver::propagate() {
             }
 
             if(value(imp) == l_Undef) {
-                std::cout << "propagate from bin watched" << std::endl;
                 uncheckedEnqueue(imp, wbin[k].cref);
             }
         }
@@ -1101,10 +1112,7 @@ CRef Solver::propagate() {
                 while(i < end)
                     *j++ = *i++;
             } else {
-                std::cout << "Propagate unit clause under assignment"<<std::endl;
                 uncheckedEnqueue(first, cr);
-
-
             }
             NextClause:;
         }
@@ -1222,10 +1230,9 @@ CRef Solver::propagateUnaryWatches(Lit p) {
 
 
 void Solver::reduceDB() {
-
     int i, j;
     stats[nbReduceDB]++;
-
+    std::cout << "reduceDB" <<std::endl;
     if (!chanseokStrategy) { // We will use the LBD, but keep 10% of the best active clauses
       sort(learnts, reduceDBAct_lt(ca));
       for(int i=learnts.size()*90/100;i<learnts.size();i++) {
@@ -1264,14 +1271,13 @@ void Solver::reduceDB() {
         }
     }
     learnts.shrink(i - j);
-
+    std::cout << "End reduce db"<<std::endl;
 
     checkGarbage();
 }
 
 
 void Solver::removeSatisfied(vec <CRef> &cs) {
-
     int i, j;
     for(i = j = 0; i < cs.size(); i++) {
         Clause &c = ca[cs[i]];
@@ -1288,6 +1294,7 @@ void Solver::removeSatisfied(vec <CRef> &cs) {
             cs[j++] = cs[i];
     }
     cs.shrink(i - j);
+    
 }
 
 
@@ -1483,12 +1490,15 @@ lbool Solver::search(int nof_conflicts) {
                 return l_False;
 
         }
+        #ifdef DEBUG_PROP
         std::cout << "PropagateFromSearch"<<std::endl;
+        #endif
         CRef confl = propagate();
 
         if(confl != CRef_Undef) {
+            #ifdef DEBUG_PROP
             std::cout << "Conflict detected into solver" <<std::endl;
-
+            #endif
             newDescent = false;
             if(parallelJobIsFinished())
                 return l_Undef;
@@ -1552,7 +1562,9 @@ lbool Solver::search(int nof_conflicts) {
 
 
             if(learnt_clause.size() == 1) {
+                #ifdef DEBUG_PROP
                 std::cout << "Propagate learnt unit clause"<<std::endl;
+                #endif
                 uncheckedEnqueue(learnt_clause[0]);
                 stats[nbUn]++;
                 parallelExportUnaryClause(learnt_clause[0]);
@@ -1567,7 +1579,9 @@ lbool Solver::search(int nof_conflicts) {
                     ca[cr].setLBD(nblevels);
                     ca[cr].setOneWatched(false);
                     learnts.push(cr);
+                    #ifdef DEBUG_PROP
                     std::cout << "Learnt ";printClause(cr);
+                    #endif
                     claBumpActivity(ca[cr]);
                 }
 #ifdef INCREMENTAL
@@ -1580,7 +1594,9 @@ lbool Solver::search(int nof_conflicts) {
 
 
                 parallelExportClauseDuringSearch(ca[cr]);
+                #ifdef DEBUG_PROP
                 std::cout << "Propagate first lit of learnt clause"<<std::endl;
+                #endif
                 uncheckedEnqueue(learnt_clause[0], cr);
 
             }
@@ -1658,7 +1674,9 @@ lbool Solver::search(int nof_conflicts) {
             // Increase decision level and enqueue 'next'
             aDecisionWasMade = true;
             newDecisionLevel();
+            #ifdef DEBUG_PROP
             std::cout << "Propagate new choice"<<std::endl;
+            #endif
             uncheckedEnqueue(next);
         }
     }
@@ -2032,16 +2050,25 @@ void Solver::parallelImportClauseDuringConflictAnalysis(Clause &, CRef ) {
 CRef Solver::storeConflictClause(){
     vec<Lit> lits;
     addClause_(lits);
+    #ifdef DEBUG_PROP
     std::cout << "Warning violated constraint into propagators"<<std::endl;
+    #endif
     return CRef_Undef;
 }
 // External propagation
 CRef Solver::externalPropagation(Var var, bool negated){
     int literal = negated ? -var : var;
-    CRef propagationClause = storePropagatorReason(literal);
+    CRef propagationClause = CRef_Undef;
+    if(value(var) == l_Undef || toInt(value(var)) != negated){
+        propagationClause = storePropagatorReason(literal);
+    }
+
+    #ifdef DEBUG_PROP
+    std::cout << "   External Propagation "<<literal;AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(var));std::cout << std::endl;
+    #endif
     if(value(var) != l_Undef && toInt(value(var)) != negated){
         //conflict detected
-        printf("External propagation of already assigned literal\n");
+        // printf("External propagation of already assigned literal\n");
         conflictLiteral=literal;
         return propagationClause;
     }else if(value(var) == l_Undef)
@@ -2051,29 +2078,46 @@ CRef Solver::externalPropagation(Var var, bool negated){
 
 CRef Solver::storePropagatorReason(int literal){
 
-    auto it = literalToClause.find(literal);
-    if(it == literalToClause.end()){
-        unsigned v = literal > 0 ? literal : -literal;
-        assert(var(reasonClause[reasonClause.size()-1]) == v);
-        std::swap(reasonClause[1],reasonClause[reasonClause.size()-1]);
-        std::swap(reasonClause[0],reasonClause[1]);
+    unsigned v = literal > 0 ? literal : -literal;
+    assert(var(reasonClause[reasonClause.size()-1]) == v);
+    std::swap(reasonClause[1],reasonClause[reasonClause.size()-1]);
+    std::swap(reasonClause[0],reasonClause[1]);
 
-        CRef cr = ca.alloc(reasonClause, true);
-        literalToClause[literal]=std::make_pair(cr,learnts.size());
+    CRef cr ;
+    int nblevels=computeLBD(reasonClause);
+    if(chanseokStrategy && nblevels <= coLBDBound) {
+        cr = ca.alloc(reasonClause, false);
+        permanentLearnts.push(cr);
+        stats[nbPermanentLearnts]++;
+    } else {
+        cr = ca.alloc(reasonClause, true);
+        ca[cr].setLBD(nblevels);
+        ca[cr].setOneWatched(false);
         learnts.push(cr);
-        attachClause(cr);
-        lastLearntClause = cr; // Use in multithread (to hard to put inside ParallelSolver)
-        parallelExportClauseDuringSearch(ca[cr]);
+        #ifdef DEBUG_PROP
+        std::cout << "Learnt ";printClause(cr);
+        #endif
         claBumpActivity(ca[cr]);
-        
-        printf("Adding clause");
-        for(int i=0;i<reasonClause.size(); i++){
-            printf(" %d",sign(reasonClause[i]) ? -var(reasonClause[i]) : var(reasonClause[i]));        
-        }
-        printf(" 0\n");
-        return cr;
     }
-    return it->second.first;
+    #ifdef INCREMENTAL
+        ca[cr].setSizeWithoutSelectors(szWithoutSelectors);
+    #endif
+    if(nblevels <= 2) { stats[nbDL2]++; } // stats
+    if(ca[cr].size() == 2) stats[nbBin]++; // stats
+    attachClause(cr);
+    lastLearntClause = cr; // Use in multithread (to hard to put inside ParallelSolver)
+
+
+    parallelExportClauseDuringSearch(ca[cr]);
+
+    #ifdef DEBUG_PROP
+    printf("Adding clause");
+    for(int i=0;i<reasonClause.size(); i++){
+        printf(" %d",sign(reasonClause[i]) ? -var(reasonClause[i]) : var(reasonClause[i]));        
+    }
+    printf(" 0\n");
+    #endif
+    return cr;
     
 }
 void Solver::addLiteralToReason(Var var, bool negated){

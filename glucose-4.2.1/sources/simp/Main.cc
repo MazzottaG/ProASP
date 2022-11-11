@@ -289,7 +289,7 @@ int main(int argc, char** argv)
         }
 
         FILE* res = (argc >= 3) ? fopen(argv[argc-1], "wb") : NULL;
-        if(false /* !ASP */){
+        if(true /* !ASP */){
             
             parse_DIMACS(in, S);
             gzclose(in);
@@ -309,8 +309,9 @@ int main(int argc, char** argv)
             
             std::cout << "Added 0"<<std::endl;
             for(unsigned id : facts){
+                #ifdef DEBUG_PROP
                 std::cout << "Adding facts in glucose"<<std::endl;
-            
+                #endif
                 while (id >= solver->nVars()) solver->newVar();
                 lits.clear();
                 lits.push( mkLit(id));
@@ -318,6 +319,7 @@ int main(int argc, char** argv)
             }            
             std::cout << "propagate at level 0"<<std::endl;
             Propagator::getInstance().propagateAtLevel0(solver,lits);
+            TupleFactory::getInstance().printAvgWatcherSize(ConstantsManager::getInstance().mapConstant("g"));
         }
         std::cout << "End intial propagation"<<std::endl;        
         if (S.verbosity > 0){

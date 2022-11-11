@@ -80,7 +80,9 @@ void GeneratorCompiler::buildComponentGenerator(int componentId){
                     outfile << --ind << "} else std::cout << \"Warning null tuple in generation stack\"<<std::endl;\n";
                 outfile << --ind << "}\n";
             }
+            #ifdef DEBUG_GEN
             outfile << ind << "std::cout << \"Generator "<<className<<"\"<<std::endl;\n";
+            #endif
         outfile << --ind << "}\n";
     ind--;
     outfile << --ind << "};\n";
@@ -188,7 +190,9 @@ void GeneratorCompiler::compileComponentRules(std::ofstream& outfile,Indentation
         outfile << "}, AuxMapHandler::getInstance().get_"<<atom->getPredicateName()<<"());\n";
         outfile << ind << "const auto& insertResult = head_"<<index<<"->setStatus(Undef);\n";
         outfile << ind++ << "if(insertResult.second){\n";
+            #ifdef DEBUG_GEN
             outfile << ind << "std::cout << \"Added tuple \";AuxMapHandler::getInstance().printTuple(head_"<<index<<");\n";
+            #endif
             outfile << ind << "TupleFactory::getInstance().removeFromCollisionsList(head_"<<index<<"->getId());\n";
             outfile << ind << "AuxMapHandler::getInstance().insertUndef(insertResult);\n";
             outfile << ind << "while (head_"<<index<<"->getId() >= solver->nVars()) solver->newVar();\n";

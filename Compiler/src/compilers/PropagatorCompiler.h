@@ -15,6 +15,7 @@ class PropagatorCompiler{
         void compile();
         void buildAuxMapHandler();
         void compileRuleLevelZero(unsigned ruleId,std::ofstream&,Indentation&);
+        void compileRuleWatcher(unsigned ruleId,std::ofstream&,Indentation&);
         void compileRuleFromStarter(unsigned ruleId, std::ofstream&, Indentation&);
         void printTuplePropagation(std::ofstream& outfile,Indentation& ind, std::string tuple,bool asFalse,bool level0 ,bool constraint = false);
         void printConflict(std::ofstream& outfile,Indentation& ind, bool level0);

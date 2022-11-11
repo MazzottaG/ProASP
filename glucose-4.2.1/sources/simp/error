@@ -1,1 +1,0 @@
-Assertion failed: (confl != CRef_Undef), function analyze, file Solver.cc, line 696.

@@ -5,7 +5,10 @@ void PropagatorCompiler::compileRuleFromStarter(unsigned ruleId, std::ofstream& 
     outfile << ind++ << "Glucose::CRef propagate(Glucose::Solver* solver,Glucose::vec<Glucose::Lit>& lits,int literal) override {\n";
     outfile << ind << "Tuple* starter = TupleFactory::getInstance().getTupleFromInternalID( literal > 0 ? literal : -literal);\n";
     outfile << ind << "if(starter == NULL){if(literal != 0){std::cout << \"Error: unable to find starting literal\" <<std::endl; exit(180);}}\n";
+    #ifdef DEBUG_PROP
     outfile << ind << "std::cout << \"Propagator "<<ruleId<<": Propagating \"<<literal << \" \"; AuxMapHandler::getInstance().printTuple(starter); std::cout << std::endl;\n";
+    #endif
+
     outfile << ind++ << "if(starter->isUndef()){\n";
         outfile << ind << "const auto& insertResult = starter->setStatus(literal > 0 ? True : False);\n";
         outfile << ind++ << "if(insertResult.second){\n";
@@ -55,11 +58,15 @@ void PropagatorCompiler::compileRuleFromStarter(unsigned ruleId, std::ofstream& 
                                     outfile << ind << "solver->clearReasonClause();\n";
                                     outfile << ind << "solver->addLiteralToReason(literal,true);\n";
                                     outfile << ind << "solver->addLiteralToReason(boundBody->getId(),true);\n";
+                                    #ifdef DEBUG_PROP
                                     outfile << ind << "std::cout << \"True head for false literal false\"<<std::endl;\n";
+                                    #endif
                                     printConflict(outfile,ind,false);
                                 outfile << --ind << "}\n";
                                 outfile << ind++ << "else if(boundBody != NULL && boundBody->isUndef()){\n";
+                                    #ifdef DEBUG_PROP
                                     outfile << ind << "std::cout << \"True head for false literal undefined\"<<std::endl;\n";
+                                    #endif
                                     outfile << ind << "solver->clearReasonClause();\n";
                                     outfile << ind << "solver->addLiteralToReason(literal,true);\n";
                                     printTuplePropagation(outfile,ind,"boundBody",true,false);
@@ -67,14 +74,18 @@ void PropagatorCompiler::compileRuleFromStarter(unsigned ruleId, std::ofstream& 
                                 
                             }else{
                                 outfile << ind++ << "if(boundBody == NULL || boundBody->isFalse()){\n";
+                                    #ifdef DEBUG_PROP
                                     outfile << ind << "std::cout << \"True head for bound positive literal false\"<<std::endl;\n";
+                                    #endif
                                     outfile << ind << "solver->clearReasonClause();\n";
                                     outfile << ind << "solver->addLiteralToReason(literal,true);\n";
                                     outfile << ind << "if(boundBody != NULL) solver->addLiteralToReason(boundBody->getId(),false);\n";
                                     printConflict(outfile,ind,false);
                                 outfile << --ind << "}\n";
                                 outfile << ind++ << "else if(boundBody != NULL && boundBody->isUndef()){\n";
+                                    #ifdef DEBUG_PROP
                                     outfile << ind << "std::cout << \"True head for bound positive literal undefined\"<<std::endl;\n";
+                                    #endif
                                     outfile << ind << "solver->clearReasonClause();\n";
                                     outfile << ind << "solver->addLiteralToReason(literal,true);\n";
                                     printTuplePropagation(outfile,ind,"boundBody",false,false);
@@ -86,14 +97,18 @@ void PropagatorCompiler::compileRuleFromStarter(unsigned ruleId, std::ofstream& 
                             if(lit->isNegated()){
                                 // false head and negative body literal
                                 outfile << ind++ << "if(boundBody == NULL || boundBody->isFalse()){\n";
+                                    #ifdef DEBUG_PROP
                                     outfile << ind << "std::cout << \"False head for negative literal true\"<<std::endl;\n";
+                                    #endif
                                     outfile << ind << "solver->clearReasonClause();\n";
                                     outfile << ind << "solver->addLiteralToReason(-literal,false);\n";
                                     outfile << ind << "if(boundBody != NULL) solver->addLiteralToReason(boundBody->getId(),false);\n";
                                     printConflict(outfile,ind,false);
                                 outfile << --ind << "}\n";
                                 outfile << ind++ << "else if(boundBody != NULL && boundBody->isUndef()){\n";
+                                    #ifdef DEBUG_PROP
                                     outfile << ind << "std::cout << \"False head for negative literal undefined\"<<std::endl;\n";
+                                    #endif
                                     outfile << ind << "solver->clearReasonClause();\n";
                                     outfile << ind << "solver->addLiteralToReason(-literal,false);\n";
                                     printTuplePropagation(outfile,ind,"boundBody",false,false);
@@ -101,14 +116,18 @@ void PropagatorCompiler::compileRuleFromStarter(unsigned ruleId, std::ofstream& 
                             }else{
                                 // false head and positive body literal
                                 outfile << ind++ << "if(boundBody != NULL && boundBody->isTrue()){\n";
+                                    #ifdef DEBUG_PROP
                                     outfile << ind << "std::cout << \"False head for bound positive literal true\"<<std::endl;\n";
+                                    #endif
                                     outfile << ind << "solver->clearReasonClause();\n";
                                     outfile << ind << "solver->addLiteralToReason(-literal,false);\n";
                                     outfile << ind << "solver->addLiteralToReason(boundBody->getId(),true);\n";
                                     printConflict(outfile,ind,false);
                                 outfile << --ind << "}\n";
                                 outfile << ind++ << "else if(boundBody != NULL && boundBody->isUndef()){\n";
+                                    #ifdef DEBUG_PROP
                                     outfile << ind << "std::cout << \"False head for bound positive literal undefined\"<<std::endl;\n";
+                                    #endif
                                     outfile << ind << "solver->clearReasonClause();\n";
                                     outfile << ind << "solver->addLiteralToReason(-literal,false);\n";
                                     printTuplePropagation(outfile,ind,"boundBody",true,false);
@@ -136,7 +155,9 @@ void PropagatorCompiler::compileRuleFromStarter(unsigned ruleId, std::ofstream& 
                         outfile << ind++ << "if(literal > 0){\n";
                         // head is true
                             outfile << ind++ << "if(bodyTuplesU->size()+bodyTuplesP->size() == 0){\n";
+                                #ifdef DEBUG_PROP
                                 outfile << ind << "std::cout << \"True head for no positive literal true/undefined\"<<std::endl;\n";
+                                #endif
                                 outfile << ind << "solver->clearReasonClause();\n";
                                 outfile << ind << "solver->addLiteralToReason(literal,true);\n";
                                 outfile << ind << "const std::vector<int>* bodyTuplesF = &"<<prefix<<"f"<<mapName<<"()->getValuesVec({"<<terms<<"});\n";
@@ -148,7 +169,9 @@ void PropagatorCompiler::compileRuleFromStarter(unsigned ruleId, std::ofstream& 
                                 outfile << ind << "Tuple* tupleU = TupleFactory::getInstance().getTupleFromInternalID(bodyTuplesU->at(0));\n";
                                 outfile << ind << "if(tupleU == NULL){ std::cout << \"Error: Unable to find tuple to propagate\"<<std::endl; exit(180);}\n";
                                 outfile << ind++ << "else{\n";
+                                    #ifdef DEBUG_PROP
                                     outfile << ind << "std::cout << \"True head for last positive literal undefined\"<<std::endl;\n";
+                                    #endif
                                     outfile << ind << "solver->clearReasonClause();\n";
                                     outfile << ind << "solver->addLiteralToReason(literal,true);\n";
                                     outfile << ind << "const std::vector<int>* bodyTuplesF = &"<<prefix<<"f"<<mapName<<"()->getValuesVec({"<<terms<<"});\n";
@@ -161,7 +184,9 @@ void PropagatorCompiler::compileRuleFromStarter(unsigned ruleId, std::ofstream& 
                         // head is false
                             outfile << ind++ << "if(bodyTuplesP->size() > 0){\n";
                                 //TODO Fix reason calculus
+                                #ifdef DEBUG_PROP
                                 outfile << ind << "std::cout << \"False head for positive literal true\"<<std::endl;\n";
+                                #endif
                                 outfile << ind << "solver->clearReasonClause();\n";
                                 outfile << ind << "solver->addLiteralToReason(-literal,false);\n";
                                 outfile << ind << "solver->addLiteralToReason(bodyTuplesP->at(0),true);\n";
@@ -173,7 +198,9 @@ void PropagatorCompiler::compileRuleFromStarter(unsigned ruleId, std::ofstream& 
                                     outfile << ind << "Tuple* tupleU = TupleFactory::getInstance().getTupleFromInternalID(bodyTuplesU->at(i));\n";
                                     outfile << ind << "if(tupleU == NULL){ std::cout << \"Error: Unable to find tuple to propagate\"<<std::endl; exit(180);}\n";
                                     outfile << ind++ << "else{\n";
+                                        #ifdef DEBUG_PROP
                                         outfile << ind << "std::cout << \"False head for positive literals undefined\"<<std::endl;\n";
+                                        #endif
                                         outfile << ind << "solver->clearReasonClause();\n";
                                         outfile << ind << "solver->addLiteralToReason(-literal,false);\n";
                                         printTuplePropagation(outfile,ind,"tupleU",true,false);
@@ -224,14 +251,18 @@ void PropagatorCompiler::compileRuleFromStarter(unsigned ruleId, std::ofstream& 
                         outfile << ind++ << "if(literal > 0){\n";
                             //body is false
                             outfile << ind++ << "if(head != NULL && head->isTrue()){\n";
+                                #ifdef DEBUG_PROP
                                 outfile << ind << "std::cout << \"True head for negative literal false\"<<std::endl;\n";
+                                #endif
                                 outfile << ind << "solver->clearReasonClause();\n";
                                 outfile << ind << "solver->addLiteralToReason(literal,true);\n";
                                 outfile << ind << "solver->addLiteralToReason(head->getId(),true);\n";
                                 printConflict(outfile,ind,false);
                             outfile << --ind << "}\n";
                             outfile << ind++ << "else if(head != NULL && head->isUndef()){\n";
+                                #ifdef DEBUG_PROP
                                 outfile << ind << "std::cout << \"Undef head for negative literal false\"<<std::endl;\n";
+                                #endif
                                 outfile << ind << "solver->clearReasonClause();\n";
                                 outfile << ind << "solver->addLiteralToReason(literal,true);\n";
                                 printTuplePropagation(outfile,ind,"head",true,false);
@@ -240,14 +271,18 @@ void PropagatorCompiler::compileRuleFromStarter(unsigned ruleId, std::ofstream& 
                         outfile << ind++ << "else{\n";
                             //body is true
                             outfile << ind++ << "if(head == NULL || head->isFalse()){\n";
+                                #ifdef DEBUG_PROP
                                 outfile << ind << "std::cout << \"False head for negative literal true\"<<std::endl;\n";
+                                #endif
                                 outfile << ind << "solver->clearReasonClause();\n";
                                 outfile << ind << "solver->addLiteralToReason(-literal,false);\n";
                                 outfile << ind << "if(head != NULL) solver->addLiteralToReason(head->getId(),false);\n";
                                 printConflict(outfile,ind,false);
                             outfile << --ind << "}\n";
                             outfile << ind++ << "else if(head != NULL && head->isUndef()){\n";
+                                #ifdef DEBUG_PROP
                                 outfile << ind << "std::cout << \"Undef head for negative literal true\"<<std::endl;\n";
+                                #endif
                                 outfile << ind << "solver->clearReasonClause();\n";
                                 outfile << ind << "solver->addLiteralToReason(-literal,false);\n";
                                 printTuplePropagation(outfile,ind,"head",false,false);
@@ -258,14 +293,18 @@ void PropagatorCompiler::compileRuleFromStarter(unsigned ruleId, std::ofstream& 
                         outfile << ind++ << "if(literal > 0){\n";
                             //body is true
                             outfile << ind++ << "if(head == NULL || head->isFalse()){\n";
+                                #ifdef DEBUG_PROP
                                 outfile << ind << "std::cout << \"False head for positive literal true\"<<std::endl;\n";
+                                #endif
                                 outfile << ind << "solver->clearReasonClause();\n";
                                 outfile << ind << "solver->addLiteralToReason(literal,true);\n";
                                 outfile << ind << "if(head != NULL) solver->addLiteralToReason(head->getId(),false);\n";
                                 printConflict(outfile,ind,false);
                             outfile << --ind << "}\n";
                             outfile << ind++ << "else if(head != NULL && head->isUndef()){\n";
+                                #ifdef DEBUG_PROP
                                 outfile << ind << "std::cout << \"Undef head for positive literal true\"<<std::endl;\n";
+                                #endif
                                 outfile << ind << "solver->clearReasonClause();\n";
                                 outfile << ind << "solver->addLiteralToReason(literal,true);\n";
                                 printTuplePropagation(outfile,ind,"head",false,false);
@@ -274,14 +313,18 @@ void PropagatorCompiler::compileRuleFromStarter(unsigned ruleId, std::ofstream& 
                         outfile << ind++ << "else{\n";
                             //body is false
                             outfile << ind++ << "if(head != NULL && head->isTrue()){\n";
+                                #ifdef DEBUG_PROP
                                 outfile << ind << "std::cout << \"True head for positive literal false\"<<std::endl;\n";
+                                #endif
                                 outfile << ind << "solver->clearReasonClause();\n";
                                 outfile << ind << "solver->addLiteralToReason(-literal,false);\n";
                                 outfile << ind << "solver->addLiteralToReason(head->getId(),true);\n";
                                 printConflict(outfile,ind,false);
                             outfile << --ind << "}\n";
                             outfile << ind++ << "else if(head != NULL && head->isUndef()){\n";
+                                #ifdef DEBUG_PROP
                                 outfile << ind << "std::cout << \"Undef head for positive literal false\"<<std::endl;\n";
+                                #endif
                                 outfile << ind << "solver->clearReasonClause();\n";
                                 outfile << ind << "solver->addLiteralToReason(-literal,false);\n";
                                 printTuplePropagation(outfile,ind,"head",true,false);
@@ -306,8 +349,10 @@ void PropagatorCompiler::compileRuleFromStarter(unsigned ruleId, std::ofstream& 
                         outfile << ind++ << "if(literal > 0){\n";
                             //body is true
                             outfile << ind++ << "if(head == NULL || head->isFalse()){\n";
+                                #ifdef DEBUG_PROP
                                 outfile << ind << "std::cout << \"True body for false head\"<<std::endl;\n";
-
+                                #endif
+                                    
                                 outfile << ind << "solver->clearReasonClause();\n";
                                 outfile << ind << "solver->addLiteralToReason(literal,true);\n";
                                 outfile << ind << "if(head != NULL) solver->addLiteralToReason(head->getId(),false);\n";
@@ -315,8 +360,10 @@ void PropagatorCompiler::compileRuleFromStarter(unsigned ruleId, std::ofstream& 
                                 printConflict(outfile,ind,false);
                             outfile << --ind << "}\n";
                             outfile << ind++ << "else if(head != NULL && head->isUndef()){\n";
+                                #ifdef DEBUG_PROP
                                 outfile << ind << "std::cout << \"True body for undefined head\"<<std::endl;\n";
-
+                                #endif
+                                    
                                 outfile << ind << "solver->clearReasonClause();\n";
                                 outfile << ind << "solver->addLiteralToReason(literal,true);\n";
                                 printTuplePropagation(outfile,ind,"head",false,false);
@@ -328,7 +375,9 @@ void PropagatorCompiler::compileRuleFromStarter(unsigned ruleId, std::ofstream& 
                                 //head is true
                                 outfile << ind++ << "if(bodyTuplesU->size() == 0 && bodyTuplesP->size() == 0){\n";
                                     // no other body for head
+                                    #ifdef DEBUG_PROP
                                     outfile << ind << "std::cout << \"No remaining body for true head\"<<std::endl;\n";
+                                    #endif
                                     outfile << ind << "solver->clearReasonClause();\n";
                                     outfile << ind << "solver->addLiteralToReason(-literal,false);\n";
                                     outfile << ind << "solver->addLiteralToReason(head->getId(),true);\n";
@@ -341,7 +390,9 @@ void PropagatorCompiler::compileRuleFromStarter(unsigned ruleId, std::ofstream& 
                                     outfile << ind << "Tuple* tupleU = TupleFactory::getInstance().getTupleFromInternalID(bodyTuplesU->at(0));\n";
                                     outfile << ind << "if(tupleU == NULL){ std::cout << \"Error: Unable to find tuple to propagate\"<<std::endl; exit(180);}\n";
                                     outfile << ind++ << "else{\n";
+                                        #ifdef DEBUG_PROP
                                         outfile << ind << "std::cout << \"Last remaining body for true head\"<<std::endl;\n";
+                                        #endif
                                         outfile << ind << "const std::vector<int>* bodyTuplesF = &"<<prefix<<"f"<<mapName<<"()->getValuesVec({"<<terms<<"});\n";
                                         outfile << ind << "solver->clearReasonClause();\n";
                                         outfile << ind << "solver->addLiteralToReason(-literal,false);\n"; 
@@ -353,8 +404,10 @@ void PropagatorCompiler::compileRuleFromStarter(unsigned ruleId, std::ofstream& 
                                 
                             outfile << --ind << "}\n";
                             outfile << ind++ << "else if(head != NULL && head->isUndef() && bodyTuplesU->size() == 0 && bodyTuplesP->size() == 0){\n";
+                                #ifdef DEBUG_PROP
                                 outfile << ind << "std::cout << \"No remaining body for undefined head\"<<std::endl;\n";
-
+                                #endif
+                                    
                                 outfile << ind << "const std::vector<int>* bodyTuplesF = &"<<prefix<<"f"<<mapName<<"()->getValuesVec({"<<terms<<"});\n";
                                 outfile << ind << "solver->clearReasonClause();\n";
                                 outfile << ind << "solver->addLiteralToReason(-literal,false);\n"; 
@@ -380,7 +433,9 @@ void PropagatorCompiler::compileRuleFromStarter(unsigned ruleId, std::ofstream& 
             std::unordered_set<std::string> boundVars;
             
             outfile << ind++ << "if("<<(lit->isPositiveLiteral() ? "literal > 0" : "literal < 0")<<" && starter->getPredicateName() == AuxMapHandler::getInstance().get_"<< lit->getPredicateName() << "()){\n";
+                #ifdef DEBUG_PROP
                 outfile << ind << "std::cout << \" starter "<<i << "\"<<std::endl;\n";
+                #endif
                 if(rule.getSupportAtom() == i){
                     outfile << ind << "if(TupleFactory::getInstance().isFact(starter->getId())) return Glucose::CRef_Undef;\n";
                 }
@@ -467,8 +522,10 @@ void PropagatorCompiler::compileRuleFromStarter(unsigned ruleId, std::ofstream& 
                             outfile << ind << "const std::vector<int>* tuples_"<<index<<" = &AuxMapHandler::getInstance().get_p"<<mapName<<"()->getValuesVec({"<<terms<<"});\n";
                             outfile << ind++ << "for(unsigned i=0; i<tuples_"<<index<<"->size()+tuplesU_"<<index<<"->size()+repeatedTuples.size(); i++){\n";
                             closingPars++;
+                                #ifdef DEBUG_PROP
                                 outfile << ind << "std::cout << \" Evaluating "<<index<<"\" << i << \" \" << tuples_"<<index<<"->size()<<std::endl;\n";
-
+                                #endif
+                                    
                                 outfile << ind << "Tuple* tuple_"<<index<<"=NULL;\n";
                                 outfile << ind++ << "if(i < tuples_"<<index<<"->size()){\n";
                                     outfile << ind << "tuple_"<<index<<" = TupleFactory::getInstance().getTupleFromInternalID(tuples_"<<index<<"->at(i));\n";
@@ -502,7 +559,9 @@ void PropagatorCompiler::compileRuleFromStarter(unsigned ruleId, std::ofstream& 
                 }
                 outfile << ind << "solver->clearReasonClause();\n";
                 outfile << ind++ << "if(tupleU == NULL){\n";
+                    #ifdef DEBUG_PROP
                     outfile << ind << "std::cout << \"Violated constraint\"<<std::endl;\n";
+                    #endif
                     outfile << ind << "solver->addLiteralToReason(starter->getId(),literal > 0);\n";
                     outfile << ind << "AuxMapHandler::getInstance().printTuple(starter);\n";
                     for(unsigned index : ordering[i]){
@@ -512,13 +571,16 @@ void PropagatorCompiler::compileRuleFromStarter(unsigned ruleId, std::ofstream& 
                     }
                     printConflict(outfile,ind,false);
                 outfile << --ind << "}else{\n";
+                ind++;
                     outfile << ind << "solver->addLiteralToReason(starter->getId(),literal > 0);\n";
                     for(unsigned index : ordering[i]){
                         if(body->at(index)->isLiteral()){
                             outfile << ind << "if(tuple_"<<index<<" != NULL && tuple_"<<index<<"!=tupleU) solver->addLiteralToReason(tuple_"<<index<<"->getId(),"<<(body->at(index)->isPositiveLiteral() ? "true":"false")<<");\n";        
                         }
                     }
+                    #ifdef DEBUG_PROP
                     outfile << ind << "std::cout << \"last undefined for constraint\"<<std::endl;\n";
+                    #endif
                     printTuplePropagation(outfile,ind,"tupleU",false,false,true);
                 outfile << --ind << "}\n";
             while(closingPars > 0){
@@ -533,11 +595,15 @@ void PropagatorCompiler::compileRuleFromStarter(unsigned ruleId, std::ofstream& 
 }
 void PropagatorCompiler::printConflict(std::ofstream& outfile,Indentation& ind, bool level0){
     if(level0){
+        #ifdef DEBUG_PROP
         outfile << ind << "std::cout << \"Conflict detected at level 0\"<<std::endl;\n";
+        #endif
         outfile << ind << "lits.clear();\n";
         outfile << ind << "solver->addClause_(lits);\n";
     }else{
+        #ifdef DEBUG_PROP
         outfile << ind << "std::cout << \"Conflict detected in the solver\"<<std::endl;\n";
+        #endif
         outfile << ind << "return solver->storeConflictClause();\n";
     }
 }
@@ -558,16 +624,207 @@ void PropagatorCompiler::printTuplePropagation(std::ofstream& outfile,Indentatio
         outfile << ind++ << "if(clause != Glucose::CRef_Undef)\n";
             outfile << ind-- << "return clause;\n";
     }  
+    #ifdef DEBUG_PROP
     outfile << ind << "std::cout << \"Propagate \"<<var<<\" \"; AuxMapHandler::getInstance().printTuple("<<tuplename<<"); std::cout <<std::endl;\n";
+    #endif
     // outfile << ind << "s->addLiteralToReason(boundBody->getId(),"<<sign<<");\n";
     // outfile << ind << "Glucose::CRef clause = s->externalPropagation("<<tuplename<<"->getId(),"<<sign<<");\n";
     // outfile << ind++ << "if(clause != Glucose::CRef_Undef)\n";
     //     outfile << ind-- << "return clause;\n";
 }
+void PropagatorCompiler::compileRuleWatcher(unsigned ruleId,std::ofstream& outfile,Indentation& ind){
+    
+    outfile << ind++ << "virtual void attachWatched() override {\n";
+    #ifdef DEBUG_PROP
+    outfile << ind << "std::cout <<\"PropagateAtLevel0 "<<ruleId<<"\"<<std::endl;\n";
+    #endif
+    //0 means current propagator not added to watchList
+    //1 means current propagator added to positive literal watchList
+    //-1 means current propagator added to negative literal watchList
+    //2 means current propagator added to both positive and negative literal watchLists
+    outfile << ind << "std::vector<int> watched(TupleFactory::getInstance().size(),0);\n";
+    aspc::Rule rule = program.getRule(ruleId);
+    const std::vector<const aspc::Formula*>& body = rule.getFormulas();
+    if(!rule.isConstraint()){
+        //rules have body of lenght 1
+        if(!body[0]->isLiteral()){
+            std::cout << "Warning: Rule with only one arithmetic relation in the body"<<std::endl;
+        }else{
+            const aspc::Atom* head = &rule.getHead()[0];
+            const aspc::Literal* lit = (const aspc::Literal*) body[0];
+            outfile << "{\n";
+                outfile << ind << "const std::vector<int>* tuplesU = &AuxMapHandler::getInstance().get_u"<<head->getPredicateName()<<"_()->getValuesVec({});\n";
+                outfile << ind << "const std::vector<int>* tuplesF = &AuxMapHandler::getInstance().get_f"<<head->getPredicateName()<<"_()->getValuesVec({});\n";
+                outfile << ind << "const std::vector<int>* tuplesP = &AuxMapHandler::getInstance().get_p"<<head->getPredicateName()<<"_()->getValuesVec({});\n";
+                
+                std::unordered_set<std::string> boundVars;
+                outfile << ind++ << "for(int i = 0; i < tuplesP->size() + tuplesF->size() + tuplesU->size(); i++){\n";
+                
+                    int closingPars=0;
+                    outfile << ind << "int id = i < tuplesP->size() ? tuplesP->at(i) : (i < tuplesP->size()+tuplesF->size() ? tuplesF->at(i - tuplesP->size()) : tuplesU->at(i - tuplesP->size() - tuplesF->size()));\n";
+                    outfile << ind << "Tuple* tuple = TupleFactory::getInstance().getTupleFromInternalID(id);\n";
+                    for(unsigned k=0; k<head->getAriety(); k++){
+                        if(!head->isVariableTermAt(k) || boundVars.count(head->getTermAt(k))){
+                            std::string term = isInteger(head->getTermAt(k)) || head->isVariableTermAt(k) ? head->getTermAt(k) : "ConstantsManager::getInstance().mapConstant(\""+head->getTermAt(k)+"\")";
+                            outfile << ind++ << "if(tuple->at("<<k<<") == " << term << "){\n";
+                            closingPars++;
+                        }else{
+                            outfile << ind << "int "<<head->getTermAt(k) << " = tuple->at(" <<k<< ");\n"; 
+                            boundVars.insert(head->getTermAt(k));
+                        }
+                    }
+                        outfile << ind << "int& watchValue=watched[id];\n";
+                        outfile << ind++ << "if(watchValue != 2){\n";
+                            outfile << ind << "watchValue = 2;\n";
+                            outfile << ind++ << "if(watchValue != 1)\n";
+                                outfile << ind-- << "TupleFactory::getInstance().addWatcher(this,id,false);\n";
+                            outfile << ind++ << "if(watchValue != -1)\n";
+                                outfile << ind-- << "TupleFactory::getInstance().addWatcher(this,id,true);\n";
+                        outfile << --ind << "}\n";
+
+                    while(closingPars>0){
+                        outfile << --ind << "}\n";
+                        closingPars--;
+                    }
+                outfile << --ind << "}\n";
+            outfile << "}\n";
+
+            outfile << ind++ << "{\n";
+                outfile << ind << "const std::vector<int>* tuplesU = &AuxMapHandler::getInstance().get_u"<<lit->getPredicateName()<<"_()->getValuesVec({});\n";
+                outfile << ind << "const std::vector<int>* tuplesF = &AuxMapHandler::getInstance().get_f"<<lit->getPredicateName()<<"_()->getValuesVec({});\n";
+                outfile << ind << "const std::vector<int>* tuplesP = &AuxMapHandler::getInstance().get_p"<<lit->getPredicateName()<<"_()->getValuesVec({});\n";
+                
+                boundVars.clear();
+                outfile << ind++ << "for(int i = 0; i < tuplesP->size() + tuplesF->size() + tuplesU->size(); i++){\n";
+                
+                    closingPars=0;
+                    outfile << ind << "int id = i < tuplesP->size() ? tuplesP->at(i) : (i < tuplesP->size()+tuplesF->size() ? tuplesF->at(i - tuplesP->size()) : tuplesU->at(i - tuplesP->size() - tuplesF->size()));\n";
+                    outfile << ind << "Tuple* tuple = TupleFactory::getInstance().getTupleFromInternalID(id);\n";
+                    for(unsigned k=0; k<lit->getAriety(); k++){
+                        if(!lit->isVariableTermAt(k) || boundVars.count(lit->getTermAt(k))){
+                            std::string term = isInteger(lit->getTermAt(k)) || lit->isVariableTermAt(k) ? lit->getTermAt(k) : "ConstantsManager::getInstance().mapConstant(\""+lit->getTermAt(k)+"\")";
+                            outfile << ind++ << "if(tuple->at("<<k<<") == " << term << "){\n";
+                            closingPars++;
+                        }else{
+                            outfile << ind << "int "<<lit->getTermAt(k) << " = tuple->at(" <<k<< ");\n"; 
+                            boundVars.insert(lit->getTermAt(k));
+                        }
+                    }
+                        outfile << ind << "int& watchValue=watched[id];\n";
+                        outfile << ind++ << "if(watchValue != 2){\n";
+                            outfile << ind << "watchValue = 2;\n";
+                            outfile << ind++ << "if(watchValue != 1)\n";
+                                outfile << ind-- << "TupleFactory::getInstance().addWatcher(this,id,false);\n";
+                            outfile << ind++ << "if(watchValue != -1)\n";
+                                outfile << ind-- << "TupleFactory::getInstance().addWatcher(this,id,true);\n";
+                        outfile << --ind << "}\n";
+                        
+                    while(closingPars>0){
+                        outfile << --ind << "}\n";
+                        closingPars--;
+                    }
+                outfile << --ind << "}\n";
+            outfile << "}\n";
+        }
+    }else{
+        std::vector<unsigned> order = ruleOrdering[ruleId].first[body.size()];
+        std::unordered_set<std::string> boundVars;
+        outfile << ind++ << "{\n";
+        unsigned closingPars=1;
+            for(unsigned index : order){
+                const aspc::Formula* f = body[index];
+                if(f->isLiteral()){
+                    const aspc::Literal* lit = (const aspc::Literal*)f;
+                    if(lit->isBoundedLiteral(boundVars)){
+                        outfile << ind << "Tuple* boundTuple_"<<index<<"=TupleFactory::getInstance().find({";
+                        for(unsigned k=0; k<lit->getAriety(); k++){
+                            if(k>0) outfile << ",";
+                            outfile << (lit->isVariableTermAt(k) || isInteger(lit->getTermAt(k)) ? lit->getTermAt(k) : "ConstantsManager::getInstance().mapConstant(\""+lit->getTermAt(k)+"\")");
+                        }
+                        outfile << "}, AuxMapHandler::getInstance().get_"<<lit->getPredicateName()<<"());\n";
+                        if(lit->isNegated()){
+                            outfile << ind++ << "if(boundTuple_"<<index<<" == NULL || !boundTuple_"<<index<<"->isTrue()){\n";
+                        }else{
+                            outfile << ind++ << "if(boundTuple_"<<index<<" != NULL && !boundTuple_"<<index<<"->isFalse()){\n";
+                        }
+                        closingPars++;
+
+                        outfile << ind << "int id_"<<index<<" = boundTuple_"<<index<<" != NULL ? boundTuple_"<<index<<"->getId() : 0;\n";
+                        outfile << ind++ << "if(id_"<<index<<">0){\n";
+                            outfile << ind << "int& watchValue=watched[id_"<<index<<"];\n";
+                            if(lit->isNegated())
+                                outfile << ind++ << "if(watchValue != -1 && watchValue != 2){\n";
+                            else
+                                outfile << ind++ << "if(watchValue < 1){\n";
+
+                                outfile << ind << "watchValue = watchValue != 0 ? 2 : "<<(lit->isNegated() ? -1 : 1)<<";\n";
+                                outfile << ind << "TupleFactory::getInstance().addWatcher(this,id_"<<index<<","<<(lit->isNegated() ? "true" : "false")<<");\n";
+                            outfile << --ind << "}\n";
+                        outfile << --ind << "}\n";
+                    }else{
+                        std::string prefix = "AuxMapHandler::getInstance().get_";
+                        std::string mapName = lit->getPredicateName()+"_";
+                        std::string terms = "";
+                        std::unordered_set<int> boundIndices;
+
+                        for(unsigned k=0; k<lit->getAriety(); k++){
+                            if(!lit->isVariableTermAt(k) || boundVars.count(lit->getTermAt(k))){
+                                std::string term = lit->isVariableTermAt(k) || isInteger(lit->getTermAt(k)) ? lit->getTermAt(k) : "ConstantsManager::getInstance().mapConstant(\""+lit->getTermAt(k)+"\")";
+                                mapName+=std::to_string(k)+"_";
+                                terms += (terms != "" ? ","+term : term);
+                                boundIndices.insert(k);
+                            }
+                        }
+                        outfile << ind << "const std::vector<int>* tuplesU_"<<index<<" = &"<<prefix<<"u"<<mapName<<"()->getValuesVec({"<<terms<<"});\n";
+                        outfile << ind << "const std::vector<int>* tuples_"<<index<<" = &"<<prefix<<"p"<<mapName<<"()->getValuesVec({"<<terms<<"});\n";
+                        outfile << ind++ << "for(unsigned i=0; i<tuples_"<<index<<"->size()+tuplesU_"<<index<<"->size(); i++){\n";
+                        closingPars++;
+                            outfile << ind << "Tuple* tuple_"<<index<<"= i<tuples_"<<index<<"->size() ? TupleFactory::getInstance().getTupleFromInternalID(tuples_"<<index<<"->at(i)) : TupleFactory::getInstance().getTupleFromInternalID(tuplesU_"<<index<<"->at(i-tuples_"<<index<<"->size()));\n";
+                            outfile << ind++ << "if(tuple_"<<index<<"!= NULL){\n";
+                            closingPars++;
+                        for(unsigned k=0; k<lit->getAriety(); k++){
+                            if(lit->isVariableTermAt(k) && !boundIndices.count(k)){
+                                if(!boundVars.count(lit->getTermAt(k))){
+                                    outfile << ind << "int "<< lit->getTermAt(k)<< " = tuple_"<<index<<"->at("<<k<<");\n";
+                                    boundVars.insert(lit->getTermAt(k));
+                                }else{
+                                    outfile << ind++ << "if("<< lit->getTermAt(k)<< " == tuple_"<<index<<"->at("<<k<<")){\n";
+                                    closingPars++;
+                                }
+                            }
+                        }
+                        outfile << ind << "int id_"<<index<<" = tuple_"<<index<<"->getId();\n";
+                        outfile << ind << "int& watchValue=watched[id_"<<index<<"];\n";
+                        outfile << ind++ << "if(watchValue < 1){\n";
+                            outfile << ind << "watchValue = watchValue != 0 ? 2 : 1;\n";
+                            outfile << ind << "TupleFactory::getInstance().addWatcher(this,id_"<<index<<",false);\n";
+                        outfile << --ind << "}\n";
+                    }
+                }else{
+                    const aspc::ArithmeticRelation* ineq = (const aspc::ArithmeticRelation*) f;
+                    if(f->isBoundedValueAssignment(boundVars)){
+                        outfile << ind << "int "<<ineq->getAssignmentStringRep(boundVars)<<";"<<std::endl;
+                        boundVars.insert(ineq->getAssignedVariable(boundVars));
+                    }else{
+                        outfile << ind++ << "if("<<ineq->getStringRep()<<"){"<<std::endl;
+                        closingPars++;
+                    }
+                }   
+            }
+        while(closingPars > 0){
+            outfile << --ind << "}\n";
+            closingPars--;
+        }
+    }
+    outfile << --ind << "} //function\n";
+}
 void PropagatorCompiler::compileRuleLevelZero(unsigned ruleId,std::ofstream& outfile,Indentation& ind){
     
     outfile << ind++ << "virtual void propagateLevelZero(Glucose::Solver* solver,Glucose::vec<Glucose::Lit>& lits) override {\n";
+    #ifdef DEBUG_PROP
     outfile << ind << "std::cout <<\"PropagateAtLevel0 "<<ruleId<<"\"<<std::endl;\n";
+    #endif
+
     aspc::Rule rule = program.getRule(ruleId);
     const std::vector<const aspc::Formula*>& body = rule.getFormulas();
     if(!rule.isConstraint()){
@@ -587,8 +844,10 @@ void PropagatorCompiler::compileRuleLevelZero(unsigned ruleId,std::ofstream& out
                 int closingPars=0;
                 outfile << ind++ << "for(int i = 0; i < tuplesP->size(); i++){\n";
                 closingPars++;
-                    outfile << ind << "Tuple* tuple = TupleFactory::getInstance().getTupleFromInternalID(tuplesP->at(i));\n";
-                    outfile << ind++ << "if(tuple != NULL && !TupleFactory::getInstance().isFact(tuplesP->at(i))){\n";
+                    outfile << ind << "int id = tuplesP->at(i);\n";
+
+                    outfile << ind << "Tuple* tuple = TupleFactory::getInstance().getTupleFromInternalID(id);\n";
+                    outfile << ind++ << "if(tuple != NULL && !TupleFactory::getInstance().isFact(id)){\n";
                     closingPars++;
                     for(unsigned k=0; k<head->getAriety(); k++){
                         if(!head->isVariableTermAt(k) || boundVars.count(head->getTermAt(k))){
@@ -607,6 +866,7 @@ void PropagatorCompiler::compileRuleLevelZero(unsigned ruleId,std::ofstream& out
                             outfile << (lit->isVariableTermAt(k) || isInteger(lit->getTermAt(k)) ? lit->getTermAt(k) : "ConstantsManager::getInstance().mapConstant(\""+lit->getTermAt(k)+"\")");
                         }
                         outfile << "}, AuxMapHandler::getInstance().get_"<<lit->getPredicateName()<<"());\n";
+                        
                         if(lit->isNegated()){
                             outfile << ind++ << "if(boundBody != NULL && boundBody->isTrue()){\n";
                                 printConflict(outfile,ind,true);
@@ -651,6 +911,7 @@ void PropagatorCompiler::compileRuleLevelZero(unsigned ruleId,std::ofstream& out
                                 printTuplePropagation(outfile,ind,"tupleU",false,true);
                             outfile << --ind << "}\n";
                         outfile << --ind << "}\n";
+
                     }
                 while (closingPars > 0){
                     outfile << --ind << "}\n";
@@ -722,7 +983,10 @@ void PropagatorCompiler::compileRuleLevelZero(unsigned ruleId,std::ofstream& out
                             printConflict(outfile,ind,true);
                         outfile << --ind << "}\n";
                         outfile << ind++ << "else if(bodyTuplesU->size() > 0){\n";
+                            #ifdef DEBUG_PROP
                             outfile << ind << "std::cout << \"Propagating all undefined as false\" <<std::endl;\n";
+                            #endif
+                                    
                             outfile << ind++ << "for(unsigned i = 0; i<bodyTuplesU->size(); i++){\n";
                                 outfile << ind << "Tuple* tupleU = TupleFactory::getInstance().getTupleFromInternalID(bodyTuplesU->at(i));\n";
                                 outfile << ind << "if(tupleU == NULL){ std::cout << \"Error: Unable to find tuple to propagate\"<<std::endl; exit(180);}\n";
@@ -742,7 +1006,9 @@ void PropagatorCompiler::compileRuleLevelZero(unsigned ruleId,std::ofstream& out
                 int closingPars=0;
                 outfile << ind++ << "for(int i = 0; i < tuplesU->size(); i++){\n";
                 closingPars++;
-                    outfile << ind << "Tuple* tuple = TupleFactory::getInstance().getTupleFromInternalID(tuplesU->at(i));\n";
+                    outfile << ind << "int id = tuplesU->at(i);\n";
+
+                    outfile << ind << "Tuple* tuple = TupleFactory::getInstance().getTupleFromInternalID(id);\n";
                     outfile << ind++ << "if(tuple != NULL){\n";
                     closingPars++;
                     for(unsigned k=0; k<head->getAriety(); k++){
@@ -762,6 +1028,7 @@ void PropagatorCompiler::compileRuleLevelZero(unsigned ruleId,std::ofstream& out
                             outfile << (lit->isVariableTermAt(k) || isInteger(lit->getTermAt(k)) ? lit->getTermAt(k) : "ConstantsManager::getInstance().mapConstant(\""+lit->getTermAt(k)+"\")");
                         }
                         outfile << "}, AuxMapHandler::getInstance().get_"<<lit->getPredicateName()<<"());\n";
+
                         if(lit->isNegated()){
                             // undef head and negative body literal
                             outfile << ind++ << "if(boundBody == NULL || boundBody->isFalse()){\n";
@@ -837,8 +1104,8 @@ void PropagatorCompiler::compileRuleLevelZero(unsigned ruleId,std::ofstream& out
                             outfile << (lit->isVariableTermAt(k) || isInteger(lit->getTermAt(k)) ? lit->getTermAt(k) : "ConstantsManager::getInstance().mapConstant(\""+lit->getTermAt(k)+"\")");
                         }
                         outfile << "}, AuxMapHandler::getInstance().get_"<<lit->getPredicateName()<<"());\n";
+
                         outfile << ind << "bool foundJoin = false;\n";
-                        
                         outfile << ind++ << "if(boundBody!=NULL && boundBody->isUndef()){\n";
                             outfile << ind++ << "if(tupleU == NULL){\n";
                                 outfile << ind << "foundJoin = true;\n";
@@ -904,6 +1171,7 @@ void PropagatorCompiler::compileRuleLevelZero(unsigned ruleId,std::ofstream& out
 
                             outfile << ind++ << "if(tuple_"<<index<<"!= NULL){\n";
                             closingPars++;
+                                
                         for(unsigned k=0; k<lit->getAriety(); k++){
                             if(lit->isVariableTermAt(k) && !boundVars.count(lit->getTermAt(k))){
                                 outfile << ind << "int "<< lit->getTermAt(k)<< " = tuple_"<<index<<"->at("<<k<<");\n";
@@ -921,16 +1189,22 @@ void PropagatorCompiler::compileRuleLevelZero(unsigned ruleId,std::ofstream& out
             }
             outfile << ind++ << "if(tupleU == NULL){\n";
                 printConflict(outfile,ind,true);
-                outfile << ind << "std::cout << \"Violated constraint\"<<std::endl;\n";
-                for(unsigned index : order){
-                    if(body[index]->isLiteral()){
-                        outfile << ind << "if(tuple_"<<index<<" != NULL){AuxMapHandler::getInstance().printTuple(tuple_"<<index<<");}\n";        
+                #ifdef DEBUG_PROP
+                    outfile << ind << "std::cout << \"Violated constraint\"<<std::endl;\n";
+                    for(unsigned index : order){
+                        if(body[index]->isLiteral()){
+                            outfile << ind << "if(tuple_"<<index<<" != NULL){AuxMapHandler::getInstance().printTuple(tuple_"<<index<<");}\n";        
+                        }
                     }
-                }
+                #endif
             outfile << --ind << "}else{\n";
+                #ifdef DEBUG_PROP
                 outfile << ++ind << "std::cout << \"Building unit clause for level 0\" << std::endl;\n";
+                #endif
                 printTuplePropagation(outfile,ind,"tupleU",false,true,true);
+                #ifdef DEBUG_PROP
                 outfile << ind << "std::cout << \"Propagating body literal as false\" <<std::endl;\n";
+                #endif
             outfile << --ind << "}\n";
         while (closingPars > 0){
             outfile << --ind << "}\n";
@@ -1011,6 +1285,7 @@ void PropagatorCompiler::compile(){
                 outfile << ind << className << "():tuplesEmpty({}){}\n";
                 compileRuleLevelZero(ruleId,outfile,ind);
                 compileRuleFromStarter(ruleId,outfile,ind);
+                compileRuleWatcher(ruleId,outfile,ind);
             --ind;
         outfile << --ind << "};\n";
         outfile << ind << "#endif\n";

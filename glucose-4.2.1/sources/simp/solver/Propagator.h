@@ -20,13 +20,16 @@ class Propagator{
             }
         }
         void propagateAtLevel0(Glucose::Solver* s,Glucose::vec<Glucose::Lit>& lits){
+            
             for(AbstractPropagator* prop : propagators){
                 prop->propagateLevelZero(s,lits);
+                prop->attachWatched();
             }
+            
         }
 
         Glucose::CRef propagateLiteral(Glucose::Solver* s,Glucose::vec<Glucose::Lit>& lits,int literal){
-            for(AbstractPropagator* prop : propagators){
+            for(AbstractPropagator* prop : TupleFactory::getInstance().getWatcher(literal<0 ? -literal : literal,literal<0)){
                 Glucose::CRef clause = prop->propagate(s,lits,literal);
                 if(clause != Glucose::CRef_Undef)
                     return clause;
@@ -40,13 +43,17 @@ class Propagator{
             if(!starter->isUndef()){
                 const auto& insertResult = starter->setStatus(Undef);
                 if(insertResult.second){
+                    #ifdef DEBUG_PROP
                     std::cout << "Unrolling ";AuxMapHandler::getInstance().printTuple(starter);
+                    #endif
                     TupleFactory::getInstance().removeFromCollisionsList(starter->getId());
                     AuxMapHandler::getInstance().insertUndef(insertResult);
                 }
             }
             else{
+                #ifdef DEBUG_PROP
                 std::cout << "Warning: Unrolling literal not assigned yet" <<std::endl;
+                #endif
             }
         }
     private:
