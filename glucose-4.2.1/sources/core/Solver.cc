@@ -616,7 +616,7 @@ void Solver::cancelUntil(int level) {
             #ifdef DEBUG_PROP
             std::cout << "DEBUG:   Unrolling ";AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(x));std::cout<<std::endl;
             #endif
-            // Propagator::getInstance().unrollLiteral(x);
+            Propagator::getInstance().unrollLiteral(x);
             
             if(phase_saving > 1 || ((phase_saving == 1) && c > trail_lim.last())) {
                 polarity[x] = sign(trail[c]);
@@ -1012,7 +1012,7 @@ CRef Solver::propagate() {
             #ifdef DEBUG_PROP
             std::cout << "Propagate ";AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(var(p)));std::cout << std::endl;
             #endif
-            // confl = Propagator::getInstance().propagateLiteral(this,lits,lit);
+            confl = Propagator::getInstance().propagateLiteral(this,lits,lit);
         }
             
         if(confl != CRef_Undef){

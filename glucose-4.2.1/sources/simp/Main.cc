@@ -289,7 +289,7 @@ int main(int argc, char** argv)
         }
 
         FILE* res = (argc >= 3) ? fopen(argv[argc-1], "wb") : NULL;
-        if(true /* !ASP */){
+        if(false /* !ASP */){
             
             parse_DIMACS(in, S);
             gzclose(in);
