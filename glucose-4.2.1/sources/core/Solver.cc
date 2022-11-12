@@ -2049,6 +2049,7 @@ void Solver::parallelImportClauseDuringConflictAnalysis(Clause &, CRef ) {
 }
 CRef Solver::storeConflictClause(){
     vec<Lit> lits;
+    std::cout << "storeConflictClause"<<std::endl;
     addClause_(lits);
     #ifdef DEBUG_PROP
     std::cout << "Warning violated constraint into propagators"<<std::endl;

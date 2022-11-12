@@ -8,7 +8,6 @@ void PropagatorCompiler::compileRuleFromStarter(unsigned ruleId, std::ofstream& 
     #ifdef DEBUG_PROP
     outfile << ind << "std::cout << \"Propagator "<<ruleId<<": Propagating \"<<literal << \" \"; AuxMapHandler::getInstance().printTuple(starter); std::cout << std::endl;\n";
     #endif
-
     outfile << ind++ << "if(starter->isUndef()){\n";
         outfile << ind << "const auto& insertResult = starter->setStatus(literal > 0 ? True : False);\n";
         outfile << ind++ << "if(insertResult.second){\n";
@@ -615,9 +614,10 @@ void PropagatorCompiler::printTuplePropagation(std::ofstream& outfile,Indentatio
     else
         outfile << ind << "var = "<<(asFalse ? "-var" : "var")<< ";\n";
     if(level0){
-        outfile << ind << "lits.clear();\n";
-        outfile << ind << "lits.push( (var > 0) ? Glucose::mkLit(var) : ~Glucose::mkLit(var) );\n";
-        outfile << ind << "solver->addClause_(lits);\n";
+        outfile << ind << "propagations.push_back((var > 0) ? Glucose::mkLit(var) : ~Glucose::mkLit(var));\n";
+        // outfile << ind << "lits.clear();\n";
+        // outfile << ind << "lits.push( (var > 0) ? Glucose::mkLit(var) : ~Glucose::mkLit(var) );\n";
+        // outfile << ind << "solver->addClause_(lits);\n";
     }else{
         outfile << ind << "solver->addLiteralToReason("<<tuplename<<"->getId(),var < 0);\n";
         outfile << ind << "Glucose::CRef clause = solver->externalPropagation("<<tuplename<<"->getId(),var < 0);\n";
@@ -824,7 +824,7 @@ void PropagatorCompiler::compileRuleLevelZero(unsigned ruleId,std::ofstream& out
     #ifdef DEBUG_PROP
     outfile << ind << "std::cout <<\"PropagateAtLevel0 "<<ruleId<<"\"<<std::endl;\n";
     #endif
-
+    outfile << ind << "std::vector<Glucose::Lit> propagations;\n";
     aspc::Rule rule = program.getRule(ruleId);
     const std::vector<const aspc::Formula*>& body = rule.getFormulas();
     if(!rule.isConstraint()){
@@ -1211,6 +1211,11 @@ void PropagatorCompiler::compileRuleLevelZero(unsigned ruleId,std::ofstream& out
             closingPars--;
         }
     }
+        outfile << ind++ << "for(unsigned i = 0; i< propagations.size(); i++){\n";
+            outfile << ind << "lits.clear();\n";
+            outfile << ind << "lits.push( propagations[i] );\n";
+            outfile << ind << "solver->addClause_(lits);\n";
+        outfile << --ind << "}\n";
     outfile << --ind << "} //function\n";
 }
 // void PropagatorCompiler::computePropagatorOrder(){

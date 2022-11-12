@@ -19,13 +19,16 @@ class Propagator{
                 delete prop;
             }
         }
+        void attachWatchers(){
+            for(AbstractPropagator* prop : propagators){
+                prop->attachWatched();
+            }
+        }
         void propagateAtLevel0(Glucose::Solver* s,Glucose::vec<Glucose::Lit>& lits){
             
             for(AbstractPropagator* prop : propagators){
                 prop->propagateLevelZero(s,lits);
-                prop->attachWatched();
             }
-            
         }
 
         Glucose::CRef propagateLiteral(Glucose::Solver* s,Glucose::vec<Glucose::Lit>& lits,int literal){

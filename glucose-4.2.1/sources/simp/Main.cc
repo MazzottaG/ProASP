@@ -304,10 +304,8 @@ int main(int argc, char** argv)
             read_asp(solver,argv[argc-1],facts);
             TupleFactory::getInstance().storeFactSize();
             Generator::getInstance().generate(solver);
-            std::cout << "Generated "<<facts.size()<<std::endl;
+            Propagator::getInstance().attachWatchers();
             
-            
-            std::cout << "Added 0"<<std::endl;
             for(unsigned id : facts){
                 #ifdef DEBUG_PROP
                 std::cout << "Adding facts in glucose"<<std::endl;
@@ -317,10 +315,8 @@ int main(int argc, char** argv)
                 lits.push( mkLit(id));
                 solver->addClause_(lits);
             }            
-            std::cout << "propagate at level 0"<<std::endl;
             Propagator::getInstance().propagateAtLevel0(solver,lits);
         }
-        std::cout << "End intial propagation"<<std::endl;        
         if (S.verbosity > 0){
             printf("c |  Number of variables:  %12d                                                                   |\n", S.nVars());
             printf("c |  Number of clauses:    %12d                                                                   |\n", S.nClauses()); 
