@@ -1,1 +1,1 @@
-./glucose -no-pre -model $1
+./glucose -no-pre $1

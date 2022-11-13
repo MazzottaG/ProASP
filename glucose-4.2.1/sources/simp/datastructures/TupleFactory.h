@@ -63,6 +63,7 @@ class TupleFactory{
         std::vector<std::vector<AbstractPropagator*>> negativeWatcher;
         std::vector<std::vector<AbstractPropagator*>> positiveWatcher;
         static std::vector<AbstractPropagator*> EMPTY_WATCHER;
+        std::vector<unsigned> visibleTuple;
 
         //TODO Remove
         std::unordered_map<int,TupleLight*> waspIDToTuple;
@@ -88,15 +89,15 @@ class TupleFactory{
         void addPredicate(){
             tupleToInternalVarSets.push_back(std::unordered_set<TupleLight*,TuplePointerHash,TuplePointerEq>());
         }
-        
+        std::vector<unsigned>& getVisibleAtoms(){return visibleTuple;}
         
         ~TupleFactory(){
         }
         void printAvgWatcherSize(int term){
-            TupleLight* t = find({1,term},4);
-            int id = t->getId();
-            std::cout << (id >= positiveWatcher.size() ? "No watchers for sup_1(1,g)" : "Watcher count for sup_1(1,g): "+std::to_string(positiveWatcher[id].size()))<<std::endl;
-            std::cout << (id >= negativeWatcher.size() ? "No watchers for not sup_1(1,g)" : "Watcher count for not sup_1(1,g): "+std::to_string(negativeWatcher[id].size()))<<std::endl;
+            // TupleLight* t = find({1,term},4);
+            // int id = t->getId();
+            // std::cout << (id >= positiveWatcher.size() ? "No watchers for sup_1(1,g)" : "Watcher count for sup_1(1,g): "+std::to_string(positiveWatcher[id].size()))<<std::endl;
+            // std::cout << (id >= negativeWatcher.size() ? "No watchers for not sup_1(1,g)" : "Watcher count for not sup_1(1,g): "+std::to_string(negativeWatcher[id].size()))<<std::endl;
         }
         void addWatcher(AbstractPropagator* prop,int id,bool negated){
             if(negated){
@@ -171,7 +172,7 @@ class TupleFactory{
             return *it;
         }
         //store new internal tuple and return smart reference to it
-        TupleLight* addNewInternalTuple(std::vector<int> terms,int predName){
+        TupleLight* addNewInternalTuple(std::vector<int> terms,int predName,bool hidden=false){
             bufferTuple.setContent(terms.data(),terms.size(),predName);
             auto& tupleToInternalVar=tupleToInternalVarSets[predName];
             auto it = tupleToInternalVar.find(&bufferTuple);
@@ -182,6 +183,7 @@ class TupleFactory{
                 tupleToInternalVar.insert(trueReference);
                 internalIDToTuple.push_back(trueReference);
                 trueReference->setId(storage.size()-1);
+                if(!hidden) visibleTuple.push_back(trueReference->getId());
                 bufferTuple.clearContent();
                 return trueReference;
             }

@@ -560,12 +560,12 @@ void PropagatorCompiler::compileRuleFromStarter(unsigned ruleId, std::ofstream& 
                 outfile << ind++ << "if(tupleU == NULL){\n";
                     #ifdef DEBUG_PROP
                     outfile << ind << "std::cout << \"Violated constraint\"<<std::endl;\n";
+                    outfile << ind << "AuxMapHandler::getInstance().printTuple(starter);\n";
                     #endif
                     outfile << ind << "solver->addLiteralToReason(starter->getId(),literal > 0);\n";
-                    outfile << ind << "AuxMapHandler::getInstance().printTuple(starter);\n";
                     for(unsigned index : ordering[i]){
                         if(body->at(index)->isLiteral()){
-                            outfile << ind << "if(tuple_"<<index<<" != NULL){solver->addLiteralToReason(tuple_"<<index<<"->getId(),"<<(body->at(index)->isPositiveLiteral() ? "true":"false")<<"); AuxMapHandler::getInstance().printTuple(tuple_"<<index<<");}\n";        
+                            outfile << ind << "if(tuple_"<<index<<" != NULL){solver->addLiteralToReason(tuple_"<<index<<"->getId(),"<<(body->at(index)->isPositiveLiteral() ? "true":"false")<<"); /*AuxMapHandler::getInstance().printTuple(tuple_"<<index<<");*/}\n";        
                         }
                     }
                     printConflict(outfile,ind,false);

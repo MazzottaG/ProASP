@@ -22,6 +22,8 @@ int main(int argc, char *argv[])
 		ASPCore2Parser parser (&tokens);
 		parser.addParseListener(&listener);
 		parser.program();
+		std::unordered_set<std::string> originalPredicates;
+		listener.getProgram().findPredicates(originalPredicates);
 		Rewriter r(listener.getProgram(),listener.getPredicateNames(),listener.getPredicateIds());
 		r.reduceToSigleHeadForPredicate();
 		r.computeCompletion();
@@ -48,7 +50,7 @@ int main(int argc, char *argv[])
 			}
 		}
 		DataStructureCompiler dc;
-		GeneratorCompiler genCompiler (r.getGeneratorProgram(),executablePath,r.getPredicateNames(),r.getPredicateId(),&dc,listener.getProgram().isStratified());
+		GeneratorCompiler genCompiler (r.getGeneratorProgram(),executablePath,r.getPredicateNames(),r.getPredicateId(),&dc,listener.getProgram().isStratified(),originalPredicates);
 		genCompiler.compile();
 		PropagatorCompiler propCompiler (r.getPropagatorsProgram(),executablePath,r.getPropagatorRuleLabeling(),&dc);
 		propCompiler.compile();

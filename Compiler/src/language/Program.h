@@ -80,6 +80,16 @@ namespace aspc {
         const std::vector<unsigned>& getRulesForPredicate(std::string predicate);
         bool isHeadPredicate(std::string predicate);
         void printRuleForComponent()const;
+        void findPredicates(std::unordered_set<std::string>& preds)const{
+            for(const aspc::Rule& r : rules){
+                for(const aspc::Atom& a : r.getHead()){
+                    preds.insert(a.getPredicateName());
+                }
+                for(const aspc::Literal& l : r.getBodyLiterals()){
+                    preds.insert(l.getPredicateName());
+                }
+            }
+        }
     private:
         std::vector<aspc::Rule> rules; //only rules are compiled
         std::vector<aspc::Atom> facts; //not compiled

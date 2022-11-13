@@ -1232,7 +1232,6 @@ CRef Solver::propagateUnaryWatches(Lit p) {
 void Solver::reduceDB() {
     int i, j;
     stats[nbReduceDB]++;
-    std::cout << "reduceDB" <<std::endl;
     if (!chanseokStrategy) { // We will use the LBD, but keep 10% of the best active clauses
       sort(learnts, reduceDBAct_lt(ca));
       for(int i=learnts.size()*90/100;i<learnts.size();i++) {
@@ -1271,8 +1270,6 @@ void Solver::reduceDB() {
         }
     }
     learnts.shrink(i - j);
-    std::cout << "End reduce db"<<std::endl;
-
     checkGarbage();
 }
 
@@ -1839,7 +1836,8 @@ lbool Solver::solve_(bool do_simp, bool turn_off_simp) // Parameters are useless
         model.growTo(nVars());
         for(int i = 0; i < nVars(); i++) model[i] = value(i);
         if(true){
-            for(unsigned id=1;id<TupleFactory::getInstance().size();id++){
+            std::vector<unsigned>& visible=TupleFactory::getInstance().getVisibleAtoms();         
+            for(unsigned id: visible){
                 TupleLight* t = TupleFactory::getInstance().getTupleFromInternalID(id);
                 if(t != NULL && t->isTrue()) AuxMapHandler::getInstance().printTuple(t);
             }
@@ -2049,9 +2047,9 @@ void Solver::parallelImportClauseDuringConflictAnalysis(Clause &, CRef ) {
 }
 CRef Solver::storeConflictClause(){
     vec<Lit> lits;
-    std::cout << "storeConflictClause"<<std::endl;
     addClause_(lits);
     #ifdef DEBUG_PROP
+    std::cout << "storeConflictClause"<<std::endl;
     std::cout << "Warning violated constraint into propagators"<<std::endl;
     #endif
     return CRef_Undef;

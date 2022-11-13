@@ -376,6 +376,7 @@ int main(int argc, char** argv)
             printf("\n"); 
         }
         printf(ret == l_True ? "s SATISFIABLE\n" : ret == l_False ? "s UNSATISFIABLE\n" : "s INDETERMINATE\n");
+	    int exit_code = ret == l_True ? 10 : ret == l_False ? 20 : 180;
 
         if (res != NULL){
             if (ret == l_True){
@@ -408,7 +409,7 @@ int main(int argc, char** argv)
             }
         }
 
-
+        exit(exit_code);
         #ifdef NDEBUG
             exit(ret == l_True ? 10 : ret == l_False ? 20 : 0);     // (faster than "return", which will invoke the destructor for 'Solver')
         #else

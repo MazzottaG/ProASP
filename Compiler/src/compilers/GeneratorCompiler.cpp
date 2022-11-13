@@ -187,7 +187,7 @@ void GeneratorCompiler::compileComponentRules(std::ofstream& outfile,Indentation
             if(k>0) outfile << ",";
             outfile << (atom->isVariableTermAt(k) || isInteger(atom->getTermAt(k)) ? atom->getTermAt(k) : "ConstantsManager::getInstance().mapConstant(\""+atom->getTermAt(k)+"\")");
         }
-        outfile << "}, AuxMapHandler::getInstance().get_"<<atom->getPredicateName()<<"());\n";
+        outfile << "}, AuxMapHandler::getInstance().get_"<<atom->getPredicateName()<<"(),"<<(originalPredicates.count(atom->getPredicateName()) ? "false" : "true")<<");\n";
         outfile << ind << "const auto& insertResult = head_"<<index<<"->setStatus(Undef);\n";
         outfile << ind++ << "if(insertResult.second){\n";
             #ifdef DEBUG_GEN

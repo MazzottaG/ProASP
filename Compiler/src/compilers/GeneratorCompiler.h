@@ -11,7 +11,7 @@
 
 class GeneratorCompiler{
     public:
-        GeneratorCompiler(const aspc::Program& pg,const std::string& execPath, const std::vector<std::string>& names, const std::unordered_map<std::string,unsigned>& id, DataStructureCompiler* mapCompiler,bool isStratified):program(pg), executablePath(execPath), builtSCC(false),predNames(names),predIds(id),auxMapCompiler(mapCompiler),solvedByGenerator(isStratified){}
+        GeneratorCompiler(const aspc::Program& pg,const std::string& execPath, const std::vector<std::string>& names, const std::unordered_map<std::string,unsigned>& id, DataStructureCompiler* mapCompiler,bool isStratified,std::unordered_set<std::string>& preds):program(pg), executablePath(execPath), builtSCC(false),predNames(names),predIds(id),auxMapCompiler(mapCompiler),solvedByGenerator(isStratified),originalPredicates(preds){}
         void compile();
         
         void buildAuxMapHandler();
@@ -38,5 +38,7 @@ class GeneratorCompiler{
         bool builtSCC;
         std::string executablePath;
         bool solvedByGenerator;         
+
+        std::unordered_set<std::string>& originalPredicates;
 };
 #endif
