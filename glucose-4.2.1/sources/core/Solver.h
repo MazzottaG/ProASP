@@ -662,14 +662,7 @@ inline void Solver::printLit(Lit l)
 }
 
 
-inline void Solver::printClause(CRef cr)
-{
-  Clause &c = ca[cr];
-    for (int i = 0; i < c.size(); i++){
-        printLit(c[i]);
-        printf(" ");
-    }
-}
+
 
 inline void Solver::printInitialClause(CRef cr)
 {

@@ -59,7 +59,7 @@ class Propagator{
                 #endif
             }
         }
-    private:
+    private:    
         Propagator();
         std::vector<AbstractPropagator*> propagators;
 };

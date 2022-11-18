@@ -66,13 +66,17 @@ OBJECTS		:= $(SOURCES:.cpp=.o)
 
 OUTPUTMAIN	:= $(call FIXPATH,$(OUTPUT)/$(MAIN))
 
-CLEANGEN.compile =	$(RM) $(SRC)/generators/*
+CLEANGEN.compile =	$(RM) ../glucose-4.2.1/sources/simp/generators/*
 CLEANGEN.run =	
 CLEANGEN = CLEANGEN.$(BUILD)
 
-CLEANPROP.compile =	$(RM) $(SRC)/propagators/*
+CLEANPROP.compile =	$(RM) ../glucose-4.2.1/sources/simp/propagators/*
 CLEANPROP.run =	
 CLEANPROP = CLEANPROP.$(BUILD)
+
+CLEANAUX.compile =	$(RM) ../glucose-4.2.1/sources/simp/solver/AuxMapHandler.h
+CLEANAUX.run =	
+CLEANAUX = CLEANAUX.$(BUILD)
 
 all: $(OUTPUT) $(MAIN)
 	@echo Executing 'all' complete!
@@ -92,6 +96,7 @@ $(MAIN): $(OBJECTS)
 
 .PHONY: clean
 clean:
+	$(call $(CLEANAUX))
 	$(call $(CLEANGEN))
 	$(call $(CLEANPROP))
 	$(RM) $(OUTPUTMAIN)

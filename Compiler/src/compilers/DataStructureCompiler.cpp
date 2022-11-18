@@ -152,6 +152,13 @@ std::pair<std::vector<std::vector<unsigned>>,std::vector<std::vector<unsigned>>>
     // general order + ordering starting literal in the body + ordering from head atom
     auto body = rule.getFormulas();
     auto head = rule.getHead();
+    if(!rule.isConstraint()){
+        std::vector<unsigned> boundIndices;
+        if(body.size() == 1 && body[0]->isLiteral()){
+            std::vector<unsigned> boundIndices;
+            auxMapNameForPredicate[((const aspc::Literal*)body[0])->getPredicateName()].insert(boundIndices);
+        }
+    }
     std::vector<std::vector<unsigned>> orderByStartersHead;
     for(unsigned starter = 0; starter < head.size(); starter++){
         orderByStartersHead.push_back({});

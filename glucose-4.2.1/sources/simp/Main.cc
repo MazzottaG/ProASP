@@ -297,7 +297,7 @@ int main(int argc, char** argv)
         }else{
             vec<Lit> lits;
             while (0 >= solver->nVars()) solver->newVar();
-            lits.push( mkLit(0));
+            lits.push( mkLit(0) );
             solver->addClause_(lits);
 
             std::vector<unsigned> facts;
@@ -311,6 +311,7 @@ int main(int argc, char** argv)
                 std::cout << "Adding facts in glucose"<<std::endl;
                 #endif
                 while (id >= solver->nVars()) solver->newVar();
+                TupleFactory::getInstance().setLiteralLevel(id,0);
                 lits.clear();
                 lits.push( mkLit(id));
                 solver->addClause_(lits);

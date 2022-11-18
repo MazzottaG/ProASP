@@ -37,12 +37,12 @@ enum TruthStatus {
 class TupleLight {
 public:
 
-    TupleLight() : predicateName(-1),waspID(0),id(-INT_MAX),size_(0),content(NULL),status(UNKNOWN),collisionsListsSize(0) {
+    TupleLight() : predicateName(-1),waspID(0),id(0),size_(0),content(NULL),status(UNKNOWN),collisionsListsSize(0) {
     }
 
-    TupleLight(int predicateName, bool negated = false, int waspID = 0) : predicateName(predicateName), waspID(waspID),id(-INT_MAX),size_(0),content(NULL),status(UNKNOWN),collisionsListsSize(0) {
+    TupleLight(int predicateName, bool negated = false, int waspID = 0) : predicateName(predicateName), waspID(waspID),id(0),size_(0),content(NULL),status(UNKNOWN),collisionsListsSize(0) {
     }
-    TupleLight(int predicateName,std::vector<int> v, bool negated = false, int waspID = 0) : predicateName(predicateName),/*std::vector<int>(v),*/ waspID(waspID),id(-INT_MAX),size_(v.size()),status(UNKNOWN),collisionsListsSize(0) {
+    TupleLight(int predicateName,std::vector<int> v, bool negated = false, int waspID = 0) : predicateName(predicateName),/*std::vector<int>(v),*/ waspID(waspID),id(0),size_(v.size()),status(UNKNOWN),collisionsListsSize(0) {
         content = new int[v.size()];
         std::copy(v.begin(), v.end(), content);
     }
@@ -59,30 +59,30 @@ public:
     }
 
     TupleLight(const std::initializer_list<int> & l, bool negated = false, int waspID = 0) :
-    /*std::vector<int>(l),*/ size_(l.size()), predicateName(-1), waspID(waspID),id(-INT_MAX),status(UNKNOWN),collisionsListsSize(0) {
+    /*std::vector<int>(l),*/ size_(l.size()), predicateName(-1), waspID(waspID),id(0),status(UNKNOWN),collisionsListsSize(0) {
         content = new int[l.size()];
         std::copy(l.begin(), l.end(), content);
     }
 
     TupleLight(const std::initializer_list<int> & l, int predicateName, bool negated = false, int waspID = 0) :
-    /*vector<int>(l),*/ size_(l.size()), predicateName(predicateName), waspID(waspID),id(-INT_MAX),status(UNKNOWN),collisionsListsSize(0) {
+    /*vector<int>(l),*/ size_(l.size()), predicateName(predicateName), waspID(waspID),id(0),status(UNKNOWN),collisionsListsSize(0) {
         content = new int[l.size()];
         std::copy(l.begin(), l.end(), content);
     }
     
     TupleLight(const std::vector<int> & l, int predicateName, bool negated = false, int waspID = 0) :
-    /*vector<int>(l),*/ size_(l.size()), predicateName(predicateName), waspID(waspID),id(-INT_MAX),status(UNKNOWN),collisionsListsSize(0) {
+    /*vector<int>(l),*/ size_(l.size()), predicateName(predicateName), waspID(waspID),id(0),status(UNKNOWN),collisionsListsSize(0) {
         content = new int[l.size()];
         std::copy(l.begin(), l.end(), content);
     }
 
     //WARNING: require l to be created on the fly new int[]{...}
     TupleLight(int* l, int size, int predicateName, bool negated = false, int waspID = 0) :
-    /*vector<int>(l),*/ size_(size), predicateName(predicateName), waspID(waspID),id(-INT_MAX),status(UNKNOWN),collisionsListsSize(0){
+    /*vector<int>(l),*/ size_(size), predicateName(predicateName), waspID(waspID),id(0),status(UNKNOWN),collisionsListsSize(0){
         content = l;
     }
     TupleLight(const std::vector<int> & l, bool negated = false, int waspID = 0) :
-    /*vector<int>(l),*/ size_(l.size()), waspID(waspID),id(-INT_MAX),status(UNKNOWN),collisionsListsSize(0) {
+    /*vector<int>(l),*/ size_(l.size()), waspID(waspID),id(0),status(UNKNOWN),collisionsListsSize(0) {
         content = new int[l.size()];
         std::copy(l.begin(), l.end(), content);
     }

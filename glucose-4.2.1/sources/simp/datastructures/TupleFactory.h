@@ -55,6 +55,7 @@ class TupleFactory{
         TupleFactory(/* args */){
             storage.push_back(TupleLight());
             internalIDToTuple.push_back(&storage.back());
+            literalLevel.push_back(INT_MAX);
             // AggregateSetCmp::factory=this;
             generated=false;
         }
@@ -64,7 +65,8 @@ class TupleFactory{
         std::vector<std::vector<AbstractPropagator*>> positiveWatcher;
         static std::vector<AbstractPropagator*> EMPTY_WATCHER;
         std::vector<unsigned> visibleTuple;
-
+        std::vector<unsigned> literalLevel;
+        
         //TODO Remove
         std::unordered_map<int,TupleLight*> waspIDToTuple;
         //-----------
@@ -92,6 +94,14 @@ class TupleFactory{
         std::vector<unsigned>& getVisibleAtoms(){return visibleTuple;}
         
         ~TupleFactory(){
+        }
+        bool isLevel0(unsigned var){
+            assert(var < literalLevel.size());
+            return literalLevel[var]==0;
+        }
+        void setLiteralLevel(unsigned var,unsigned level){
+            assert(var < literalLevel.size());
+            literalLevel[var]=level;
         }
         void printAvgWatcherSize(int term){
             // TupleLight* t = find({1,term},4);
@@ -182,6 +192,7 @@ class TupleFactory{
                 TupleLight* trueReference = &storage.back();
                 tupleToInternalVar.insert(trueReference);
                 internalIDToTuple.push_back(trueReference);
+                literalLevel.push_back(INT_MAX);
                 trueReference->setId(storage.size()-1);
                 if(!hidden) visibleTuple.push_back(trueReference->getId());
                 bufferTuple.clearContent();
