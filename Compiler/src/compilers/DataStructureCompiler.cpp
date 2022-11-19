@@ -52,7 +52,10 @@ void DataStructureCompiler::buildAuxMapHandler(std::string executablePath,const 
             }
             outfile << ind++ << "int getPredicateId(const std::string& predicateName) {\n";
                 outfile << ind << "auto pair = predicateIds.emplace(predicateName,predicateNames.size());\n";
-                outfile << ind << "if(pair.second) TupleFactory::getInstance().addPredicate();\n";
+                outfile << ind++ << "if(pair.second){\n";
+                    outfile << ind << "TupleFactory::getInstance().addPredicate();\n";
+                    outfile << ind << "predicateNames.push_back(predicateName);\n";
+                outfile << --ind << "}\n";
                 outfile << ind << "return pair.first->second;\n";
             outfile << --ind << "}\n";
             outfile << ind << "std::string unmapPredicate(int predicateId)const {return predicateNames[predicateId];}\n";
