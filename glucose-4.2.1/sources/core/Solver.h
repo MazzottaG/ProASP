@@ -61,7 +61,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 #include "mtl/Vec.h"
 #include <unordered_map>
-
+class AbstractPropagator;
 namespace Glucose {
 // Core stats 
 
@@ -103,7 +103,7 @@ class Solver : public Clone {
 
     friend class SolverConfiguration;
 
-public:
+    public:
 
     // Constructor/Destructor:
     //
@@ -141,7 +141,8 @@ public:
     bool    okay         () const;                  // FALSE means solver is in a conflicting state
 
     // External Propagators
-    CRef externalPropagation(Var var, bool negated);
+    void declarePostponedClause(vec <Lit> &ps);
+    CRef externalPropagation(Var var, bool negated,AbstractPropagator* prop);
     CRef storePropagatorReason(int literal);
     void addLiteralToReason(Var var, bool negated);
     void clearReasonClause(){reasonClause.clear();}
@@ -283,7 +284,7 @@ public:
     // Important stats completely related to search. Keep here
     uint64_t solves,starts,decisions,propagations,conflicts,conflictsRestarts;
 
-protected:
+    protected:
 
     long curRestart;
 
@@ -307,12 +308,12 @@ protected:
         Watcher(CRef cr, Lit p) : cref(cr), blocker(p) {}
         bool operator==(const Watcher& w) const { return cref == w.cref; }
         bool operator!=(const Watcher& w) const { return cref != w.cref; }
-/*        Watcher &operator=(Watcher w) {
-            this->cref = w.cref;
-            this->blocker = w.blocker;
-            return *this;
-        }
-*/
+    /*        Watcher &operator=(Watcher w) {
+                this->cref = w.cref;
+                this->blocker = w.blocker;
+                return *this;
+            }
+    */
     };
 
     struct WatcherDeleted
@@ -371,6 +372,7 @@ protected:
     // External Propagator
     vec<Lit> reasonClause;
     int conflictLiteral;
+    CRef CRef_Prop=CRef_Undef;
 
     // UPDATEVARACTIVITY trick (see competition'09 companion paper)
     vec<Lit> lastDecisionLevel;
@@ -515,8 +517,14 @@ public:
 
 //=================================================================================================
 // Implementation of inline methods:
-
+#ifndef PURE_PROP
 inline CRef Solver::reason(Var x) const { return vardata[x].reason; }
+#endif
+
+#ifdef PURE_PROP
+inline CRef Solver::reason(Var x) const { CRef reas = vardata[x].reason; return reas != CRef_Prop ? reas : Propagator::getInstance().explain(x);}
+#endif
+
 inline int  Solver::level (Var x) const { return vardata[x].level; }
 
 inline void Solver::insertVarOrder(Var x) {

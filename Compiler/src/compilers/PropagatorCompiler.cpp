@@ -620,7 +620,7 @@ void PropagatorCompiler::printTuplePropagation(std::ofstream& outfile,Indentatio
         // outfile << ind << "solver->addClause_(lits);\n";
     }else{
         outfile << ind << "solver->addLiteralToReason("<<tuplename<<"->getId(),var < 0);\n";
-        outfile << ind << "Glucose::CRef clause = solver->externalPropagation("<<tuplename<<"->getId(),var < 0);\n";
+        outfile << ind << "Glucose::CRef clause = solver->externalPropagation("<<tuplename<<"->getId(),var < 0,this);\n";
         outfile << ind++ << "if(clause != Glucose::CRef_Undef)\n";
             outfile << ind-- << "return clause;\n";
     }  
@@ -633,7 +633,7 @@ void PropagatorCompiler::printTuplePropagation(std::ofstream& outfile,Indentatio
     //     outfile << ind-- << "return clause;\n";
 }
 void PropagatorCompiler::compileRuleWatcher(unsigned ruleId,std::ofstream& outfile,Indentation& ind){
-    
+    outfile << ind << "virtual void printName()const {std::cout << \"External Propagator "<<ruleId<<"\"<<std::endl;}";
     outfile << ind++ << "virtual void attachWatched() override {\n";
     #ifdef DEBUG_PROP
     outfile << ind << "std::cout <<\"PropagateAtLevel0 "<<ruleId<<"\"<<std::endl;\n";

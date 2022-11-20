@@ -710,7 +710,9 @@ void Solver::analyze(CRef confl, vec <Lit> &out_learnt, vec <Lit> &selectors, in
             std::cout << "Navigating "<<var(p)<< (!sign(p) ? " true" : " false")<<std::endl;
             #endif
         }
+        
         assert(confl != CRef_Undef); // (otherwise should be UIP)
+
         Clause &c = ca[confl];
         // Special case for binary clauses
         // The first one has to be SAT
@@ -786,6 +788,7 @@ void Solver::analyze(CRef confl, vec <Lit> &out_learnt, vec <Lit> &selectors, in
         while (!seen[var(trail[index--])]);
         p = trail[index + 1];
         //stats[sumRes]++;
+        
         confl = reason(var(p));
         seen[var(p)] = 0;
         pathC--;
@@ -2074,13 +2077,19 @@ CRef Solver::storeConflictClause(){
     return CRef_Undef;
 }
 // External propagation
-CRef Solver::externalPropagation(Var var, bool negated){
+
+void Solver::declarePostponedClause(vec <Lit> &ps){
+    CRef_Prop = ca.alloc(ps, false);
+}
+CRef Solver::externalPropagation(Var var, bool negated,AbstractPropagator* prop){
     int literal = negated ? -var : var;
     CRef propagationClause = CRef_Undef;
     unsigned currentDecisionLevel = decisionLevel();
     if(value(var) == l_Undef || toInt(value(var)) != negated){
         if(currentDecisionLevel == 0){
-            TupleFactory::getInstance().setLiteralLevel(var,currentDecisionLevel);
+            #ifdef PURE_PROP
+            TupleFactory::getInstance().setPropagationData(var,prop);
+            #endif
             reasonClause.clear();
             reasonClause.push( mkLit(var,negated));
             addClause_(reasonClause);
@@ -2109,7 +2118,9 @@ CRef Solver::externalPropagation(Var var, bool negated){
             return propagationClause;
         }
     }else if(value(var) == l_Undef && currentDecisionLevel>0){
-        TupleFactory::getInstance().setLiteralLevel(var,currentDecisionLevel);
+        #ifdef PURE_PROP
+        TupleFactory::getInstance().setPropagationData(var,prop);
+        #endif
         uncheckedEnqueue(mkLit(var,negated),propagationClause);
     }
     return CRef_Undef;
@@ -2160,6 +2171,6 @@ CRef Solver::storePropagatorReason(int literal){
     
 }
 void Solver::addLiteralToReason(Var var, bool negated){
-    if(!TupleFactory::getInstance().isLevel0(var))
+    if(level(var) > 0 || value(var) == l_Undef)
         reasonClause.push(mkLit(var,negated));
 }

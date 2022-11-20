@@ -55,8 +55,6 @@ class TupleFactory{
         TupleFactory(/* args */){
             storage.push_back(TupleLight());
             internalIDToTuple.push_back(&storage.back());
-            literalLevel.push_back(INT_MAX);
-            // AggregateSetCmp::factory=this;
             generated=false;
         }
         std::vector<std::unordered_set<TupleLight*,TuplePointerHash,TuplePointerEq>> tupleToInternalVarSets;
@@ -65,8 +63,7 @@ class TupleFactory{
         std::vector<std::vector<AbstractPropagator*>> positiveWatcher;
         static std::vector<AbstractPropagator*> EMPTY_WATCHER;
         std::vector<unsigned> visibleTuple;
-        std::vector<unsigned> literalLevel;
-        
+
         //TODO Remove
         std::unordered_map<int,TupleLight*> waspIDToTuple;
         //-----------
@@ -88,6 +85,7 @@ class TupleFactory{
         void setBufferedTupleStorage(int* vectorData,int size,int predName){
             bufferTuple.setContent(vectorData,size,predName);
         }
+        
         void addPredicate(){
             tupleToInternalVarSets.push_back(std::unordered_set<TupleLight*,TuplePointerHash,TuplePointerEq>());
         }
@@ -95,14 +93,8 @@ class TupleFactory{
         
         ~TupleFactory(){
         }
-        bool isLevel0(unsigned var){
-            assert(var < literalLevel.size());
-            return literalLevel[var]==0;
-        }
-        void setLiteralLevel(unsigned var,unsigned level){
-            assert(var < literalLevel.size());
-            literalLevel[var]=level;
-        }
+        
+        
         void printAvgWatcherSize(int term){
             // TupleLight* t = find({1,term},4);
             // int id = t->getId();
@@ -192,7 +184,6 @@ class TupleFactory{
                 TupleLight* trueReference = &storage.back();
                 tupleToInternalVar.insert(trueReference);
                 internalIDToTuple.push_back(trueReference);
-                literalLevel.push_back(INT_MAX);
                 trueReference->setId(storage.size()-1);
                 if(!hidden) visibleTuple.push_back(trueReference->getId());
                 bufferTuple.clearContent();

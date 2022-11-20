@@ -25,12 +25,18 @@ class Propagator{
             }
         }
         void propagateAtLevel0(Glucose::Solver* s,Glucose::vec<Glucose::Lit>& lits){
-            
+
             for(AbstractPropagator* prop : propagators){
                 prop->propagateLevelZero(s,lits);
             }
         }
-
+        #ifdef PURE_PROP
+        Glucose::CRef explain(unsigned var){
+            //TupleFactory::getInstance().getPropagatorForVar(var)->printName();
+            return Glucose::CRef_Undef;
+        }
+        #endif
+        
         Glucose::CRef propagateLiteral(Glucose::Solver* s,Glucose::vec<Glucose::Lit>& lits,int literal){
             for(AbstractPropagator* prop : TupleFactory::getInstance().getWatcher(literal<0 ? -literal : literal,literal<0)){
                 Glucose::CRef clause = prop->propagate(s,lits,literal);

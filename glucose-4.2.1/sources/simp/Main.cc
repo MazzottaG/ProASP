@@ -299,7 +299,11 @@ int main(int argc, char** argv)
             while (0 >= solver->nVars()) solver->newVar();
             lits.push( mkLit(0) );
             solver->addClause_(lits);
-
+            
+            lits.clear();
+            lits.push( mkLit(0) );
+            solver->declarePostponedClause(lits);
+            
             std::vector<unsigned> facts;
             read_asp(solver,argv[argc-1],facts);
             TupleFactory::getInstance().storeFactSize();
@@ -311,7 +315,9 @@ int main(int argc, char** argv)
                 std::cout << "Adding facts in glucose"<<std::endl;
                 #endif
                 while (id >= solver->nVars()) solver->newVar();
-                TupleFactory::getInstance().setLiteralLevel(id,0);
+                #ifdef PURE_PROP
+                TupleFactory::getInstance().setPropagationData(id,NULL);
+                #endif
                 lits.clear();
                 lits.push( mkLit(id));
                 solver->addClause_(lits);
