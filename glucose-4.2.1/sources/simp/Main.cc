@@ -300,10 +300,6 @@ int main(int argc, char** argv)
             lits.push( mkLit(0) );
             solver->addClause_(lits);
             
-            lits.clear();
-            lits.push( mkLit(0) );
-            solver->declarePostponedClause(lits);
-            
             std::vector<unsigned> facts;
             read_asp(solver,argv[argc-1],facts);
             TupleFactory::getInstance().storeFactSize();
@@ -316,7 +312,7 @@ int main(int argc, char** argv)
                 #endif
                 while (id >= solver->nVars()) solver->newVar();
                 #ifdef PURE_PROP
-                TupleFactory::getInstance().setPropagationData(id,NULL);
+                TupleFactory::getInstance().getTupleFromInternalID(id)->setReason(Glucose::CRef_Undef);
                 #endif
                 lits.clear();
                 lits.push( mkLit(id));

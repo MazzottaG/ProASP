@@ -67,6 +67,7 @@ void PropagatorCompiler::compileRuleFromStarter(unsigned ruleId, std::ofstream& 
                                     outfile << ind << "std::cout << \"True head for false literal undefined\"<<std::endl;\n";
                                     #endif
                                     outfile << ind << "solver->clearReasonClause();\n";
+                                    printAddPropagatedToReason(outfile,ind,"boundBody",true);
                                     outfile << ind << "solver->addLiteralToReason(literal,true);\n";
                                     printTuplePropagation(outfile,ind,"boundBody",true,false);
                                 outfile << --ind << "}\n";
@@ -86,6 +87,7 @@ void PropagatorCompiler::compileRuleFromStarter(unsigned ruleId, std::ofstream& 
                                     outfile << ind << "std::cout << \"True head for bound positive literal undefined\"<<std::endl;\n";
                                     #endif
                                     outfile << ind << "solver->clearReasonClause();\n";
+                                    printAddPropagatedToReason(outfile,ind,"boundBody",false);
                                     outfile << ind << "solver->addLiteralToReason(literal,true);\n";
                                     printTuplePropagation(outfile,ind,"boundBody",false,false);
                                 outfile << --ind << "}\n";
@@ -109,6 +111,7 @@ void PropagatorCompiler::compileRuleFromStarter(unsigned ruleId, std::ofstream& 
                                     outfile << ind << "std::cout << \"False head for negative literal undefined\"<<std::endl;\n";
                                     #endif
                                     outfile << ind << "solver->clearReasonClause();\n";
+                                    printAddPropagatedToReason(outfile,ind,"boundBody",false);
                                     outfile << ind << "solver->addLiteralToReason(-literal,false);\n";
                                     printTuplePropagation(outfile,ind,"boundBody",false,false);
                                 outfile << --ind << "}\n";
@@ -128,6 +131,7 @@ void PropagatorCompiler::compileRuleFromStarter(unsigned ruleId, std::ofstream& 
                                     outfile << ind << "std::cout << \"False head for bound positive literal undefined\"<<std::endl;\n";
                                     #endif
                                     outfile << ind << "solver->clearReasonClause();\n";
+                                    printAddPropagatedToReason(outfile,ind,"boundBody",true);
                                     outfile << ind << "solver->addLiteralToReason(-literal,false);\n";
                                     printTuplePropagation(outfile,ind,"boundBody",true,false);
                                 outfile << --ind << "}\n";
@@ -172,6 +176,7 @@ void PropagatorCompiler::compileRuleFromStarter(unsigned ruleId, std::ofstream& 
                                     outfile << ind << "std::cout << \"True head for last positive literal undefined\"<<std::endl;\n";
                                     #endif
                                     outfile << ind << "solver->clearReasonClause();\n";
+                                    printAddPropagatedToReason(outfile,ind,"tupleU",false);
                                     outfile << ind << "solver->addLiteralToReason(literal,true);\n";
                                     outfile << ind << "const std::vector<int>* bodyTuplesF = &"<<prefix<<"f"<<mapName<<"()->getValuesVec({"<<terms<<"});\n";
                                     outfile << ind << "for(unsigned i = 0; i< bodyTuplesF->size();i++) solver->addLiteralToReason(bodyTuplesF->at(i),false);\n";
@@ -201,6 +206,7 @@ void PropagatorCompiler::compileRuleFromStarter(unsigned ruleId, std::ofstream& 
                                         outfile << ind << "std::cout << \"False head for positive literals undefined\"<<std::endl;\n";
                                         #endif
                                         outfile << ind << "solver->clearReasonClause();\n";
+                                        printAddPropagatedToReason(outfile,ind,"tupleU",true);
                                         outfile << ind << "solver->addLiteralToReason(-literal,false);\n";
                                         printTuplePropagation(outfile,ind,"tupleU",true,false);
                                     outfile << --ind << "}\n";
@@ -263,6 +269,7 @@ void PropagatorCompiler::compileRuleFromStarter(unsigned ruleId, std::ofstream& 
                                 outfile << ind << "std::cout << \"Undef head for negative literal false\"<<std::endl;\n";
                                 #endif
                                 outfile << ind << "solver->clearReasonClause();\n";
+                                printAddPropagatedToReason(outfile,ind,"head",true);
                                 outfile << ind << "solver->addLiteralToReason(literal,true);\n";
                                 printTuplePropagation(outfile,ind,"head",true,false);
                             outfile << --ind << "}\n";
@@ -283,6 +290,7 @@ void PropagatorCompiler::compileRuleFromStarter(unsigned ruleId, std::ofstream& 
                                 outfile << ind << "std::cout << \"Undef head for negative literal true\"<<std::endl;\n";
                                 #endif
                                 outfile << ind << "solver->clearReasonClause();\n";
+                                printAddPropagatedToReason(outfile,ind,"head",false);
                                 outfile << ind << "solver->addLiteralToReason(-literal,false);\n";
                                 printTuplePropagation(outfile,ind,"head",false,false);
                             outfile << --ind << "}\n";
@@ -305,6 +313,7 @@ void PropagatorCompiler::compileRuleFromStarter(unsigned ruleId, std::ofstream& 
                                 outfile << ind << "std::cout << \"Undef head for positive literal true\"<<std::endl;\n";
                                 #endif
                                 outfile << ind << "solver->clearReasonClause();\n";
+                                printAddPropagatedToReason(outfile,ind,"head",false);
                                 outfile << ind << "solver->addLiteralToReason(literal,true);\n";
                                 printTuplePropagation(outfile,ind,"head",false,false);
                             outfile << --ind << "}\n";
@@ -325,6 +334,7 @@ void PropagatorCompiler::compileRuleFromStarter(unsigned ruleId, std::ofstream& 
                                 outfile << ind << "std::cout << \"Undef head for positive literal false\"<<std::endl;\n";
                                 #endif
                                 outfile << ind << "solver->clearReasonClause();\n";
+                                printAddPropagatedToReason(outfile,ind,"head",true);
                                 outfile << ind << "solver->addLiteralToReason(-literal,false);\n";
                                 printTuplePropagation(outfile,ind,"head",true,false);
                             outfile << --ind << "}\n";
@@ -364,6 +374,7 @@ void PropagatorCompiler::compileRuleFromStarter(unsigned ruleId, std::ofstream& 
                                 #endif
                                     
                                 outfile << ind << "solver->clearReasonClause();\n";
+                                printAddPropagatedToReason(outfile,ind,"head",false);
                                 outfile << ind << "solver->addLiteralToReason(literal,true);\n";
                                 printTuplePropagation(outfile,ind,"head",false,false);
                             outfile << --ind << "}\n";
@@ -394,6 +405,7 @@ void PropagatorCompiler::compileRuleFromStarter(unsigned ruleId, std::ofstream& 
                                         #endif
                                         outfile << ind << "const std::vector<int>* bodyTuplesF = &"<<prefix<<"f"<<mapName<<"()->getValuesVec({"<<terms<<"});\n";
                                         outfile << ind << "solver->clearReasonClause();\n";
+                                        printAddPropagatedToReason(outfile,ind,"tupleU",false);
                                         outfile << ind << "solver->addLiteralToReason(-literal,false);\n"; 
                                         outfile << ind << "for(unsigned i =0; i< bodyTuplesF->size(); i++) if(bodyTuplesF->at(i)!= -literal) solver->addLiteralToReason(bodyTuplesF->at(i),false);\n";
                                         outfile << ind << "solver->addLiteralToReason(head->getId(),true);\n";                                
@@ -409,6 +421,7 @@ void PropagatorCompiler::compileRuleFromStarter(unsigned ruleId, std::ofstream& 
                                     
                                 outfile << ind << "const std::vector<int>* bodyTuplesF = &"<<prefix<<"f"<<mapName<<"()->getValuesVec({"<<terms<<"});\n";
                                 outfile << ind << "solver->clearReasonClause();\n";
+                                printAddPropagatedToReason(outfile,ind,"head",true);
                                 outfile << ind << "solver->addLiteralToReason(-literal,false);\n"; 
                                 outfile << ind << "for(unsigned i =0; i< bodyTuplesF->size(); i++) if(bodyTuplesF->at(i)!= -literal) solver->addLiteralToReason(bodyTuplesF->at(i),false);\n";
                                 printTuplePropagation(outfile,ind,"head",true,false);
@@ -571,6 +584,7 @@ void PropagatorCompiler::compileRuleFromStarter(unsigned ruleId, std::ofstream& 
                     printConflict(outfile,ind,false);
                 outfile << --ind << "}else{\n";
                 ind++;
+                    printAddPropagatedToReason(outfile,ind,"tupleU",false,true);
                     outfile << ind << "solver->addLiteralToReason(starter->getId(),literal > 0);\n";
                     for(unsigned index : ordering[i]){
                         if(body->at(index)->isLiteral()){
@@ -608,18 +622,17 @@ void PropagatorCompiler::printConflict(std::ofstream& outfile,Indentation& ind, 
 }
 
 void PropagatorCompiler::printTuplePropagation(std::ofstream& outfile,Indentation& ind, std::string tuplename,bool asFalse,bool level0,bool constraint){
-    outfile << ind << "int var = "<<tuplename<<"->getId();\n";
-    if(constraint)
-        outfile << ind << "var = tupleUNegated ? var : -var;\n";
-    else
-        outfile << ind << "var = "<<(asFalse ? "-var" : "var")<< ";\n";
     if(level0){
+        outfile << ind << "int var = "<<tuplename<<"->getId();\n";
+        if(constraint)
+            outfile << ind << "var = tupleUNegated ? var : -var;\n";
+        else
+            outfile << ind << "var = "<<(asFalse ? "-var" : "var")<< ";\n";    
         outfile << ind << "propagations.push_back((var > 0) ? Glucose::mkLit(var) : ~Glucose::mkLit(var));\n";
         // outfile << ind << "lits.clear();\n";
         // outfile << ind << "lits.push( (var > 0) ? Glucose::mkLit(var) : ~Glucose::mkLit(var) );\n";
         // outfile << ind << "solver->addClause_(lits);\n";
     }else{
-        outfile << ind << "solver->addLiteralToReason("<<tuplename<<"->getId(),var < 0);\n";
         outfile << ind << "Glucose::CRef clause = solver->externalPropagation("<<tuplename<<"->getId(),var < 0,this);\n";
         outfile << ind++ << "if(clause != Glucose::CRef_Undef)\n";
             outfile << ind-- << "return clause;\n";
@@ -631,6 +644,16 @@ void PropagatorCompiler::printTuplePropagation(std::ofstream& outfile,Indentatio
     // outfile << ind << "Glucose::CRef clause = s->externalPropagation("<<tuplename<<"->getId(),"<<sign<<");\n";
     // outfile << ind++ << "if(clause != Glucose::CRef_Undef)\n";
     //     outfile << ind-- << "return clause;\n";
+}
+
+void PropagatorCompiler::printAddPropagatedToReason(std::ofstream& outfile,Indentation& ind, std::string tuplename,bool asFalse,bool constraint){
+        outfile << ind << "int var = "<<tuplename<<"->getId();\n";
+        if(constraint)
+            outfile << ind << "var = tupleUNegated ? var : -var;\n";
+        else
+            outfile << ind << "var = "<<(asFalse ? "-var" : "var")<< ";\n";
+        
+        outfile << ind << "solver->addLiteralToReason("<<tuplename<<"->getId(),var < 0);\n";
 }
 void PropagatorCompiler::compileRuleWatcher(unsigned ruleId,std::ofstream& outfile,Indentation& ind){
     outfile << ind << "virtual void printName()const {std::cout << \"External Propagator "<<ruleId<<"\"<<std::endl;}";

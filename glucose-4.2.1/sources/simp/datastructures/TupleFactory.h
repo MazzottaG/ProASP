@@ -53,8 +53,8 @@ class TupleFactory{
 
     private:
         TupleFactory(/* args */){
-            storage.push_back(TupleLight());
-            internalIDToTuple.push_back(&storage.back());
+            //storage.push_back(TupleLight());
+            internalIDToTuple.push_back(new TupleLight());
             generated=false;
         }
         std::vector<std::unordered_set<TupleLight*,TuplePointerHash,TuplePointerEq>> tupleToInternalVarSets;
@@ -68,7 +68,7 @@ class TupleFactory{
         std::unordered_map<int,TupleLight*> waspIDToTuple;
         //-----------
         
-        std::list<TupleLight> storage;
+        // std::list<TupleLight> storage;
         
         std::unordered_map<int,unsigned> aggregateSetToIndex;
         bool generated;
@@ -92,6 +92,7 @@ class TupleFactory{
         std::vector<unsigned>& getVisibleAtoms(){return visibleTuple;}
         
         ~TupleFactory(){
+            for(TupleLight* tuple : internalIDToTuple) delete tuple;
         }
         
         
@@ -157,16 +158,20 @@ class TupleFactory{
             auto& tupleToInternalVar=tupleToInternalVarSets[predName];
             auto it = tupleToInternalVar.find(&bufferTuple);
             if(it==tupleToInternalVar.end()){
-                storage.push_back(bufferTuple);
-                TupleLight* reference = &storage.back();
+                // storage.push_back(bufferTuple);
+                // TupleLight* reference = &storage.back();
+                TupleLight* reference = new TupleLight(bufferTuple);
                 tupleToInternalVar.insert(reference);
                 internalIDToTuple.push_back(reference);
                 waspIDToTuple.insert({id,reference});
                 reference->setWaspID(id);
-                reference->setId(storage.size()-1);
+                // reference->setId(storage.size()-1);
+                reference->setId(internalIDToTuple.size()-1);
                 bufferTuple.clearContent();
+
                 // std::cout<<reference->getWaspID()<<" "<<reference->getId()<<" ";reference->print();std::cout<<" "<<id<<std::endl;
-                return &storage.back();
+                // return &storage.back();
+                return reference;
             }
             bufferTuple.clearContent();
             // std::cout<<"Already added"<<std::endl;
@@ -180,11 +185,16 @@ class TupleFactory{
             auto it = tupleToInternalVar.find(&bufferTuple);
             if(it==tupleToInternalVar.end()){
                 
-                storage.push_back(bufferTuple);
-                TupleLight* trueReference = &storage.back();
+                // storage.push_back(bufferTuple);
+                // TupleLight* trueReference = &storage.back();
+                TupleLight* trueReference = new TupleLight(bufferTuple);
+                #ifdef PURE_PROP
+                trueReference->setReason(Glucose::CRef_Undef);
+                #endif
                 tupleToInternalVar.insert(trueReference);
                 internalIDToTuple.push_back(trueReference);
-                trueReference->setId(storage.size()-1);
+                // trueReference->setId(storage.size()-1);
+                trueReference->setId(internalIDToTuple.size()-1);
                 if(!hidden) visibleTuple.push_back(trueReference->getId());
                 bufferTuple.clearContent();
                 return trueReference;
@@ -231,32 +241,35 @@ class TupleFactory{
         }
 
         void printModelAsConstraint()const {
-            std::cout<<"Tuple factory"<<std::endl;
-            for(auto tuple : storage){
-                if(tuple.getWaspID()!=0){
-                    tuple.printAsConstraint();
-                }
+            // std::cout<<"Tuple factory"<<std::endl;
+            // for(auto tuple : storage){
+            //     if(tuple.getWaspID()!=0){
+            //         tuple.printAsConstraint();
+            //     }
                 
-            }
+            // }
         }
         std::vector<TupleLight*>* getAtoms() {
             return &internalIDToTuple;
         }
         void print()const {
-            std::cout<<"Tuple factory"<<std::endl;
-            bool first=true;
-            for(auto tuple : storage){
-                if(!first)
-                    tuple.print();
-                else
-                    first=false;
-            }
+            // std::cout<<"Tuple factory"<<std::endl;
+            // bool first=true;
+            // for(auto tuple : storage){
+            //     if(!first)
+            //         tuple.print();
+            //     else
+            //         first=false;
+            // }
         }
         unsigned size(){
-            return storage.size();
+            // return storage.size();
+            return internalIDToTuple.size();
         }
         void printSize(){
-            std::cout<<storage.size()<<std::endl;
+            // std::cout<<storage.size()<<std::endl;
+            std::cout<<internalIDToTuple.size()<<std::endl;
+
         }
         unsigned getIndexForAggrSet(int pred)const{
             auto it = aggregateSetToIndex.find(pred);
@@ -327,7 +340,8 @@ class TupleFactory{
         }
             
         void printStats(){
-            std::cout << "FACTORY::TupleCount "<<storage.size()<<std::endl;
+            // std::cout << "FACTORY::TupleCount "<<storage.size()<<std::endl;
+            std::cout << "FACTORY::TupleCount "<<internalIDToTuple.size()<<std::endl;
             for(int i=0; i<1;i++){
                 std::cout << "FACTORY::Predicate    "<<i<<std::endl;
             

@@ -710,8 +710,11 @@ void Solver::analyze(CRef confl, vec <Lit> &out_learnt, vec <Lit> &selectors, in
             std::cout << "Navigating "<<var(p)<< (!sign(p) ? " true" : " false")<<std::endl;
             #endif
         }
-        
+        #ifndef PURE_PROP
         assert(confl != CRef_Undef); // (otherwise should be UIP)
+        #else
+        assert(level(var(p))>0 || confl != CRef_Undef); 
+        #endif
 
         Clause &c = ca[confl];
         // Special case for binary clauses
@@ -977,7 +980,7 @@ void Solver::uncheckedEnqueue(Lit p, CRef from) {
     std::cout << "uncheckedEnqueue " << var(p) << (!sign(p) ? " true" : " false");if(from != CRef_Undef) printClause(from); std::cout << std::endl;
     #endif
     #ifdef TRACE_SOLVER
-    std::cout << "   Assigning " << var(p) << (!sign(p) ? " true " : " false "); AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(var(p))); std::cout << std::endl;
+    std::cout << "   Assigning " << var(p) << " at level "<<decisionLevel()<< (!sign(p) ? " true " : " false "); AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(var(p))); std::cout << std::endl;
     std::cout << "      Considered clause "; if(from != CRef_Undef) printClause(from); std::cout << std::endl;
     #endif
 
@@ -1686,7 +1689,7 @@ lbool Solver::search(int nof_conflicts) {
             aDecisionWasMade = true;
             newDecisionLevel();
             #if defined(DEBUG_PROP) || defined(TRACE_SOLVER)
-            std::cout << "Choice "<<std::endl;
+            std::cout << "Choice "<<decisionLevel()<<std::endl;
             #endif
             uncheckedEnqueue(next);
         }
@@ -1695,7 +1698,7 @@ lbool Solver::search(int nof_conflicts) {
 
 inline void Solver::printClause(CRef cr)
 {
-  Clause &c = ca[cr];
+    Clause &c = ca[cr];
     for (int i = 0; i < c.size(); i++){
         AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(var(c[i])));
         // printLit(c[i]);
@@ -2078,18 +2081,13 @@ CRef Solver::storeConflictClause(){
 }
 // External propagation
 
-void Solver::declarePostponedClause(vec <Lit> &ps){
-    CRef_Prop = ca.alloc(ps, false);
-}
+#ifndef PURE_PROP
 CRef Solver::externalPropagation(Var var, bool negated,AbstractPropagator* prop){
     int literal = negated ? -var : var;
     CRef propagationClause = CRef_Undef;
     unsigned currentDecisionLevel = decisionLevel();
     if(value(var) == l_Undef || toInt(value(var)) != negated){
         if(currentDecisionLevel == 0){
-            #ifdef PURE_PROP
-            TupleFactory::getInstance().setPropagationData(var,prop);
-            #endif
             reasonClause.clear();
             reasonClause.push( mkLit(var,negated));
             addClause_(reasonClause);
@@ -2099,9 +2097,6 @@ CRef Solver::externalPropagation(Var var, bool negated,AbstractPropagator* prop)
         }
     }
 
-    #ifdef DEBUG_PROP
-    std::cout << "   External Propagation "<<literal;AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(var));std::cout << std::endl;
-    #endif
     if(value(var) != l_Undef && toInt(value(var)) != negated){
         // conflict detected
         // printf("External propagation of already assigned literal\n");
@@ -2118,21 +2113,26 @@ CRef Solver::externalPropagation(Var var, bool negated,AbstractPropagator* prop)
             return propagationClause;
         }
     }else if(value(var) == l_Undef && currentDecisionLevel>0){
-        #ifdef PURE_PROP
-        TupleFactory::getInstance().setPropagationData(var,prop);
+        
+        #ifdef TRACE_SOLVER
+        std::cout << "   Propagated by external propagation "<<literal;AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(var));std::cout << std::endl;
         #endif
         uncheckedEnqueue(mkLit(var,negated),propagationClause);
     }
     return CRef_Undef;
 }
-
 CRef Solver::storePropagatorReason(int literal){
 
+    #ifdef TRACE_SOLVER
+        printf("Order check for clause");
+        for(int i=0;i<reasonClause.size(); i++){
+            printf(" %d",sign(reasonClause[i]) ? -var(reasonClause[i]) : var(reasonClause[i]));        
+        }
+        printf(" \n");
+    #endif
     unsigned v = literal > 0 ? literal : -literal;
-    assert(var(reasonClause[reasonClause.size()-1]) == v);
-    std::swap(reasonClause[1],reasonClause[reasonClause.size()-1]);
-    std::swap(reasonClause[0],reasonClause[1]);
-
+    assert(var(reasonClause[0]) == v && level(var(reasonClause[1]))==decisionLevel());
+    
     CRef cr ;
     int nblevels=computeLBD(reasonClause);
     if(chanseokStrategy && nblevels <= coLBDBound) {
@@ -2152,11 +2152,11 @@ CRef Solver::storePropagatorReason(int literal){
     #ifdef INCREMENTAL
         ca[cr].setSizeWithoutSelectors(szWithoutSelectors);
     #endif
+
     if(nblevels <= 2) { stats[nbDL2]++; } // stats
     if(ca[cr].size() == 2) stats[nbBin]++; // stats
     attachClause(cr);
     lastLearntClause = cr; // Use in multithread (to hard to put inside ParallelSolver)
-
 
     parallelExportClauseDuringSearch(ca[cr]);
 
@@ -2167,9 +2167,60 @@ CRef Solver::storePropagatorReason(int literal){
     }
     printf(" 0\n");
     #endif
+    
     return cr;
     
 }
+#else
+CRef Solver::externalPropagation(Var var, bool negated,AbstractPropagator* prop){
+    int literal = negated ? -var : var;
+    CRef propagationClause = CRef_Undef;
+    unsigned currentDecisionLevel = decisionLevel();
+    if(value(var) == l_Undef || toInt(value(var)) != negated){
+        if(currentDecisionLevel == 0){
+            reasonClause.clear();
+            reasonClause.push( mkLit(var,negated));
+            addClause_(reasonClause);
+            TupleFactory::getInstance().getTupleFromInternalID(var)->setReason(CRef_Undef);
+            return CRef_Undef;
+        }else{
+            propagationClause = storePropagatorReason(literal);
+        }
+    }
+
+    if(value(var) != l_Undef && toInt(value(var)) != negated){
+        // conflict detected
+        // printf("External propagation of already assigned literal\n");
+        #ifdef TRACE_SOLVER
+        std::cout << "   Found conflict on "<<literal;AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(var));std::cout << std::endl;
+        std::cout << "      Violated clause "; if(propagationClause != CRef_Undef) printClause(propagationClause); std::cout << std::endl;
+        #endif
+        if(currentDecisionLevel == 0){
+            reasonClause.clear();
+            addClause_(reasonClause);
+            return CRef_Undef;
+        }else{
+            conflictLiteral=literal;
+            return propagationClause;
+        }
+    }else if(value(var) == l_Undef && currentDecisionLevel>0){
+        TupleFactory::getInstance().getTupleFromInternalID(var)->setReason(propagationClause);
+        #ifdef TRACE_SOLVER
+        std::cout << "   Propagated by external propagation "<<literal;AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(var));std::cout << std::endl;
+        #endif
+        
+        uncheckedEnqueue(mkLit(var,negated),CRef_Prop);
+    }
+    return CRef_Undef;
+}
+CRef Solver::storePropagatorReason(int literal){
+
+    unsigned v = literal > 0 ? literal : -literal;
+    assert(var(reasonClause[0]) == v && level(var(reasonClause[1]))==decisionLevel());
+    return ca.alloc(reasonClause, true);
+}
+#endif
+
 void Solver::addLiteralToReason(Var var, bool negated){
     if(level(var) > 0 || value(var) == l_Undef)
         reasonClause.push(mkLit(var,negated));

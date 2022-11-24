@@ -58,6 +58,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "core/Constants.h"
 #include "mtl/Clone.h"
 #include "core/SolverStats.h"
+#include "../simp/datastructures/TupleFactory.h"
 
 #include "mtl/Vec.h"
 #include <unordered_map>
@@ -141,7 +142,6 @@ class Solver : public Clone {
     bool    okay         () const;                  // FALSE means solver is in a conflicting state
 
     // External Propagators
-    void declarePostponedClause(vec <Lit> &ps);
     CRef externalPropagation(Var var, bool negated,AbstractPropagator* prop);
     CRef storePropagatorReason(int literal);
     void addLiteralToReason(Var var, bool negated);
@@ -373,6 +373,7 @@ class Solver : public Clone {
     vec<Lit> reasonClause;
     int conflictLiteral;
     CRef CRef_Prop=CRef_Undef;
+    int countAnalyze=0;
 
     // UPDATEVARACTIVITY trick (see competition'09 companion paper)
     vec<Lit> lastDecisionLevel;
@@ -517,14 +518,14 @@ public:
 
 //=================================================================================================
 // Implementation of inline methods:
-#ifndef PURE_PROP
-inline CRef Solver::reason(Var x) const { return vardata[x].reason; }
-#endif
-
-#ifdef PURE_PROP
-inline CRef Solver::reason(Var x) const { CRef reas = vardata[x].reason; return reas != CRef_Prop ? reas : Propagator::getInstance().explain(x);}
-#endif
-
+inline CRef Solver::reason(Var x) const { 
+    #ifndef PURE_PROP
+        return vardata[x].reason; 
+    #else
+        CRef reas = vardata[x].reason; 
+        return reas != CRef_Prop ? reas : TupleFactory::getInstance().getTupleFromInternalID(x)->getReason();
+    #endif
+}
 inline int  Solver::level (Var x) const { return vardata[x].level; }
 
 inline void Solver::insertVarOrder(Var x) {

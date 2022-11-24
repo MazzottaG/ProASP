@@ -18,6 +18,8 @@ class PropagatorCompiler{
         void compileRuleWatcher(unsigned ruleId,std::ofstream&,Indentation&);
         void compileRuleFromStarter(unsigned ruleId, std::ofstream&, Indentation&);
         void printTuplePropagation(std::ofstream& outfile,Indentation& ind, std::string tuple,bool asFalse,bool level0 ,bool constraint = false);
+        void printAddPropagatedToReason(std::ofstream& outfile,Indentation& ind, std::string tuplename,bool asFalse,bool constraint=false);
+
         void printConflict(std::ofstream& outfile,Indentation& ind, bool level0);
         
         void computeSCC();

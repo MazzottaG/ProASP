@@ -29,6 +29,7 @@
 // #include "AggregateSetCmp.h"
 // #include "../utils/ConstantsManager.h"
 #include "IndexedSet.h"
+#include "../../core/SolverTypes.h"
 
 enum TruthStatus {
     True = 0, False, Undef, UNKNOWN
@@ -259,6 +260,14 @@ public:
         // removeFromCollisionsLists(factory);
         return std::make_pair(this, true);
     }
+    #ifdef PURE_PROP
+    void setReason(Glucose::CRef clause){
+        this->reason=clause;
+    }
+    Glucose::CRef getReason()const{
+        return reason;
+    }
+    #endif
 
 private:
     int predicateName;
@@ -272,6 +281,9 @@ private:
     mutable unsigned collisionsListsSize;
     mutable std::vector<std::pair< std::variant< std::vector<int>, IndexedSet >*,unsigned>> collisionsLists;
     // mutable std::unordered_map<std::vector<unsigned>*, unsigned> collisionsLists;
+    #ifdef PURE_PROP
+    Glucose::CRef reason;
+    #endif
 };
 
 struct TupleLightHash {
