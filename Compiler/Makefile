@@ -7,7 +7,7 @@ BUILD=compile
 CXX = g++
 
 # define any compile-time flags
-CXXFLAGS.compile := -std=c++17 -Wall -Wextra -g -DCOMPILE_GENERATOR
+CXXFLAGS.compile := -std=c++17 -Wall -Wextra -g -DCOMPILE_GENERATOR -DPURE_PROP
 CXXFLAGS.run := -std=c++17 -Wall -Wextra -g -DRUN_GENERATOR
 
 CXXFLAGS := $(CXXFLAGS.$(BUILD)) 

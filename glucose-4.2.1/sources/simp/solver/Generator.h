@@ -16,7 +16,7 @@ class Generator{
 
         }
         bool isSolvedByGenerator()const {return solvedByGenerator;}
-        void generate(Glucose::Solver* s){
+        void generate(Glucose::SimpSolver* s){
             for(AbstractGenerator* gen : generators) 
                 gen->generate(s);
         }

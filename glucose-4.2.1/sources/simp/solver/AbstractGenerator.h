@@ -1,8 +1,8 @@
 #ifndef ABSTRACTGENERATOR_H
 #define ABSTRACTGENERATOR_H
-#include "../../core/Solver.h"
+#include "../SimpSolver.h"
 class AbstractGenerator{
     public:
-        virtual void generate(Glucose::Solver*)=0;
+        virtual void generate(Glucose::SimpSolver*)=0;
 };
 #endif

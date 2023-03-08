@@ -217,25 +217,45 @@ void Solver::simpleAnalyze(CRef confl, vec<Lit>& out_learnt, vec<CRef>& reason_c
     int pathC = 0;
     Lit p = lit_Undef;
     int index = trail.size() - 1;
-
+    bool startAnalyze=true;
     do{
         if (confl != CRef_Undef){
             reason_clause.push(confl);
-            Clause& c = ca[confl];
-            // Special case for binary clauses
-            // The first one has to be SAT
-            if (p != lit_Undef && c.size() == 2 && value(c[0]) == l_False) {
+            if(confl == CRef_Prop){
+                vec<Lit>& c = startAnalyze ? reasonClause : TupleFactory::getInstance().explain(var(p));
+                // Special case for binary clauses
+                // The first one has to be SAT
+                if (p != lit_Undef && c.size() == 2 && value(c[0]) == l_False) {
 
-                assert(value(c[1]) == l_True);
-                Lit tmp = c[0];
-                c[0] = c[1], c[1] = tmp;
-            }
-            // if True_confl==true, then choose p begin with the 1th index of c;
-            for (int j = (p == lit_Undef && True_confl == false) ? 0 : 1; j < c.size(); j++){
-                Lit q = c[j];
-                if (!seen[var(q)]){
-                    seen[var(q)] = 1;
-                    pathC++;
+                    assert(value(c[1]) == l_True);
+                    Lit tmp = c[0];
+                    c[0] = c[1], c[1] = tmp;
+                }
+                // if True_confl==true, then choose p begin with the 1th index of c;
+                for (int j = (p == lit_Undef && True_confl == false) ? 0 : 1; j < c.size(); j++){
+                    Lit q = c[j];
+                    if (!seen[var(q)]){
+                        seen[var(q)] = 1;
+                        pathC++;
+                    }
+                }
+            }else{
+                Clause& c = ca[confl];
+                // Special case for binary clauses
+                // The first one has to be SAT
+                if (p != lit_Undef && c.size() == 2 && value(c[0]) == l_False) {
+
+                    assert(value(c[1]) == l_True);
+                    Lit tmp = c[0];
+                    c[0] = c[1], c[1] = tmp;
+                }
+                // if True_confl==true, then choose p begin with the 1th index of c;
+                for (int j = (p == lit_Undef && True_confl == false) ? 0 : 1; j < c.size(); j++){
+                    Lit q = c[j];
+                    if (!seen[var(q)]){
+                        seen[var(q)] = 1;
+                        pathC++;
+                    }
                 }
             }
         }
@@ -253,7 +273,7 @@ void Solver::simpleAnalyze(CRef confl, vec<Lit>& out_learnt, vec<CRef>& reason_c
         confl = reason(var(p));
         seen[var(p)] = 0;
         pathC--;
-
+        startAnalyze=false;
     } while (pathC >= 0);
 }
 

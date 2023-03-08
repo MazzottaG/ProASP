@@ -28,6 +28,7 @@
 #include <cmath>
 
 const int HALF_INT_MAX = INT_MAX/2; 
+
 struct TuplePointerHash {
     inline std::size_t operator()(const TupleLight* v) const {
         std::size_t seed=0;
@@ -48,6 +49,10 @@ struct TuplePointerEq {
       return *val1 == *val2;
    }
 };
+namespace Glucose{
+    class Solver;
+    class Lit;
+}
 class AbstractPropagator;
 class TupleFactory{
 
@@ -62,6 +67,7 @@ class TupleFactory{
         std::vector<std::vector<AbstractPropagator*>> negativeWatcher;
         std::vector<std::vector<AbstractPropagator*>> positiveWatcher;
         static std::vector<AbstractPropagator*> EMPTY_WATCHER;
+
         std::vector<unsigned> visibleTuple;
 
         //TODO Remove
@@ -77,6 +83,11 @@ class TupleFactory{
         
     public:
         
+        Glucose::vec<Glucose::Lit>& explain(unsigned var){
+            assert(var<internalIDToTuple.size());
+            return internalIDToTuple[var]->getReasonLits();
+        }
+
         static TupleFactory& getInstance() {
             static TupleFactory instance;
             return instance;
@@ -95,7 +106,7 @@ class TupleFactory{
             for(TupleLight* tuple : internalIDToTuple) delete tuple;
         }
         
-        
+
         void printAvgWatcherSize(int term){
             // TupleLight* t = find({1,term},4);
             // int id = t->getId();
@@ -188,9 +199,6 @@ class TupleFactory{
                 // storage.push_back(bufferTuple);
                 // TupleLight* trueReference = &storage.back();
                 TupleLight* trueReference = new TupleLight(bufferTuple);
-                #ifdef PURE_PROP
-                trueReference->setReason(Glucose::CRef_Undef);
-                #endif
                 tupleToInternalVar.insert(trueReference);
                 internalIDToTuple.push_back(trueReference);
                 // trueReference->setId(storage.size()-1);

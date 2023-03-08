@@ -30,6 +30,7 @@
 // #include "../utils/ConstantsManager.h"
 #include "IndexedSet.h"
 #include "../../core/SolverTypes.h"
+#include "../../mtl/Vec.h"
 
 enum TruthStatus {
     True = 0, False, Undef, UNKNOWN
@@ -37,6 +38,7 @@ enum TruthStatus {
 // class AggregateSetCmp;
 class TupleLight {
 public:
+    static Glucose::vec<Glucose::Lit> EMPTY_REASON_LITS;
 
     TupleLight() : predicateName(-1),waspID(0),id(0),size_(0),content(NULL),status(UNKNOWN),collisionsListsSize(0) {
     }
@@ -260,14 +262,32 @@ public:
         // removeFromCollisionsLists(factory);
         return std::make_pair(this, true);
     }
-    #ifdef PURE_PROP
-    void setReason(Glucose::CRef clause){
-        this->reason=clause;
+    Glucose::vec<Glucose::Lit>& getReasonLits(){
+        #ifndef PURE_PROP
+            return TupleLight::EMPTY_REASON_LITS;
+        #else
+            return reason;
+        #endif
     }
-    Glucose::CRef getReason()const{
-        return reason;
+    void clearReasonClause(){
+        #ifdef PURE_PROP
+        this->reason.clear();
+        #endif
     }
-    #endif
+    void addLiteralToReason(int var, bool negated){
+        #ifdef PURE_PROP
+        assert(var > 0);
+        reason.push(Glucose::mkLit(var,negated));
+        #endif 
+    }
+
+    const Glucose::vec<Glucose::Lit>& getReason()const{
+        #ifndef PURE_PROP
+            return TupleLight::EMPTY_REASON_LITS;
+        #else
+            return reason;
+        #endif
+    }
 
 private:
     int predicateName;
@@ -282,7 +302,7 @@ private:
     mutable std::vector<std::pair< std::variant< std::vector<int>, IndexedSet >*,unsigned>> collisionsLists;
     // mutable std::unordered_map<std::vector<unsigned>*, unsigned> collisionsLists;
     #ifdef PURE_PROP
-    Glucose::CRef reason;
+    Glucose::vec<Glucose::Lit> reason;
     #endif
 };
 

@@ -53,43 +53,65 @@ void PropagatorCompiler::compileRuleFromStarter(unsigned ruleId, std::ofstream& 
                         outfile << ind++ << "if(literal > 0){\n";
                         // head is true
                             if(lit->isNegated()){
-                                outfile << ind++ << "if(boundBody != NULL && boundBody->isTrue()){\n";
-                                    outfile << ind << "solver->clearReasonClause();\n";
-                                    outfile << ind << "solver->addLiteralToReason(literal,true);\n";
-                                    outfile << ind << "solver->addLiteralToReason(boundBody->getId(),true);\n";
-                                    #ifdef DEBUG_PROP
-                                    outfile << ind << "std::cout << \"True head for false literal false\"<<std::endl;\n";
-                                    #endif
-                                    printConflict(outfile,ind,false);
-                                outfile << --ind << "}\n";
-                                outfile << ind++ << "else if(boundBody != NULL && boundBody->isUndef()){\n";
-                                    #ifdef DEBUG_PROP
-                                    outfile << ind << "std::cout << \"True head for false literal undefined\"<<std::endl;\n";
-                                    #endif
-                                    outfile << ind << "solver->clearReasonClause();\n";
+                                // outfile << ind++ << "if(boundBody != NULL && boundBody->isTrue()){\n";
+                                //     outfile << ind << "solver->clearReasonClause();\n";
+                                //     outfile << ind << "solver->addLiteralToReason(literal,true);\n";
+                                //     outfile << ind << "solver->addLiteralToReason(boundBody->getId(),true);\n";
+                                //     #ifdef DEBUG_PROP
+                                //     outfile << ind << "std::cout << \"True head for false literal false\"<<std::endl;\n";
+                                //     #endif
+                                //     printConflict(outfile,ind,false);
+                                // outfile << --ind << "}\n";
+                                // outfile << ind++ << "else if(boundBody != NULL && boundBody->isUndef()){\n";
+                                    // printAddPropagatedToReason(outfile,ind,"boundBody",true);
+                                    //     printAddToReason(outfile,ind,"literal","true");
+                                    //     printTuplePropagation(outfile,ind,"boundBody",true,false);
+                                    // outfile << --ind << "}\n";
+                                // outfile << --ind << "}\n";
+                                outfile << ind << "assert(!(boundBody != NULL && boundBody->isTrue()) || solver->currentLevel() == 0);\n";
+                                outfile << ind++ << "if(boundBody != NULL && boundBody->isUndef()){\n";
                                     printAddPropagatedToReason(outfile,ind,"boundBody",true);
-                                    outfile << ind << "solver->addLiteralToReason(literal,true);\n";
-                                    printTuplePropagation(outfile,ind,"boundBody",true,false);
+                                        printAddToReason(outfile,ind,"literal","true");
+                                        printTuplePropagation(outfile,ind,"boundBody",true,false);
+                                    outfile << --ind << "}\n";
+                                outfile << --ind << "}\n";
+                                outfile << ind++ << "else if(boundBody != NULL && boundBody->isTrue() && solver->currentLevel() == 0){\n";
+                                    outfile << ind << "lits.clear();\n";
+                                    outfile << ind << "solver->addClause_(lits);\n";
+                                    outfile << ind << "return Glucose::CRef_PropConf;\n";
                                 outfile << --ind << "}\n";
                                 
                             }else{
-                                outfile << ind++ << "if(boundBody == NULL || boundBody->isFalse()){\n";
-                                    #ifdef DEBUG_PROP
-                                    outfile << ind << "std::cout << \"True head for bound positive literal false\"<<std::endl;\n";
-                                    #endif
-                                    outfile << ind << "solver->clearReasonClause();\n";
-                                    outfile << ind << "solver->addLiteralToReason(literal,true);\n";
-                                    outfile << ind << "if(boundBody != NULL) solver->addLiteralToReason(boundBody->getId(),false);\n";
-                                    printConflict(outfile,ind,false);
-                                outfile << --ind << "}\n";
-                                outfile << ind++ << "else if(boundBody != NULL && boundBody->isUndef()){\n";
-                                    #ifdef DEBUG_PROP
-                                    outfile << ind << "std::cout << \"True head for bound positive literal undefined\"<<std::endl;\n";
-                                    #endif
-                                    outfile << ind << "solver->clearReasonClause();\n";
+                                // outfile << ind++ << "if(boundBody == NULL || boundBody->isFalse()){\n";
+                                //     #ifdef DEBUG_PROP
+                                //     outfile << ind << "std::cout << \"True head for bound positive literal false\"<<std::endl;\n";
+                                //     #endif
+                                //     outfile << ind << "solver->clearReasonClause();\n";
+                                //     outfile << ind << "solver->addLiteralToReason(literal,true);\n";
+                                //     outfile << ind << "if(boundBody != NULL) solver->addLiteralToReason(boundBody->getId(),false);\n";
+                                //     printConflict(outfile,ind,false);
+                                // outfile << --ind << "}\n";
+                                // outfile << ind++ << "else if(boundBody != NULL && boundBody->isUndef()){\n";
+                                    
+                                //     printAddPropagatedToReason(outfile,ind,"boundBody",false);
+                                //         printAddToReason(outfile,ind,"literal","true");
+                                //         printTuplePropagation(outfile,ind,"boundBody",false,false);
+                                //     outfile << --ind << "}\n";
+
+                                // outfile << --ind << "}\n";
+                                outfile << ind << "assert(!(boundBody == NULL || boundBody->isFalse()) || solver->currentLevel() == 0);\n";
+                                outfile << ind++ << "if(boundBody != NULL && boundBody->isUndef()){\n";
+                                    
                                     printAddPropagatedToReason(outfile,ind,"boundBody",false);
-                                    outfile << ind << "solver->addLiteralToReason(literal,true);\n";
-                                    printTuplePropagation(outfile,ind,"boundBody",false,false);
+                                        printAddToReason(outfile,ind,"literal","true");
+                                        printTuplePropagation(outfile,ind,"boundBody",false,false);
+                                    outfile << --ind << "}\n";
+
+                                outfile << --ind << "}\n";
+                                outfile << ind++ << "else if((boundBody == NULL || boundBody->isFalse()) && solver->currentLevel() == 0){\n";
+                                    outfile << ind << "lits.clear();\n";
+                                    outfile << ind << "solver->addClause_(lits);\n";
+                                    outfile << ind << "return Glucose::CRef_PropConf;\n";
                                 outfile << --ind << "}\n";
                             }
                         outfile << --ind << "}\n";
@@ -97,43 +119,65 @@ void PropagatorCompiler::compileRuleFromStarter(unsigned ruleId, std::ofstream& 
                         // head is false
                             if(lit->isNegated()){
                                 // false head and negative body literal
-                                outfile << ind++ << "if(boundBody == NULL || boundBody->isFalse()){\n";
-                                    #ifdef DEBUG_PROP
-                                    outfile << ind << "std::cout << \"False head for negative literal true\"<<std::endl;\n";
-                                    #endif
-                                    outfile << ind << "solver->clearReasonClause();\n";
-                                    outfile << ind << "solver->addLiteralToReason(-literal,false);\n";
-                                    outfile << ind << "if(boundBody != NULL) solver->addLiteralToReason(boundBody->getId(),false);\n";
-                                    printConflict(outfile,ind,false);
-                                outfile << --ind << "}\n";
-                                outfile << ind++ << "else if(boundBody != NULL && boundBody->isUndef()){\n";
-                                    #ifdef DEBUG_PROP
-                                    outfile << ind << "std::cout << \"False head for negative literal undefined\"<<std::endl;\n";
-                                    #endif
-                                    outfile << ind << "solver->clearReasonClause();\n";
+                                // outfile << ind++ << "if(boundBody == NULL || boundBody->isFalse()){\n";
+                                //     #ifdef DEBUG_PROP
+                                //     outfile << ind << "std::cout << \"False head for negative literal true\"<<std::endl;\n";
+                                //     #endif
+                                //     outfile << ind << "solver->clearReasonClause();\n";
+                                //     outfile << ind << "solver->addLiteralToReason(-literal,false);\n";
+                                //     outfile << ind << "if(boundBody != NULL) solver->addLiteralToReason(boundBody->getId(),false);\n";
+                                //     printConflict(outfile,ind,false);
+                                // outfile << --ind << "}\n";
+                                // outfile << ind++ << "else if(boundBody != NULL && boundBody->isUndef()){\n";
+
+                                //     printAddPropagatedToReason(outfile,ind,"boundBody",false);
+                                //         printAddToReason(outfile,ind,"-literal","false");
+                                //         printTuplePropagation(outfile,ind,"boundBody",false,false);
+                                //     outfile << --ind << "}\n";
+
+                                // outfile << --ind << "}\n";
+                                outfile << ind << "assert(!(boundBody == NULL || boundBody->isFalse()) || solver->currentLevel() == 0);\n";
+                                outfile << ind++ << "if(boundBody != NULL && boundBody->isUndef()){\n";
+
                                     printAddPropagatedToReason(outfile,ind,"boundBody",false);
-                                    outfile << ind << "solver->addLiteralToReason(-literal,false);\n";
-                                    printTuplePropagation(outfile,ind,"boundBody",false,false);
+                                        printAddToReason(outfile,ind,"-literal","false");
+                                        printTuplePropagation(outfile,ind,"boundBody",false,false);
+                                    outfile << --ind << "}\n";
+
+                                outfile << --ind << "}\n";
+                                outfile << ind++ << "else if( (boundBody == NULL || boundBody->isFalse()) && solver->currentLevel() == 0){\n";
+                                    outfile << ind << "lits.clear();\n";
+                                    outfile << ind << "solver->addClause_(lits);\n";
+                                    outfile << ind << "return Glucose::CRef_PropConf;\n";
                                 outfile << --ind << "}\n";
                             }else{
                                 // false head and positive body literal
-                                outfile << ind++ << "if(boundBody != NULL && boundBody->isTrue()){\n";
-                                    #ifdef DEBUG_PROP
-                                    outfile << ind << "std::cout << \"False head for bound positive literal true\"<<std::endl;\n";
-                                    #endif
-                                    outfile << ind << "solver->clearReasonClause();\n";
-                                    outfile << ind << "solver->addLiteralToReason(-literal,false);\n";
-                                    outfile << ind << "solver->addLiteralToReason(boundBody->getId(),true);\n";
-                                    printConflict(outfile,ind,false);
-                                outfile << --ind << "}\n";
-                                outfile << ind++ << "else if(boundBody != NULL && boundBody->isUndef()){\n";
-                                    #ifdef DEBUG_PROP
-                                    outfile << ind << "std::cout << \"False head for bound positive literal undefined\"<<std::endl;\n";
-                                    #endif
-                                    outfile << ind << "solver->clearReasonClause();\n";
+                                // outfile << ind++ << "if(boundBody != NULL && boundBody->isTrue()){\n";
+                                //     #ifdef DEBUG_PROP
+                                //     outfile << ind << "std::cout << \"False head for bound positive literal true\"<<std::endl;\n";
+                                //     #endif
+                                //     outfile << ind << "solver->clearReasonClause();\n";
+                                //     outfile << ind << "solver->addLiteralToReason(-literal,false);\n";
+                                //     outfile << ind << "solver->addLiteralToReason(boundBody->getId(),true);\n";
+                                //     printConflict(outfile,ind,false);
+                                // outfile << --ind << "}\n";
+                                // outfile << ind++ << "else if(boundBody != NULL && boundBody->isUndef()){\n";
+                                //     printAddPropagatedToReason(outfile,ind,"boundBody",true);
+                                //         printAddToReason(outfile,ind,"-literal","false");
+                                //         printTuplePropagation(outfile,ind,"boundBody",true,false);
+                                //     outfile << --ind << "}\n";
+                                // outfile << --ind << "}\n";
+                                outfile << ind << "assert(!(boundBody != NULL && boundBody->isTrue()) || solver->currentLevel() == 0);\n";
+                                outfile << ind++ << "if(boundBody != NULL && boundBody->isUndef()){\n";
                                     printAddPropagatedToReason(outfile,ind,"boundBody",true);
-                                    outfile << ind << "solver->addLiteralToReason(-literal,false);\n";
-                                    printTuplePropagation(outfile,ind,"boundBody",true,false);
+                                        printAddToReason(outfile,ind,"-literal","false");
+                                        printTuplePropagation(outfile,ind,"boundBody",true,false);
+                                    outfile << --ind << "}\n";
+                                outfile << --ind << "}\n";
+                                outfile << ind++ << "else if(boundBody != NULL && boundBody->isTrue() && solver->currentLevel() == 0){\n";
+                                    outfile << ind << "lits.clear();\n";
+                                    outfile << ind << "solver->addClause_(lits);\n";
+                                    outfile << ind << "return Glucose::CRef_PropConf;\n";
                                 outfile << --ind << "}\n";
                             }
                         outfile << --ind << "}\n";
@@ -157,60 +201,100 @@ void PropagatorCompiler::compileRuleFromStarter(unsigned ruleId, std::ofstream& 
                         outfile << ind << "const std::vector<int>* bodyTuplesP = &"<<prefix<<"p"<<mapName<<"()->getValuesVec({"<<terms<<"});\n";
                         outfile << ind++ << "if(literal > 0){\n";
                         // head is true
-                            outfile << ind++ << "if(bodyTuplesU->size()+bodyTuplesP->size() == 0){\n";
-                                #ifdef DEBUG_PROP
-                                outfile << ind << "std::cout << \"True head for no positive literal true/undefined\"<<std::endl;\n";
-                                #endif
-                                outfile << ind << "solver->clearReasonClause();\n";
-                                outfile << ind << "solver->addLiteralToReason(literal,true);\n";
-                                outfile << ind << "const std::vector<int>* bodyTuplesF = &"<<prefix<<"f"<<mapName<<"()->getValuesVec({"<<terms<<"});\n";
-                                outfile << ind << "for(unsigned i =0; i< bodyTuplesF->size(); i++) solver->addLiteralToReason(bodyTuplesF->at(i),false);\n";
-                                printConflict(outfile,ind,false);
-                            outfile << --ind << "}\n";
-                            outfile << ind++ << "else if(bodyTuplesP->size() == 0 && bodyTuplesU->size() == 1){\n";
+                            // outfile << ind++ << "if(bodyTuplesU->size()+bodyTuplesP->size() == 0){\n";
+                            //     #ifdef DEBUG_PROP
+                            //     outfile << ind << "std::cout << \"True head for no positive literal true/undefined\"<<std::endl;\n";
+                            //     #endif
+                            //     outfile << ind << "solver->clearReasonClause();\n";
+                            //     outfile << ind << "solver->addLiteralToReason(literal,true);\n";
+                            //     outfile << ind << "const std::vector<int>* bodyTuplesF = &"<<prefix<<"f"<<mapName<<"()->getValuesVec({"<<terms<<"});\n";
+                            //     outfile << ind << "for(unsigned i =0; i< bodyTuplesF->size(); i++) solver->addLiteralToReason(bodyTuplesF->at(i),false);\n";
+                            //     printConflict(outfile,ind,false);
+                            // outfile << --ind << "}\n";
+                            // outfile << ind++ << "else if(bodyTuplesP->size() == 0 && bodyTuplesU->size() == 1){\n";
+                            //     //last undef body as true
+                            //     outfile << ind << "Tuple* tupleU = TupleFactory::getInstance().getTupleFromInternalID(bodyTuplesU->at(0));\n";
+                            //     outfile << ind << "if(tupleU == NULL){ std::cout << \"Error: Unable to find tuple to propagate\"<<std::endl; exit(180);}\n";
+                            //     outfile << ind++ << "else{\n";
+                                    
+                            //         printAddPropagatedToReason(outfile,ind,"tupleU",false);
+                            //             printAddToReason(outfile,ind,"literal","true");
+                            //             outfile << ind << "const std::vector<int>* bodyTuplesF = &"<<prefix<<"f"<<mapName<<"()->getValuesVec({"<<terms<<"});\n";
+                            //             outfile << ind++ << "for(unsigned i = 0; i< bodyTuplesF->size();i++){\n";
+                            //                 printAddToReason(outfile,ind,"bodyTuplesF->at(i)","false");
+                            //             outfile << --ind << "}\n";
+                            //             printTuplePropagation(outfile,ind,"tupleU",false,false);
+                            //         outfile << --ind << "}\n";
+
+                            //     outfile << --ind << "}\n";
+                            // outfile << --ind << "}\n";
+                            outfile << ind << "assert(!(bodyTuplesU->size()+bodyTuplesP->size() == 0) || solver->currentLevel() == 0);\n";
+                            outfile << ind++ << "if(bodyTuplesP->size() == 0 && bodyTuplesU->size() == 1){\n";
                                 //last undef body as true
                                 outfile << ind << "Tuple* tupleU = TupleFactory::getInstance().getTupleFromInternalID(bodyTuplesU->at(0));\n";
                                 outfile << ind << "if(tupleU == NULL){ std::cout << \"Error: Unable to find tuple to propagate\"<<std::endl; exit(180);}\n";
                                 outfile << ind++ << "else{\n";
-                                    #ifdef DEBUG_PROP
-                                    outfile << ind << "std::cout << \"True head for last positive literal undefined\"<<std::endl;\n";
-                                    #endif
-                                    outfile << ind << "solver->clearReasonClause();\n";
+                                    
                                     printAddPropagatedToReason(outfile,ind,"tupleU",false);
-                                    outfile << ind << "solver->addLiteralToReason(literal,true);\n";
-                                    outfile << ind << "const std::vector<int>* bodyTuplesF = &"<<prefix<<"f"<<mapName<<"()->getValuesVec({"<<terms<<"});\n";
-                                    outfile << ind << "for(unsigned i = 0; i< bodyTuplesF->size();i++) solver->addLiteralToReason(bodyTuplesF->at(i),false);\n";
-                                    printTuplePropagation(outfile,ind,"tupleU",false,false);
+                                        printAddToReason(outfile,ind,"literal","true");
+                                        outfile << ind << "const std::vector<int>* bodyTuplesF = &"<<prefix<<"f"<<mapName<<"()->getValuesVec({"<<terms<<"});\n";
+                                        outfile << ind++ << "for(unsigned i = 0; i< bodyTuplesF->size();i++){\n";
+                                            printAddToReason(outfile,ind,"bodyTuplesF->at(i)","false");
+                                        outfile << --ind << "}\n";
+                                        printTuplePropagation(outfile,ind,"tupleU",false,false);
+                                    outfile << --ind << "}\n";
+
                                 outfile << --ind << "}\n";
+                            outfile << --ind << "}\n";
+                            outfile << ind++ << "else if(bodyTuplesU->size()+bodyTuplesP->size() == 0 && solver->currentLevel() == 0){\n";
+                                outfile << ind << "lits.clear();\n";
+                                outfile << ind << "solver->addClause_(lits);\n";
+                                outfile << ind << "return Glucose::CRef_PropConf;\n";
                             outfile << --ind << "}\n";
                         outfile << --ind << "}\n";
                         outfile << ind++ << "else{\n";
-                        // head is false
-                            outfile << ind++ << "if(bodyTuplesP->size() > 0){\n";
-                                //TODO Fix reason calculus
-                                #ifdef DEBUG_PROP
-                                outfile << ind << "std::cout << \"False head for positive literal true\"<<std::endl;\n";
-                                #endif
-                                outfile << ind << "solver->clearReasonClause();\n";
-                                outfile << ind << "solver->addLiteralToReason(-literal,false);\n";
-                                outfile << ind << "solver->addLiteralToReason(bodyTuplesP->at(0),true);\n";
-                                printConflict(outfile,ind,false);
-                            outfile << --ind << "}\n";
-                            outfile << ind++ << "else if(bodyTuplesU->size() > 0){\n";
-                            // all undef body as false
+                            // // head is false
+                            // outfile << ind++ << "if(bodyTuplesP->size() > 0){\n";
+                            //     //TODO Fix reason calculus
+                            //     #ifdef DEBUG_PROP
+                            //     outfile << ind << "std::cout << \"False head for positive literal true\"<<std::endl;\n";
+                            //     #endif
+                            //     outfile << ind << "solver->clearReasonClause();\n";
+                            //     outfile << ind << "solver->addLiteralToReason(-literal,false);\n";
+                            //     outfile << ind << "solver->addLiteralToReason(bodyTuplesP->at(0),true);\n";
+                            //     printConflict(outfile,ind,false);
+                            // outfile << --ind << "}\n";
+                            // outfile << ind++ << "else if(bodyTuplesU->size() > 0){\n";
+                            // // all undef body as false
+                            //     outfile << ind++ << "for(unsigned i = 0; i<bodyTuplesU->size(); i++){\n";
+                            //         outfile << ind << "Tuple* tupleU = TupleFactory::getInstance().getTupleFromInternalID(bodyTuplesU->at(i));\n";
+                            //         outfile << ind << "if(tupleU == NULL){ std::cout << \"Error: Unable to find tuple to propagate\"<<std::endl; exit(180);}\n";
+                            //         outfile << ind++ << "else{\n";
+                            //             printAddPropagatedToReason(outfile,ind,"tupleU",true);
+                            //                 printAddToReason(outfile,ind,"-literal","false");
+                            //                 printTuplePropagation(outfile,ind,"tupleU",true,false);
+                            //             outfile << --ind << "}\n";
+                            //         outfile << --ind << "}\n";
+                            //     outfile << --ind << "}\n";
+                            // outfile << --ind << "}\n";
+                            outfile << ind << "assert(!(bodyTuplesP->size() > 0) || solver->currentLevel() == 0);\n";
+                            outfile << ind++ << "if(bodyTuplesU->size() > 0){\n";
+                                // all undef body as false
                                 outfile << ind++ << "for(unsigned i = 0; i<bodyTuplesU->size(); i++){\n";
                                     outfile << ind << "Tuple* tupleU = TupleFactory::getInstance().getTupleFromInternalID(bodyTuplesU->at(i));\n";
                                     outfile << ind << "if(tupleU == NULL){ std::cout << \"Error: Unable to find tuple to propagate\"<<std::endl; exit(180);}\n";
                                     outfile << ind++ << "else{\n";
-                                        #ifdef DEBUG_PROP
-                                        outfile << ind << "std::cout << \"False head for positive literals undefined\"<<std::endl;\n";
-                                        #endif
-                                        outfile << ind << "solver->clearReasonClause();\n";
                                         printAddPropagatedToReason(outfile,ind,"tupleU",true);
-                                        outfile << ind << "solver->addLiteralToReason(-literal,false);\n";
-                                        printTuplePropagation(outfile,ind,"tupleU",true,false);
+                                            printAddToReason(outfile,ind,"-literal","false");
+                                            printTuplePropagation(outfile,ind,"tupleU",true,false);
+                                        outfile << --ind << "}\n";
                                     outfile << --ind << "}\n";
                                 outfile << --ind << "}\n";
+                            outfile << --ind << "}\n";
+                            outfile << ind++ << "else if(bodyTuplesP->size() > 0 && solver->currentLevel() == 0){\n";
+                                outfile << ind << "lits.clear();\n";
+                                outfile << ind << "solver->addClause_(lits);\n";
+                                outfile << ind << "return Glucose::CRef_PropConf;\n";
                             outfile << --ind << "}\n";
                         outfile << --ind << "}\n";
                     }
@@ -255,88 +339,124 @@ void PropagatorCompiler::compileRuleFromStarter(unsigned ruleId, std::ofstream& 
                         //ground literal in the body
                         outfile << ind++ << "if(literal > 0){\n";
                             //body is false
-                            outfile << ind++ << "if(head != NULL && head->isTrue()){\n";
-                                #ifdef DEBUG_PROP
-                                outfile << ind << "std::cout << \"True head for negative literal false\"<<std::endl;\n";
-                                #endif
-                                outfile << ind << "solver->clearReasonClause();\n";
-                                outfile << ind << "solver->addLiteralToReason(literal,true);\n";
-                                outfile << ind << "solver->addLiteralToReason(head->getId(),true);\n";
-                                printConflict(outfile,ind,false);
-                            outfile << --ind << "}\n";
-                            outfile << ind++ << "else if(head != NULL && head->isUndef()){\n";
-                                #ifdef DEBUG_PROP
-                                outfile << ind << "std::cout << \"Undef head for negative literal false\"<<std::endl;\n";
-                                #endif
-                                outfile << ind << "solver->clearReasonClause();\n";
+                            // outfile << ind++ << "if(head != NULL && head->isTrue()){\n";
+                            //     #ifdef DEBUG_PROP
+                            //     outfile << ind << "std::cout << \"True head for negative literal false\"<<std::endl;\n";
+                            //     #endif
+                            //     outfile << ind << "solver->clearReasonClause();\n";
+                            //     outfile << ind << "solver->addLiteralToReason(literal,true);\n";
+                            //     outfile << ind << "solver->addLiteralToReason(head->getId(),true);\n";
+                            //     printConflict(outfile,ind,false);
+                            // outfile << --ind << "}\n";
+                            // outfile << ind++ << "else if(head != NULL && head->isUndef()){\n";
+                            //     printAddPropagatedToReason(outfile,ind,"head",true);
+                            //         printAddToReason(outfile,ind,"literal","true");
+                            //         printTuplePropagation(outfile,ind,"head",true,false);
+                            //     outfile << --ind << "}\n";
+                            // outfile << --ind << "}\n";
+                            outfile << ind << "assert(!(head != NULL && head->isTrue()) || solver->currentLevel() == 0);\n";
+                            outfile << ind++ << "if(head != NULL && head->isUndef()){\n";
                                 printAddPropagatedToReason(outfile,ind,"head",true);
-                                outfile << ind << "solver->addLiteralToReason(literal,true);\n";
-                                printTuplePropagation(outfile,ind,"head",true,false);
+                                    printAddToReason(outfile,ind,"literal","true");
+                                    printTuplePropagation(outfile,ind,"head",true,false);
+                                outfile << --ind << "}\n";
+                            outfile << --ind << "}\n";
+                            outfile << ind++ << "else if( head != NULL && head->isTrue() && solver->currentLevel() == 0){\n";
+                                outfile << ind << "lits.clear();\n";
+                                outfile << ind << "solver->addClause_(lits);\n";
+                                outfile << ind << "return Glucose::CRef_PropConf;\n";
                             outfile << --ind << "}\n";
                         outfile << --ind << "}\n";
                         outfile << ind++ << "else{\n";
                             //body is true
-                            outfile << ind++ << "if(head == NULL || head->isFalse()){\n";
-                                #ifdef DEBUG_PROP
-                                outfile << ind << "std::cout << \"False head for negative literal true\"<<std::endl;\n";
-                                #endif
-                                outfile << ind << "solver->clearReasonClause();\n";
-                                outfile << ind << "solver->addLiteralToReason(-literal,false);\n";
-                                outfile << ind << "if(head != NULL) solver->addLiteralToReason(head->getId(),false);\n";
-                                printConflict(outfile,ind,false);
-                            outfile << --ind << "}\n";
-                            outfile << ind++ << "else if(head != NULL && head->isUndef()){\n";
-                                #ifdef DEBUG_PROP
-                                outfile << ind << "std::cout << \"Undef head for negative literal true\"<<std::endl;\n";
-                                #endif
-                                outfile << ind << "solver->clearReasonClause();\n";
+                            // outfile << ind++ << "if(head == NULL || head->isFalse()){\n";
+                            //     #ifdef DEBUG_PROP
+                            //     outfile << ind << "std::cout << \"False head for negative literal true\"<<std::endl;\n";
+                            //     #endif
+                            //     outfile << ind << "solver->clearReasonClause();\n";
+                            //     outfile << ind << "solver->addLiteralToReason(-literal,false);\n";
+                            //     outfile << ind << "if(head != NULL) solver->addLiteralToReason(head->getId(),false);\n";
+                            //     printConflict(outfile,ind,false);
+                            // outfile << --ind << "}\n";
+                            // outfile << ind++ << "else if(head != NULL && head->isUndef()){\n";
+                            //     printAddPropagatedToReason(outfile,ind,"head",false);
+                            //         printAddPropagatedToReason(outfile,ind,"-literal","false");
+                            //         printTuplePropagation(outfile,ind,"head",false,false);
+                            //     outfile << --ind << "}\n";
+                            // outfile << --ind << "}\n";
+                            outfile << ind << "assert(!(head == NULL || head->isFalse()) || solver->currentLevel() == 0);\n";
+                            outfile << ind++ << "if(head != NULL && head->isUndef()){\n";
                                 printAddPropagatedToReason(outfile,ind,"head",false);
-                                outfile << ind << "solver->addLiteralToReason(-literal,false);\n";
-                                printTuplePropagation(outfile,ind,"head",false,false);
+                                    printAddPropagatedToReason(outfile,ind,"-literal","false");
+                                    printTuplePropagation(outfile,ind,"head",false,false);
+                                outfile << --ind << "}\n";
                             outfile << --ind << "}\n";
+                        outfile << --ind << "}\n";
+                        outfile << ind++ << "else if((head == NULL || head->isFalse()) && solver->currentLevel() == 0){\n";
+                            outfile << ind << "lits.clear();\n";
+                            outfile << ind << "solver->addClause_(lits);\n";
+                            outfile << ind << "return Glucose::CRef_PropConf;\n";
                         outfile << --ind << "}\n";
                     }else if(lit->isBoundedLiteral(headVars)){
                         //unique body for head
                         outfile << ind++ << "if(literal > 0){\n";
                             //body is true
-                            outfile << ind++ << "if(head == NULL || head->isFalse()){\n";
-                                #ifdef DEBUG_PROP
-                                outfile << ind << "std::cout << \"False head for positive literal true\"<<std::endl;\n";
-                                #endif
-                                outfile << ind << "solver->clearReasonClause();\n";
-                                outfile << ind << "solver->addLiteralToReason(literal,true);\n";
-                                outfile << ind << "if(head != NULL) solver->addLiteralToReason(head->getId(),false);\n";
-                                printConflict(outfile,ind,false);
-                            outfile << --ind << "}\n";
-                            outfile << ind++ << "else if(head != NULL && head->isUndef()){\n";
-                                #ifdef DEBUG_PROP
-                                outfile << ind << "std::cout << \"Undef head for positive literal true\"<<std::endl;\n";
-                                #endif
-                                outfile << ind << "solver->clearReasonClause();\n";
+                            // outfile << ind++ << "if(head == NULL || head->isFalse()){\n";
+                            //     #ifdef DEBUG_PROP
+                            //     outfile << ind << "std::cout << \"False head for positive literal true\"<<std::endl;\n";
+                            //     #endif
+                            //     outfile << ind << "solver->clearReasonClause();\n";
+                            //     outfile << ind << "solver->addLiteralToReason(literal,true);\n";
+                            //     outfile << ind << "if(head != NULL) solver->addLiteralToReason(head->getId(),false);\n";
+                            //     printConflict(outfile,ind,false);
+                            // outfile << --ind << "}\n";
+                            // outfile << ind++ << "else if(head != NULL && head->isUndef()){\n";
+                            //     printAddPropagatedToReason(outfile,ind,"head",false);
+                            //         printAddToReason(outfile,ind,"literal","true");
+                            //         printTuplePropagation(outfile,ind,"head",false,false);
+                            //     outfile << --ind << "}\n";
+                            // outfile << --ind << "}\n";
+                            outfile << ind << "assert(!(head == NULL || head->isFalse()) || solver->currentLevel() == 0);\n";
+                            outfile << ind++ << "if(head != NULL && head->isUndef()){\n";
                                 printAddPropagatedToReason(outfile,ind,"head",false);
-                                outfile << ind << "solver->addLiteralToReason(literal,true);\n";
-                                printTuplePropagation(outfile,ind,"head",false,false);
+                                    printAddToReason(outfile,ind,"literal","true");
+                                    printTuplePropagation(outfile,ind,"head",false,false);
+                                outfile << --ind << "}\n";
+                            outfile << --ind << "}\n";
+                            outfile << ind++ << "else if((head == NULL || head->isFalse()) && solver->currentLevel() == 0){\n";
+                                outfile << ind << "lits.clear();\n";
+                                outfile << ind << "solver->addClause_(lits);\n";
+                                outfile << ind << "return Glucose::CRef_PropConf;\n";
                             outfile << --ind << "}\n";
                         outfile << --ind << "}\n";
                         outfile << ind++ << "else{\n";
                             //body is false
-                            outfile << ind++ << "if(head != NULL && head->isTrue()){\n";
-                                #ifdef DEBUG_PROP
-                                outfile << ind << "std::cout << \"True head for positive literal false\"<<std::endl;\n";
-                                #endif
-                                outfile << ind << "solver->clearReasonClause();\n";
-                                outfile << ind << "solver->addLiteralToReason(-literal,false);\n";
-                                outfile << ind << "solver->addLiteralToReason(head->getId(),true);\n";
-                                printConflict(outfile,ind,false);
-                            outfile << --ind << "}\n";
-                            outfile << ind++ << "else if(head != NULL && head->isUndef()){\n";
-                                #ifdef DEBUG_PROP
-                                outfile << ind << "std::cout << \"Undef head for positive literal false\"<<std::endl;\n";
-                                #endif
-                                outfile << ind << "solver->clearReasonClause();\n";
+                            // outfile << ind++ << "if(head != NULL && head->isTrue()){\n";
+                            //     #ifdef DEBUG_PROP
+                            //     outfile << ind << "std::cout << \"True head for positive literal false\"<<std::endl;\n";
+                            //     #endif
+                            //     outfile << ind << "solver->clearReasonClause();\n";
+                            //     outfile << ind << "solver->addLiteralToReason(-literal,false);\n";
+                            //     outfile << ind << "solver->addLiteralToReason(head->getId(),true);\n";
+                            //     printConflict(outfile,ind,false);
+                            // outfile << --ind << "}\n";
+                            // outfile << ind++ << "else if(head != NULL && head->isUndef()){\n";
+                            //     printAddPropagatedToReason(outfile,ind,"head",true);
+                            //         printAddToReason(outfile,ind,"-literal","false");
+                            //         printTuplePropagation(outfile,ind,"head",true,false);
+                            //     outfile << --ind << "}\n";
+                            // outfile << --ind << "}\n";
+                            outfile << ind << "assert(!(head != NULL && head->isTrue()) || solver->currentLevel() == 0);\n";
+                            outfile << ind++ << "if(head != NULL && head->isUndef()){\n";
                                 printAddPropagatedToReason(outfile,ind,"head",true);
-                                outfile << ind << "solver->addLiteralToReason(-literal,false);\n";
-                                printTuplePropagation(outfile,ind,"head",true,false);
+                                    printAddToReason(outfile,ind,"-literal","false");
+                                    printTuplePropagation(outfile,ind,"head",true,false);
+                                outfile << --ind << "}\n";
+                            outfile << --ind << "}\n";
+                            outfile << ind++ << "else if(head != NULL && head->isTrue() && solver->currentLevel() == 0){\n";
+                                outfile << ind << "lits.clear();\n";
+                                outfile << ind << "solver->addClause_(lits);\n";
+                                outfile << ind << "return Glucose::CRef_PropConf;\n";
                             outfile << --ind << "}\n";
                         outfile << --ind << "}\n";
                     }else{
@@ -357,45 +477,73 @@ void PropagatorCompiler::compileRuleFromStarter(unsigned ruleId, std::ofstream& 
                         outfile << ind << "const std::vector<int>* bodyTuplesP = &"<<prefix<<"p"<<mapName<<"()->getValuesVec({"<<terms<<"});\n";
                         outfile << ind++ << "if(literal > 0){\n";
                             //body is true
-                            outfile << ind++ << "if(head == NULL || head->isFalse()){\n";
-                                #ifdef DEBUG_PROP
-                                outfile << ind << "std::cout << \"True body for false head\"<<std::endl;\n";
-                                #endif
+                            // outfile << ind++ << "if(head == NULL || head->isFalse()){\n";
+                            //     #ifdef DEBUG_PROP
+                            //     outfile << ind << "std::cout << \"True body for false head\"<<std::endl;\n";
+                            //     #endif
                                     
-                                outfile << ind << "solver->clearReasonClause();\n";
-                                outfile << ind << "solver->addLiteralToReason(literal,true);\n";
-                                outfile << ind << "if(head != NULL) solver->addLiteralToReason(head->getId(),false);\n";
+                            //     outfile << ind << "solver->clearReasonClause();\n";
+                            //     outfile << ind << "solver->addLiteralToReason(literal,true);\n";
+                            //     outfile << ind << "if(head != NULL) solver->addLiteralToReason(head->getId(),false);\n";
                                 
-                                printConflict(outfile,ind,false);
-                            outfile << --ind << "}\n";
-                            outfile << ind++ << "else if(head != NULL && head->isUndef()){\n";
-                                #ifdef DEBUG_PROP
-                                outfile << ind << "std::cout << \"True body for undefined head\"<<std::endl;\n";
-                                #endif
-                                    
-                                outfile << ind << "solver->clearReasonClause();\n";
+                            //     printConflict(outfile,ind,false);
+                            // outfile << --ind << "}\n";
+                            // outfile << ind++ << "else if(head != NULL && head->isUndef()){\n";
+                            //     printAddPropagatedToReason(outfile,ind,"head",false);
+                            //         printAddToReason(outfile,ind,"literal","true");
+                            //         printTuplePropagation(outfile,ind,"head",false,false);
+                            //     outfile << --ind << "}\n";
+                            // outfile << --ind << "}\n";
+                            outfile << ind << "assert(!(head == NULL || head->isFalse()) || solver->currentLevel() == 0);\n";
+                            outfile << ind++ << "if(head != NULL && head->isUndef()){\n";
                                 printAddPropagatedToReason(outfile,ind,"head",false);
-                                outfile << ind << "solver->addLiteralToReason(literal,true);\n";
-                                printTuplePropagation(outfile,ind,"head",false,false);
+                                    printAddToReason(outfile,ind,"literal","true");
+                                    printTuplePropagation(outfile,ind,"head",false,false);
+                                outfile << --ind << "}\n";
+                            outfile << --ind << "}\n";
+                            outfile << ind++ << "else if((head == NULL || head->isFalse()) && solver->currentLevel() == 0){\n";
+                                outfile << ind << "lits.clear();\n";
+                                outfile << ind << "solver->addClause_(lits);\n";
+                                outfile << ind << "return Glucose::CRef_PropConf;\n";
                             outfile << --ind << "}\n";
                         outfile << --ind << "}\n";
                         outfile << ind++ << "else{\n";
                             //current body is false
                             outfile << ind++ << "if(head != NULL && head->isTrue()){\n";
                                 //head is true
-                                outfile << ind++ << "if(bodyTuplesU->size() == 0 && bodyTuplesP->size() == 0){\n";
-                                    // no other body for head
-                                    #ifdef DEBUG_PROP
-                                    outfile << ind << "std::cout << \"No remaining body for true head\"<<std::endl;\n";
-                                    #endif
-                                    outfile << ind << "solver->clearReasonClause();\n";
-                                    outfile << ind << "solver->addLiteralToReason(-literal,false);\n";
-                                    outfile << ind << "solver->addLiteralToReason(head->getId(),true);\n";
-                                    outfile << ind << "const std::vector<int>* bodyTuplesF = &"<<prefix<<"f"<<mapName<<"()->getValuesVec({"<<terms<<"});\n";
-                                    outfile << ind << "for(unsigned i = 0; i< bodyTuplesF->size(); i++) if(bodyTuplesF->at(i)!= -literal) solver->addLiteralToReason(bodyTuplesF->at(i),false);\n";
-                                    printConflict(outfile,ind,false);
-                                outfile << --ind << "}\n";
-                                outfile << ind++ << "else if(bodyTuplesU->size() == 1 && bodyTuplesP->size() == 0){\n";
+                                // outfile << ind++ << "if(bodyTuplesU->size() == 0 && bodyTuplesP->size() == 0){\n";
+                                //     // no other body for head
+                                //     #ifdef DEBUG_PROP
+                                //     outfile << ind << "std::cout << \"No remaining body for true head\"<<std::endl;\n";
+                                //     #endif
+                                //     outfile << ind << "solver->clearReasonClause();\n";
+                                //     outfile << ind << "solver->addLiteralToReason(-literal,false);\n";
+                                //     outfile << ind << "solver->addLiteralToReason(head->getId(),true);\n";
+                                //     outfile << ind << "const std::vector<int>* bodyTuplesF = &"<<prefix<<"f"<<mapName<<"()->getValuesVec({"<<terms<<"});\n";
+                                //     outfile << ind << "for(unsigned i = 0; i< bodyTuplesF->size(); i++) if(bodyTuplesF->at(i)!= -literal) solver->addLiteralToReason(bodyTuplesF->at(i),false);\n";
+                                //     printConflict(outfile,ind,false);
+                                // outfile << --ind << "}\n";
+                                // outfile << ind++ << "else if(bodyTuplesU->size() == 1 && bodyTuplesP->size() == 0){\n";
+                                //     //last body for true head 
+                                //     outfile << ind << "Tuple* tupleU = TupleFactory::getInstance().getTupleFromInternalID(bodyTuplesU->at(0));\n";
+                                //     outfile << ind << "if(tupleU == NULL){ std::cout << \"Error: Unable to find tuple to propagate\"<<std::endl; exit(180);}\n";
+                                //     outfile << ind++ << "else{\n";
+                                //         #ifdef DEBUG_PROP
+                                //         outfile << ind << "std::cout << \"Last remaining body for true head\"<<std::endl;\n";
+                                //         #endif
+                                //         outfile << ind << "const std::vector<int>* bodyTuplesF = &"<<prefix<<"f"<<mapName<<"()->getValuesVec({"<<terms<<"});\n";
+                                //         printAddPropagatedToReason(outfile,ind,"tupleU",false);
+                                //             printAddToReason(outfile,ind,"-literal","false");
+                                //             outfile << ind++ << "for(unsigned i =0; i< bodyTuplesF->size(); i++){\n";
+                                //                 printAddToReason(outfile,ind,"bodyTuplesF->at(i)","false");
+                                //             outfile << --ind << "}\n";
+                                //             printAddToReason(outfile,ind,"head->getId()","true");
+                                //             printTuplePropagation(outfile,ind,"tupleU",false,false);
+                                //         outfile << --ind << "}\n";
+                                //     outfile << --ind << "}\n";
+                                // outfile << --ind << "}\n";
+                                outfile << ind << "assert(!(bodyTuplesU->size() + bodyTuplesP->size() == 0) || solver->currentLevel() == 0);\n";
+                                outfile << ind++ << "if(bodyTuplesU->size() == 1 && bodyTuplesP->size() == 0){\n";
                                     //last body for true head 
                                     outfile << ind << "Tuple* tupleU = TupleFactory::getInstance().getTupleFromInternalID(bodyTuplesU->at(0));\n";
                                     outfile << ind << "if(tupleU == NULL){ std::cout << \"Error: Unable to find tuple to propagate\"<<std::endl; exit(180);}\n";
@@ -404,29 +552,39 @@ void PropagatorCompiler::compileRuleFromStarter(unsigned ruleId, std::ofstream& 
                                         outfile << ind << "std::cout << \"Last remaining body for true head\"<<std::endl;\n";
                                         #endif
                                         outfile << ind << "const std::vector<int>* bodyTuplesF = &"<<prefix<<"f"<<mapName<<"()->getValuesVec({"<<terms<<"});\n";
-                                        outfile << ind << "solver->clearReasonClause();\n";
                                         printAddPropagatedToReason(outfile,ind,"tupleU",false);
-                                        outfile << ind << "solver->addLiteralToReason(-literal,false);\n"; 
-                                        outfile << ind << "for(unsigned i =0; i< bodyTuplesF->size(); i++) if(bodyTuplesF->at(i)!= -literal) solver->addLiteralToReason(bodyTuplesF->at(i),false);\n";
-                                        outfile << ind << "solver->addLiteralToReason(head->getId(),true);\n";                                
-                                        printTuplePropagation(outfile,ind,"tupleU",false,false);
+                                            printAddToReason(outfile,ind,"-literal","false");
+                                            outfile << ind++ << "for(unsigned i =0; i< bodyTuplesF->size(); i++){\n";
+                                                outfile << ind << "int reasonLit = bodyTuplesF->at(i);\n";
+                                                outfile << ind << "if(reasonLit == -literal) continue;\n";
+                                                printAddToReason(outfile,ind,"reasonLit","false");
+                                            outfile << --ind << "}\n";
+                                            printAddToReason(outfile,ind,"head->getId()","true");
+                                            printTuplePropagation(outfile,ind,"tupleU",false,false);
+                                        outfile << --ind << "}\n";
                                     outfile << --ind << "}\n";
                                 outfile << --ind << "}\n";
-                                
+                                outfile << ind++ << "else if(bodyTuplesU->size() + bodyTuplesP->size() == 0 && solver->currentLevel() == 0){\n";
+                                    outfile << ind << "lits.clear();\n";
+                                    outfile << ind << "solver->addClause_(lits);\n";
+                                    outfile << ind << "return Glucose::CRef_PropConf;\n";
+                                outfile << --ind << "}\n";
                             outfile << --ind << "}\n";
                             outfile << ind++ << "else if(head != NULL && head->isUndef() && bodyTuplesU->size() == 0 && bodyTuplesP->size() == 0){\n";
                                 #ifdef DEBUG_PROP
                                 outfile << ind << "std::cout << \"No remaining body for undefined head\"<<std::endl;\n";
                                 #endif
-                                    
                                 outfile << ind << "const std::vector<int>* bodyTuplesF = &"<<prefix<<"f"<<mapName<<"()->getValuesVec({"<<terms<<"});\n";
-                                outfile << ind << "solver->clearReasonClause();\n";
                                 printAddPropagatedToReason(outfile,ind,"head",true);
-                                outfile << ind << "solver->addLiteralToReason(-literal,false);\n"; 
-                                outfile << ind << "for(unsigned i =0; i< bodyTuplesF->size(); i++) if(bodyTuplesF->at(i)!= -literal) solver->addLiteralToReason(bodyTuplesF->at(i),false);\n";
-                                printTuplePropagation(outfile,ind,"head",true,false);
+                                    printAddToReason(outfile,ind,"-literal","false"); 
+                                    outfile << ind++ << "for(unsigned i =0; i< bodyTuplesF->size(); i++){\n";
+                                        outfile << ind << "int reasonLit = bodyTuplesF->at(i);\n";
+                                        outfile << ind << "if(reasonLit == -literal) continue;\n";
+                                        printAddToReason(outfile,ind,"reasonLit","false");
+                                    outfile << --ind << "}\n";
+                                    printTuplePropagation(outfile,ind,"head",true,false);
+                                outfile << --ind << "}\n";
                             outfile << --ind << "}\n";
-                            
                         outfile << --ind << "}\n";
                     }
                 while (closingPars > 0){
@@ -569,32 +727,54 @@ void PropagatorCompiler::compileRuleFromStarter(unsigned ruleId, std::ofstream& 
                         }
                     }
                 }
-                outfile << ind << "solver->clearReasonClause();\n";
+                #ifdef DEBUG_PROP
                 outfile << ind++ << "if(tupleU == NULL){\n";
-                    #ifdef DEBUG_PROP
-                    outfile << ind << "std::cout << \"Violated constraint\"<<std::endl;\n";
+                //     outfile << ind << "solver->clearReasonClause();\n";
+                //     #ifdef DEBUG_PROP
+                //     outfile << ind << "std::cout << \"Violated constraint\"<<std::endl;\n";
+                //     outfile << ind << "AuxMapHandler::getInstance().printTuple(starter);\n";
+                //     #endif
+                //     outfile << ind << "solver->addLiteralToReason(starter->getId(),literal > 0);\n";
+
                     outfile << ind << "AuxMapHandler::getInstance().printTuple(starter);\n";
-                    #endif
-                    outfile << ind << "solver->addLiteralToReason(starter->getId(),literal > 0);\n";
                     for(unsigned index : ordering[i]){
                         if(body->at(index)->isLiteral()){
-                            outfile << ind << "if(tuple_"<<index<<" != NULL){solver->addLiteralToReason(tuple_"<<index<<"->getId(),"<<(body->at(index)->isPositiveLiteral() ? "true":"false")<<"); /*AuxMapHandler::getInstance().printTuple(tuple_"<<index<<");*/}\n";        
+                            outfile << ind << "if(tuple_"<<index<<"!=NULL) AuxMapHandler::getInstance().printTuple(tuple_"<<index<<");\n";        
                         }
                     }
-                    printConflict(outfile,ind,false);
+                //     printConflict(outfile,ind,false);
+                outfile << --ind << "}\n";
+                #endif
+                // ind++;
+                //     printAddPropagatedToReason(outfile,ind,"tupleU",false,true);
+                //         printAddToReason(outfile,ind,"starter->getId()","literal > 0");
+                //         for(unsigned index : ordering[i]){
+                //             if(body->at(index)->isLiteral()){
+                //                 outfile << ind << "if(tuple_"<<index<<" != NULL && tuple_"<<index<<"!=tupleU){\n"; 
+                //                     printAddToReason(outfile,ind,"tuple_"+std::to_string(index)+"->getId()",(body->at(index)->isPositiveLiteral() ? "true":"false"));        
+                //             }
+                //         }
+                //         printTuplePropagation(outfile,ind,"tupleU",false,false,true);
+                //     outfile << --ind << "}\n";
+                // outfile << --ind << "}\n";
+                outfile << ind << "assert(tupleU != NULL || solver->currentLevel() == 0);\n";
+                outfile << ind++ << "if(tupleU != NULL){\n";
+                    printAddPropagatedToReason(outfile,ind,"tupleU",false,true);
+                        printAddToReason(outfile,ind,"starter->getId()","literal > 0");
+                        for(unsigned index : ordering[i]){
+                            if(body->at(index)->isLiteral()){
+                                outfile << ind++ << "if(tuple_"<<index<<" != NULL && tuple_"<<index<<"!=tupleU){\n"; 
+                                    printAddToReason(outfile,ind,"tuple_"+std::to_string(index)+"->getId()",(body->at(index)->isPositiveLiteral() ? "true":"false"));        
+                                outfile << --ind << "}\n";
+                            }
+                        }
+                        printTuplePropagation(outfile,ind,"tupleU",false,false,true);
+                    outfile << --ind << "}\n";
                 outfile << --ind << "}else{\n";
                 ind++;
-                    printAddPropagatedToReason(outfile,ind,"tupleU",false,true);
-                    outfile << ind << "solver->addLiteralToReason(starter->getId(),literal > 0);\n";
-                    for(unsigned index : ordering[i]){
-                        if(body->at(index)->isLiteral()){
-                            outfile << ind << "if(tuple_"<<index<<" != NULL && tuple_"<<index<<"!=tupleU) solver->addLiteralToReason(tuple_"<<index<<"->getId(),"<<(body->at(index)->isPositiveLiteral() ? "true":"false")<<");\n";        
-                        }
-                    }
-                    #ifdef DEBUG_PROP
-                    outfile << ind << "std::cout << \"last undefined for constraint\"<<std::endl;\n";
-                    #endif
-                    printTuplePropagation(outfile,ind,"tupleU",false,false,true);
+                    outfile << ind << "lits.clear();\n";
+                    outfile << ind << "solver->addClause_(lits);\n";
+                    outfile << ind << "return Glucose::CRef_PropConf;\n";
                 outfile << --ind << "}\n";
             while(closingPars > 0){
                 outfile << --ind << "}\n";
@@ -628,38 +808,46 @@ void PropagatorCompiler::printTuplePropagation(std::ofstream& outfile,Indentatio
             outfile << ind << "var = tupleUNegated ? var : -var;\n";
         else
             outfile << ind << "var = "<<(asFalse ? "-var" : "var")<< ";\n";    
-        outfile << ind << "propagations.push_back((var > 0) ? Glucose::mkLit(var) : ~Glucose::mkLit(var));\n";
-        // outfile << ind << "lits.clear();\n";
-        // outfile << ind << "lits.push( (var > 0) ? Glucose::mkLit(var) : ~Glucose::mkLit(var) );\n";
-        // outfile << ind << "solver->addClause_(lits);\n";
+        outfile << ind << "propagations.push_back((var >= 0) ? Glucose::mkLit(var) : Glucose::mkLit(-var,true));\n";
     }else{
+        //  foundConflict -> violated clause is in solver
         outfile << ind << "Glucose::CRef clause = solver->externalPropagation("<<tuplename<<"->getId(),var < 0,this);\n";
         outfile << ind++ << "if(clause != Glucose::CRef_Undef)\n";
             outfile << ind-- << "return clause;\n";
     }  
-    #ifdef DEBUG_PROP
-    outfile << ind << "std::cout << \"Propagate \"<<var<<\" \"; AuxMapHandler::getInstance().printTuple("<<tuplename<<"); std::cout <<std::endl;\n";
-    #endif
-    // outfile << ind << "s->addLiteralToReason(boundBody->getId(),"<<sign<<");\n";
-    // outfile << ind << "Glucose::CRef clause = s->externalPropagation("<<tuplename<<"->getId(),"<<sign<<");\n";
-    // outfile << ind++ << "if(clause != Glucose::CRef_Undef)\n";
-    //     outfile << ind-- << "return clause;\n";
 }
 
 void PropagatorCompiler::printAddPropagatedToReason(std::ofstream& outfile,Indentation& ind, std::string tuplename,bool asFalse,bool constraint){
-        outfile << ind << "int var = "<<tuplename<<"->getId();\n";
-        if(constraint)
-            outfile << ind << "var = tupleUNegated ? var : -var;\n";
-        else
-            outfile << ind << "var = "<<(asFalse ? "-var" : "var")<< ";\n";
-        
-        outfile << ind << "solver->addLiteralToReason("<<tuplename<<"->getId(),var < 0);\n";
+    outfile << ind << "int var = "<<tuplename<<"->getId();\n";
+    if(constraint)
+        outfile << ind << "var = tupleUNegated ? var : -var;\n";
+    else
+        outfile << ind << "var = "<<(asFalse ? "-var" : "var")<< ";\n";
+
+    outfile << ind << "bool foundConflict = solver->isConflictPropagation("<<tuplename<<"->getId(),var < 0);\n";
+    outfile << ind << "bool assigned = solver->isAssigned("<<tuplename<<"->getId());\n";
+    
+    outfile << ind++ << "if(!assigned || foundConflict){\n";
+        #ifndef PURE_PROP
+            outfile << ind << "Glucose::vec<Glucose::Lit>& propagationReason = solver->getReasonClause();\n";
+        #else
+            outfile << ind << "Glucose::vec<Glucose::Lit>& propagationReason = !assigned ? "<<tuplename<<"->getReasonLits() : solver->getReasonClause();\n";
+        #endif
+        outfile << ind << "propagationReason.clear();\n";
+        outfile << ind << "propagationReason.push(Glucose::mkLit("<<tuplename<<"->getId(),var < 0));\n";
+
+    // WARNING print a closing scope after calling this method
 }
+void PropagatorCompiler::printAddToReason(std::ofstream& outfile,Indentation& ind, std::string var,std::string sign){
+    outfile << ind++ << "if(solver->levelFromPropagator("<<var<<")>0)\n";
+        outfile << ind-- << "propagationReason.push(Glucose::mkLit("<<var<<","<<sign<<"));\n";
+}
+
 void PropagatorCompiler::compileRuleWatcher(unsigned ruleId,std::ofstream& outfile,Indentation& ind){
     outfile << ind << "virtual void printName()const {std::cout << \"External Propagator "<<ruleId<<"\"<<std::endl;}";
     outfile << ind++ << "virtual void attachWatched() override {\n";
     #ifdef DEBUG_PROP
-    outfile << ind << "std::cout <<\"PropagateAtLevel0 "<<ruleId<<"\"<<std::endl;\n";
+    outfile << ind << "std::cout <<\"Attaching watched "<<ruleId<<"\"<<std::endl;\n";
     #endif
     //0 means current propagator not added to watchList
     //1 means current propagator added to positive literal watchList

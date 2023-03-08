@@ -208,8 +208,9 @@ lbool SimpSolver::solve_(bool do_simp, bool turn_off_simp)
 bool SimpSolver::addClause_(vec<Lit>& ps)
 {
 #ifndef NDEBUG
-    for (int i = 0; i < ps.size(); i++)
+    for (int i = 0; i < ps.size(); i++){
         assert(!isEliminated(var(ps[i])));
+    }
 #endif
     int nclauses = clauses.size();
 

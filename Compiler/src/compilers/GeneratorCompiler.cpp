@@ -29,7 +29,7 @@ void GeneratorCompiler::buildComponentGenerator(int componentId){
     outfile << ind << "class "<<className<<": public AbstractGenerator{\n";
     outfile << ++ind << "public:\n";
     ind++;
-        outfile << ind++ << "void generate(Glucose::Solver* solver)override {\n";
+        outfile << ind++ << "void generate(Glucose::SimpSolver* solver)override {\n";
             bool isRecursive = components[componentId].size() > 1;
             if(!isRecursive){
                 std::string predicate = *components[componentId].begin();
@@ -60,6 +60,15 @@ void GeneratorCompiler::buildComponentGenerator(int componentId){
                     outfile << ind << "Tuple* starter = TupleFactory::getInstance().getTupleFromInternalID(stack.back());\n";
                     outfile << ind << "stack.pop_back();\n";
                     outfile << ind++ << "if(starter != NULL){\n";
+                    outfile << ind << "const auto& insertResult = starter->setStatus(Undef);\n";
+                    outfile << ind++ << "if(insertResult.second){\n";
+                        #ifdef DEBUG_GEN
+                        outfile << ind << "std::cout << \"Added tuple \";AuxMapHandler::getInstance().printTuple(head_"<<index<<");\n";
+                        #endif
+                        outfile << ind << "TupleFactory::getInstance().removeFromCollisionsList(starter->getId());\n";
+                        outfile << ind << "AuxMapHandler::getInstance().insertUndef(insertResult);\n";
+                        outfile << ind << "while (starter->getId() >= solver->nVars()) {solver->setFrozen(solver->newVar(),true);}\n";
+                    outfile << --ind << "}\n";
                     for(const std::string& predicate: components[componentId]){
                         for(unsigned ruleIndex : program.getRulesForPredicate(predicate)){
                             aspc::Rule r = program.getRule(ruleIndex);
@@ -188,18 +197,20 @@ void GeneratorCompiler::compileComponentRules(std::ofstream& outfile,Indentation
             outfile << (atom->isVariableTermAt(k) || isInteger(atom->getTermAt(k)) ? atom->getTermAt(k) : "ConstantsManager::getInstance().mapConstant(\""+atom->getTermAt(k)+"\")");
         }
         outfile << "}, AuxMapHandler::getInstance().get_"<<atom->getPredicateName()<<"(),"<<(originalPredicates.count(atom->getPredicateName()) ? "false" : "true")<<");\n";
-        outfile << ind << "const auto& insertResult = head_"<<index<<"->setStatus(Undef);\n";
-        outfile << ind++ << "if(insertResult.second){\n";
+        outfile << ind << "if(TupleFactory::getInstance().isFact(head_"<<index<<"->getId())) continue;\n";
             #ifdef DEBUG_GEN
             outfile << ind << "std::cout << \"Added tuple \";AuxMapHandler::getInstance().printTuple(head_"<<index<<");\n";
             #endif
-            outfile << ind << "TupleFactory::getInstance().removeFromCollisionsList(head_"<<index<<"->getId());\n";
-            outfile << ind << "AuxMapHandler::getInstance().insertUndef(insertResult);\n";
-            outfile << ind << "while (head_"<<index<<"->getId() >= solver->nVars()) solver->newVar();\n";
             if(isRecursive){
                 outfile << ind << "stack.push_back(head_"<<index<<"->getId());\n";
+            }else{
+                outfile << ind << "const auto& insertResult = head_"<<index<<"->setStatus(Undef);\n";
+                outfile << ind++ << "if(insertResult.second){\n";
+                    outfile << ind << "TupleFactory::getInstance().removeFromCollisionsList(head_"<<index<<"->getId());\n";
+                    outfile << ind << "AuxMapHandler::getInstance().insertUndef(insertResult);\n";
+                    outfile << ind << "while (head_"<<index<<"->getId() >= solver->nVars()) {solver->setFrozen(solver->newVar(),true);}\n";
+                outfile << --ind << "}\n";                        
             }                                
-        outfile << --ind << "}\n";                        
     }
     while (closingPars > 0){
         outfile << --ind << "}// closing"<<std::endl;

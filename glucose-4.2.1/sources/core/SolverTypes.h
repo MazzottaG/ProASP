@@ -288,6 +288,7 @@ public:
 
     const CRef CRef_Undef = RegionAllocator<uint32_t>::Ref_Undef;
     const CRef CRef_Prop = RegionAllocator<uint32_t>::Ref_Prop;
+    const CRef CRef_PropConf = RegionAllocator<uint32_t>::Ref_PropConf;
     class ClauseAllocator : public RegionAllocator<uint32_t>
     {
         static int clauseWord32Size(int size, int extra_size){
@@ -331,6 +332,9 @@ public:
 
         void reloc(CRef& cr, ClauseAllocator& to)
         {
+            // WARNING: Added to skip reallocation of placeholder clauses in PURE_PROP mode
+            if(cr == CRef_Prop)
+                return;
             Clause& c = operator[](cr);
 
             if (c.reloced()) { cr = c.relocation(); return; }

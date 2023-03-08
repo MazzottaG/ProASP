@@ -16,3 +16,4 @@
  *
  */
 #include "TupleLight.h"
+Glucose::vec<Glucose::Lit> TupleLight::EMPTY_REASON_LITS;

@@ -153,6 +153,7 @@ int parseTuple(const std::string & literalString) {
         }
     }
     TupleLight* tuple=TupleFactory::getInstance().addNewInternalTuple(terms, AuxMapHandler::getInstance().getPredicateId(predicateName));
+
     const auto& insertResult = tuple->setStatus(True);
     if(insertResult.second){
         TupleFactory::getInstance().removeFromCollisionsList(tuple->getId());
@@ -189,6 +190,7 @@ void read_asp(Solver* solver,std::string filename,std::vector<unsigned>& facts){
         
     }
     else cout << "Unable to open file"<<std::endl;
+
 }
 int main(int argc, char** argv)
 {
@@ -303,22 +305,22 @@ int main(int argc, char** argv)
             std::vector<unsigned> facts;
             read_asp(solver,argv[argc-1],facts);
             TupleFactory::getInstance().storeFactSize();
-            Generator::getInstance().generate(solver);
+            Generator::getInstance().generate(&S);
             Propagator::getInstance().attachWatchers();
             
             for(unsigned id : facts){
                 #ifdef DEBUG_PROP
-                std::cout << "Adding facts in glucose"<<std::endl;
+                std::cout << "Adding facts in glucose "<<id<<std::endl;
                 #endif
-                while (id >= solver->nVars()) solver->newVar();
-                #ifdef PURE_PROP
-                TupleFactory::getInstance().getTupleFromInternalID(id)->setReason(Glucose::CRef_Undef);
-                #endif
+                while (id >= S.nVars()) {S.setFrozen(S.newVar(),true);}
                 lits.clear();
                 lits.push( mkLit(id));
                 solver->addClause_(lits);
-            }            
-            Propagator::getInstance().propagateAtLevel0(solver,lits);
+                if(!solver->okay())
+                    break;
+            } 
+            if(S.okay())  
+                Propagator::getInstance().propagateAtLevel0(&S,lits);
         }
         if (S.verbosity > 0){
             printf("c |  Number of variables:  %12d                                                                   |\n", S.nVars());

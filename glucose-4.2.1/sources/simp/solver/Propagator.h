@@ -30,12 +30,6 @@ class Propagator{
                 prop->propagateLevelZero(s,lits);
             }
         }
-        #ifdef PURE_PROP
-        Glucose::CRef explain(unsigned var){
-            //TupleFactory::getInstance().getPropagatorForVar(var)->printName();
-            return Glucose::CRef_Undef;
-        }
-        #endif
         
         Glucose::CRef propagateLiteral(Glucose::Solver* s,Glucose::vec<Glucose::Lit>& lits,int literal){
             for(AbstractPropagator* prop : TupleFactory::getInstance().getWatcher(literal<0 ? -literal : literal,literal<0)){

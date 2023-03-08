@@ -146,7 +146,14 @@ class Solver : public Clone {
     CRef storePropagatorReason(int literal);
     void addLiteralToReason(Var var, bool negated);
     void clearReasonClause(){reasonClause.clear();}
+    vec<Lit>& getReasonClause(){return reasonClause;}
+    bool isConflictPropagation(Var,bool);
+    bool isAssigned(Var);
     CRef storeConflictClause();
+    inline CRef currentLevel(){return decisionLevel();}
+    inline CRef levelFromPropagator(Var var){return level(var);}
+    void analyzeWithClause(CRef confl, vec <Lit> &out_learnt, vec <Lit> &selectors, int &out_btlevel, unsigned int &lbd, unsigned int &szWithoutSelectors, int& pathC, Lit& p);
+    void analyzeWithVec(CRef confl, vec <Lit> &out_learnt, vec <Lit> &selectors, int &out_btlevel, unsigned int &lbd, unsigned int &szWithoutSelectors, int& pathC, Lit& p,bool start);
 
        // Convenience versions of 'toDimacs()':
     void    toDimacs     (FILE* f, const vec<Lit>& assumps);            // Write CNF to file in DIMACS-format.
@@ -371,8 +378,9 @@ class Solver : public Clone {
 
     // External Propagator
     vec<Lit> reasonClause;
+    //TODO: remove conflictLiteral
     int conflictLiteral;
-    CRef CRef_Prop=CRef_Undef;
+    CRef conflictualPropagation=CRef_Undef;
     int countAnalyze=0;
 
     // UPDATEVARACTIVITY trick (see competition'09 companion paper)
@@ -519,13 +527,9 @@ public:
 //=================================================================================================
 // Implementation of inline methods:
 inline CRef Solver::reason(Var x) const { 
-    #ifndef PURE_PROP
-        return vardata[x].reason; 
-    #else
-        CRef reas = vardata[x].reason; 
-        return reas != CRef_Prop ? reas : TupleFactory::getInstance().getTupleFromInternalID(x)->getReason();
-    #endif
+    return vardata[x].reason; 
 }
+
 inline int  Solver::level (Var x) const { return vardata[x].level; }
 
 inline void Solver::insertVarOrder(Var x) {
@@ -565,12 +569,13 @@ inline bool     Solver::addClause       (Lit p)                 { add_tmp.clear(
 inline bool     Solver::addClause       (Lit p, Lit q)          { add_tmp.clear(); add_tmp.push(p); add_tmp.push(q); return addClause_(add_tmp); }
 inline bool     Solver::addClause       (Lit p, Lit q, Lit r)   { add_tmp.clear(); add_tmp.push(p); add_tmp.push(q); add_tmp.push(r); return addClause_(add_tmp); }
  inline bool     Solver::locked          (const Clause& c) const {
+    
    if(c.size()>2)
-     return value(c[0]) == l_True && reason(var(c[0])) != CRef_Undef && ca.lea(reason(var(c[0]))) == &c;
+     return value(c[0]) == l_True && reason(var(c[0])) != CRef_Undef && reason(var(c[0])) != CRef_Prop && ca.lea(reason(var(c[0]))) == &c;
    return
-     (value(c[0]) == l_True && reason(var(c[0])) != CRef_Undef && ca.lea(reason(var(c[0]))) == &c)
+     (value(c[0]) == l_True && reason(var(c[0])) != CRef_Undef && reason(var(c[0])) != CRef_Prop && ca.lea(reason(var(c[0]))) == &c)
      ||
-     (value(c[1]) == l_True && reason(var(c[1])) != CRef_Undef && ca.lea(reason(var(c[1]))) == &c);
+     (value(c[1]) == l_True && reason(var(c[1])) != CRef_Undef && reason(var(c[1])) != CRef_Prop && ca.lea(reason(var(c[1]))) == &c);
  }
 inline void     Solver::newDecisionLevel()                      { trail_lim.push(trail.size()); }
 
