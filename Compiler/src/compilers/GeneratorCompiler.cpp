@@ -63,12 +63,12 @@ void GeneratorCompiler::buildComponentGenerator(int componentId){
                     outfile << ind << "const auto& insertResult = starter->setStatus(Undef);\n";
                     outfile << ind++ << "if(insertResult.second){\n";
                         #ifdef DEBUG_GEN
-                        outfile << ind << "std::cout << \"Added tuple \";AuxMapHandler::getInstance().printTuple(head_"<<index<<");\n";
+                        outfile << ind << "std::cout << \"Added tuple \";AuxMapHandler::getInstance().printTuple(starter);\n";
                         #endif
                         outfile << ind << "TupleFactory::getInstance().removeFromCollisionsList(starter->getId());\n";
                         outfile << ind << "AuxMapHandler::getInstance().insertUndef(insertResult);\n";
                         outfile << ind << "while (starter->getId() >= solver->nVars()) {solver->setFrozen(solver->newVar(),true);}\n";
-                    outfile << --ind << "}\n";
+                    outfile << --ind << "}else continue;\n";
                     for(const std::string& predicate: components[componentId]){
                         for(unsigned ruleIndex : program.getRulesForPredicate(predicate)){
                             aspc::Rule r = program.getRule(ruleIndex);

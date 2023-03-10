@@ -844,7 +844,7 @@ void PropagatorCompiler::printAddToReason(std::ofstream& outfile,Indentation& in
 }
 
 void PropagatorCompiler::compileRuleWatcher(unsigned ruleId,std::ofstream& outfile,Indentation& ind){
-    outfile << ind << "virtual void printName()const {std::cout << \"External Propagator "<<ruleId<<"\"<<std::endl;}";
+    outfile << ind << "virtual void printName()const {std::cout << \"External Propagator "<<ruleId<<"\"<<std::endl;}\n";
     outfile << ind++ << "virtual void attachWatched() override {\n";
     #ifdef DEBUG_PROP
     outfile << ind << "std::cout <<\"Attaching watched "<<ruleId<<"\"<<std::endl;\n";
@@ -856,177 +856,285 @@ void PropagatorCompiler::compileRuleWatcher(unsigned ruleId,std::ofstream& outfi
     outfile << ind << "std::vector<int> watched(TupleFactory::getInstance().size(),0);\n";
     aspc::Rule rule = program.getRule(ruleId);
     const std::vector<const aspc::Formula*>& body = rule.getFormulas();
-    if(!rule.isConstraint()){
-        //rules have body of lenght 1
-        if(!body[0]->isLiteral()){
-            std::cout << "Warning: Rule with only one arithmetic relation in the body"<<std::endl;
-        }else{
-            const aspc::Atom* head = &rule.getHead()[0];
-            const aspc::Literal* lit = (const aspc::Literal*) body[0];
-            outfile << "{\n";
-                outfile << ind << "const std::vector<int>* tuplesU = &AuxMapHandler::getInstance().get_u"<<head->getPredicateName()<<"_()->getValuesVec({});\n";
-                outfile << ind << "const std::vector<int>* tuplesF = &AuxMapHandler::getInstance().get_f"<<head->getPredicateName()<<"_()->getValuesVec({});\n";
-                outfile << ind << "const std::vector<int>* tuplesP = &AuxMapHandler::getInstance().get_p"<<head->getPredicateName()<<"_()->getValuesVec({});\n";
-                
-                std::unordered_set<std::string> boundVars;
-                outfile << ind++ << "for(int i = 0; i < tuplesP->size() + tuplesF->size() + tuplesU->size(); i++){\n";
-                
-                    int closingPars=0;
-                    outfile << ind << "int id = i < tuplesP->size() ? tuplesP->at(i) : (i < tuplesP->size()+tuplesF->size() ? tuplesF->at(i - tuplesP->size()) : tuplesU->at(i - tuplesP->size() - tuplesF->size()));\n";
-                    outfile << ind << "Tuple* tuple = TupleFactory::getInstance().getTupleFromInternalID(id);\n";
-                    for(unsigned k=0; k<head->getAriety(); k++){
-                        if(!head->isVariableTermAt(k) || boundVars.count(head->getTermAt(k))){
-                            std::string term = isInteger(head->getTermAt(k)) || head->isVariableTermAt(k) ? head->getTermAt(k) : "ConstantsManager::getInstance().mapConstant(\""+head->getTermAt(k)+"\")";
-                            outfile << ind++ << "if(tuple->at("<<k<<") == " << term << "){\n";
-                            closingPars++;
-                        }else{
-                            outfile << ind << "int "<<head->getTermAt(k) << " = tuple->at(" <<k<< ");\n"; 
-                            boundVars.insert(head->getTermAt(k));
+    if ( false /* OPT_FULL_WATCHED */ ){
+        if(!rule.isConstraint()){
+            //rules have body of lenght 1
+            if(!body[0]->isLiteral()){
+                std::cout << "Warning: Rule with only one arithmetic relation in the body"<<std::endl;
+            }else{
+                const aspc::Atom* head = &rule.getHead()[0];
+                const aspc::Literal* lit = (const aspc::Literal*) body[0];
+                outfile << "{\n";
+                    outfile << ind << "const std::vector<int>* tuplesU = &AuxMapHandler::getInstance().get_u"<<head->getPredicateName()<<"_()->getValuesVec({});\n";
+                    outfile << ind << "const std::vector<int>* tuplesF = &AuxMapHandler::getInstance().get_f"<<head->getPredicateName()<<"_()->getValuesVec({});\n";
+                    outfile << ind << "const std::vector<int>* tuplesP = &AuxMapHandler::getInstance().get_p"<<head->getPredicateName()<<"_()->getValuesVec({});\n";
+                    
+                    std::unordered_set<std::string> boundVars;
+                    outfile << ind++ << "for(int i = 0; i < tuplesP->size() + tuplesF->size() + tuplesU->size(); i++){\n";
+                    
+                        int closingPars=0;
+                        outfile << ind << "int id = i < tuplesP->size() ? tuplesP->at(i) : (i < tuplesP->size()+tuplesF->size() ? tuplesF->at(i - tuplesP->size()) : tuplesU->at(i - tuplesP->size() - tuplesF->size()));\n";
+                        outfile << ind << "Tuple* tuple = TupleFactory::getInstance().getTupleFromInternalID(id);\n";
+                        for(unsigned k=0; k<head->getAriety(); k++){
+                            if(!head->isVariableTermAt(k) || boundVars.count(head->getTermAt(k))){
+                                std::string term = isInteger(head->getTermAt(k)) || head->isVariableTermAt(k) ? head->getTermAt(k) : "ConstantsManager::getInstance().mapConstant(\""+head->getTermAt(k)+"\")";
+                                outfile << ind++ << "if(tuple->at("<<k<<") == " << term << "){\n";
+                                closingPars++;
+                            }else{
+                                outfile << ind << "int "<<head->getTermAt(k) << " = tuple->at(" <<k<< ");\n"; 
+                                boundVars.insert(head->getTermAt(k));
+                            }
                         }
-                    }
-                        outfile << ind << "int& watchValue=watched[id];\n";
-                        outfile << ind++ << "if(watchValue != 2){\n";
-                            outfile << ind << "watchValue = 2;\n";
-                            outfile << ind++ << "if(watchValue != 1)\n";
-                                outfile << ind-- << "TupleFactory::getInstance().addWatcher(this,id,false);\n";
-                            outfile << ind++ << "if(watchValue != -1)\n";
-                                outfile << ind-- << "TupleFactory::getInstance().addWatcher(this,id,true);\n";
-                        outfile << --ind << "}\n";
-
-                    while(closingPars>0){
-                        outfile << --ind << "}\n";
-                        closingPars--;
-                    }
-                outfile << --ind << "}\n";
-            outfile << "}\n";
-
-            outfile << ind++ << "{\n";
-                outfile << ind << "const std::vector<int>* tuplesU = &AuxMapHandler::getInstance().get_u"<<lit->getPredicateName()<<"_()->getValuesVec({});\n";
-                outfile << ind << "const std::vector<int>* tuplesF = &AuxMapHandler::getInstance().get_f"<<lit->getPredicateName()<<"_()->getValuesVec({});\n";
-                outfile << ind << "const std::vector<int>* tuplesP = &AuxMapHandler::getInstance().get_p"<<lit->getPredicateName()<<"_()->getValuesVec({});\n";
-                
-                boundVars.clear();
-                outfile << ind++ << "for(int i = 0; i < tuplesP->size() + tuplesF->size() + tuplesU->size(); i++){\n";
-                
-                    closingPars=0;
-                    outfile << ind << "int id = i < tuplesP->size() ? tuplesP->at(i) : (i < tuplesP->size()+tuplesF->size() ? tuplesF->at(i - tuplesP->size()) : tuplesU->at(i - tuplesP->size() - tuplesF->size()));\n";
-                    outfile << ind << "Tuple* tuple = TupleFactory::getInstance().getTupleFromInternalID(id);\n";
-                    for(unsigned k=0; k<lit->getAriety(); k++){
-                        if(!lit->isVariableTermAt(k) || boundVars.count(lit->getTermAt(k))){
-                            std::string term = isInteger(lit->getTermAt(k)) || lit->isVariableTermAt(k) ? lit->getTermAt(k) : "ConstantsManager::getInstance().mapConstant(\""+lit->getTermAt(k)+"\")";
-                            outfile << ind++ << "if(tuple->at("<<k<<") == " << term << "){\n";
-                            closingPars++;
-                        }else{
-                            outfile << ind << "int "<<lit->getTermAt(k) << " = tuple->at(" <<k<< ");\n"; 
-                            boundVars.insert(lit->getTermAt(k));
-                        }
-                    }
-                        outfile << ind << "int& watchValue=watched[id];\n";
-                        outfile << ind++ << "if(watchValue != 2){\n";
-                            outfile << ind << "watchValue = 2;\n";
-                            outfile << ind++ << "if(watchValue != 1)\n";
-                                outfile << ind-- << "TupleFactory::getInstance().addWatcher(this,id,false);\n";
-                            outfile << ind++ << "if(watchValue != -1)\n";
-                                outfile << ind-- << "TupleFactory::getInstance().addWatcher(this,id,true);\n";
-                        outfile << --ind << "}\n";
-                        
-                    while(closingPars>0){
-                        outfile << --ind << "}\n";
-                        closingPars--;
-                    }
-                outfile << --ind << "}\n";
-            outfile << "}\n";
-        }
-    }else{
-        std::vector<unsigned> order = ruleOrdering[ruleId].first[body.size()];
-        std::unordered_set<std::string> boundVars;
-        outfile << ind++ << "{\n";
-        unsigned closingPars=1;
-            for(unsigned index : order){
-                const aspc::Formula* f = body[index];
-                if(f->isLiteral()){
-                    const aspc::Literal* lit = (const aspc::Literal*)f;
-                    if(lit->isBoundedLiteral(boundVars)){
-                        outfile << ind << "Tuple* boundTuple_"<<index<<"=TupleFactory::getInstance().find({";
-                        for(unsigned k=0; k<lit->getAriety(); k++){
-                            if(k>0) outfile << ",";
-                            outfile << (lit->isVariableTermAt(k) || isInteger(lit->getTermAt(k)) ? lit->getTermAt(k) : "ConstantsManager::getInstance().mapConstant(\""+lit->getTermAt(k)+"\")");
-                        }
-                        outfile << "}, AuxMapHandler::getInstance().get_"<<lit->getPredicateName()<<"());\n";
-                        if(lit->isNegated()){
-                            outfile << ind++ << "if(boundTuple_"<<index<<" == NULL || !boundTuple_"<<index<<"->isTrue()){\n";
-                        }else{
-                            outfile << ind++ << "if(boundTuple_"<<index<<" != NULL && !boundTuple_"<<index<<"->isFalse()){\n";
-                        }
-                        closingPars++;
-
-                        outfile << ind << "int id_"<<index<<" = boundTuple_"<<index<<" != NULL ? boundTuple_"<<index<<"->getId() : 0;\n";
-                        outfile << ind++ << "if(id_"<<index<<">0){\n";
-                            outfile << ind << "int& watchValue=watched[id_"<<index<<"];\n";
-                            if(lit->isNegated())
-                                outfile << ind++ << "if(watchValue != -1 && watchValue != 2){\n";
-                            else
-                                outfile << ind++ << "if(watchValue < 1){\n";
-
-                                outfile << ind << "watchValue = watchValue != 0 ? 2 : "<<(lit->isNegated() ? -1 : 1)<<";\n";
-                                outfile << ind << "TupleFactory::getInstance().addWatcher(this,id_"<<index<<","<<(lit->isNegated() ? "true" : "false")<<");\n";
+                            outfile << ind << "int& watchValue=watched[id];\n";
+                            outfile << ind++ << "if(watchValue != 2){\n";
+                                outfile << ind << "watchValue = 2;\n";
+                                outfile << ind++ << "if(watchValue != 1)\n";
+                                    outfile << ind-- << "TupleFactory::getInstance().addWatcher(this,id,false);\n";
+                                outfile << ind++ << "if(watchValue != -1)\n";
+                                    outfile << ind-- << "TupleFactory::getInstance().addWatcher(this,id,true);\n";
                             outfile << --ind << "}\n";
-                        outfile << --ind << "}\n";
-                    }else{
-                        std::string prefix = "AuxMapHandler::getInstance().get_";
-                        std::string mapName = lit->getPredicateName()+"_";
-                        std::string terms = "";
-                        std::unordered_set<int> boundIndices;
 
+                        while(closingPars>0){
+                            outfile << --ind << "}\n";
+                            closingPars--;
+                        }
+                    outfile << --ind << "}\n";
+                outfile << "}\n";
+
+                outfile << ind++ << "{\n";
+                    outfile << ind << "const std::vector<int>* tuplesU = &AuxMapHandler::getInstance().get_u"<<lit->getPredicateName()<<"_()->getValuesVec({});\n";
+                    outfile << ind << "const std::vector<int>* tuplesF = &AuxMapHandler::getInstance().get_f"<<lit->getPredicateName()<<"_()->getValuesVec({});\n";
+                    outfile << ind << "const std::vector<int>* tuplesP = &AuxMapHandler::getInstance().get_p"<<lit->getPredicateName()<<"_()->getValuesVec({});\n";
+                    
+                    boundVars.clear();
+                    outfile << ind++ << "for(int i = 0; i < tuplesP->size() + tuplesF->size() + tuplesU->size(); i++){\n";
+                    
+                        closingPars=0;
+                        outfile << ind << "int id = i < tuplesP->size() ? tuplesP->at(i) : (i < tuplesP->size()+tuplesF->size() ? tuplesF->at(i - tuplesP->size()) : tuplesU->at(i - tuplesP->size() - tuplesF->size()));\n";
+                        outfile << ind << "Tuple* tuple = TupleFactory::getInstance().getTupleFromInternalID(id);\n";
                         for(unsigned k=0; k<lit->getAriety(); k++){
                             if(!lit->isVariableTermAt(k) || boundVars.count(lit->getTermAt(k))){
-                                std::string term = lit->isVariableTermAt(k) || isInteger(lit->getTermAt(k)) ? lit->getTermAt(k) : "ConstantsManager::getInstance().mapConstant(\""+lit->getTermAt(k)+"\")";
-                                mapName+=std::to_string(k)+"_";
-                                terms += (terms != "" ? ","+term : term);
-                                boundIndices.insert(k);
+                                std::string term = isInteger(lit->getTermAt(k)) || lit->isVariableTermAt(k) ? lit->getTermAt(k) : "ConstantsManager::getInstance().mapConstant(\""+lit->getTermAt(k)+"\")";
+                                outfile << ind++ << "if(tuple->at("<<k<<") == " << term << "){\n";
+                                closingPars++;
+                            }else{
+                                outfile << ind << "int "<<lit->getTermAt(k) << " = tuple->at(" <<k<< ");\n"; 
+                                boundVars.insert(lit->getTermAt(k));
                             }
                         }
-                        outfile << ind << "const std::vector<int>* tuplesU_"<<index<<" = &"<<prefix<<"u"<<mapName<<"()->getValuesVec({"<<terms<<"});\n";
-                        outfile << ind << "const std::vector<int>* tuples_"<<index<<" = &"<<prefix<<"p"<<mapName<<"()->getValuesVec({"<<terms<<"});\n";
-                        outfile << ind++ << "for(unsigned i=0; i<tuples_"<<index<<"->size()+tuplesU_"<<index<<"->size(); i++){\n";
-                        closingPars++;
-                            outfile << ind << "Tuple* tuple_"<<index<<"= i<tuples_"<<index<<"->size() ? TupleFactory::getInstance().getTupleFromInternalID(tuples_"<<index<<"->at(i)) : TupleFactory::getInstance().getTupleFromInternalID(tuplesU_"<<index<<"->at(i-tuples_"<<index<<"->size()));\n";
-                            outfile << ind++ << "if(tuple_"<<index<<"!= NULL){\n";
+                            outfile << ind << "int& watchValue=watched[id];\n";
+                            outfile << ind++ << "if(watchValue != 2){\n";
+                                outfile << ind << "watchValue = 2;\n";
+                                outfile << ind++ << "if(watchValue != 1)\n";
+                                    outfile << ind-- << "TupleFactory::getInstance().addWatcher(this,id,false);\n";
+                                outfile << ind++ << "if(watchValue != -1)\n";
+                                    outfile << ind-- << "TupleFactory::getInstance().addWatcher(this,id,true);\n";
+                            outfile << --ind << "}\n";
+                            
+                        while(closingPars>0){
+                            outfile << --ind << "}\n";
+                            closingPars--;
+                        }
+                    outfile << --ind << "}\n";
+                outfile << "}\n";
+            }
+        }else{
+            std::vector<unsigned> order = ruleOrdering[ruleId].first[body.size()];
+            std::unordered_set<std::string> boundVars;
+            outfile << ind++ << "{\n";
+            unsigned closingPars=1;
+                for(unsigned index : order){
+                    const aspc::Formula* f = body[index];
+                    if(f->isLiteral()){
+                        const aspc::Literal* lit = (const aspc::Literal*)f;
+                        if(lit->isBoundedLiteral(boundVars)){
+                            outfile << ind << "Tuple* boundTuple_"<<index<<"=TupleFactory::getInstance().find({";
+                            for(unsigned k=0; k<lit->getAriety(); k++){
+                                if(k>0) outfile << ",";
+                                outfile << (lit->isVariableTermAt(k) || isInteger(lit->getTermAt(k)) ? lit->getTermAt(k) : "ConstantsManager::getInstance().mapConstant(\""+lit->getTermAt(k)+"\")");
+                            }
+                            outfile << "}, AuxMapHandler::getInstance().get_"<<lit->getPredicateName()<<"());\n";
+                            if(lit->isNegated()){
+                                outfile << ind++ << "if(boundTuple_"<<index<<" == NULL || !boundTuple_"<<index<<"->isTrue()){\n";
+                            }else{
+                                outfile << ind++ << "if(boundTuple_"<<index<<" != NULL && !boundTuple_"<<index<<"->isFalse()){\n";
+                            }
                             closingPars++;
-                        for(unsigned k=0; k<lit->getAriety(); k++){
-                            if(lit->isVariableTermAt(k) && !boundIndices.count(k)){
-                                if(!boundVars.count(lit->getTermAt(k))){
-                                    outfile << ind << "int "<< lit->getTermAt(k)<< " = tuple_"<<index<<"->at("<<k<<");\n";
-                                    boundVars.insert(lit->getTermAt(k));
-                                }else{
-                                    outfile << ind++ << "if("<< lit->getTermAt(k)<< " == tuple_"<<index<<"->at("<<k<<")){\n";
-                                    closingPars++;
+
+                            outfile << ind << "int id_"<<index<<" = boundTuple_"<<index<<" != NULL ? boundTuple_"<<index<<"->getId() : 0;\n";
+                            outfile << ind++ << "if(id_"<<index<<">0){\n";
+                                outfile << ind << "int& watchValue=watched[id_"<<index<<"];\n";
+                                if(lit->isNegated())
+                                    outfile << ind++ << "if(watchValue != -1 && watchValue != 2){\n";
+                                else
+                                    outfile << ind++ << "if(watchValue < 1){\n";
+
+                                    outfile << ind << "watchValue = watchValue != 0 ? 2 : "<<(lit->isNegated() ? -1 : 1)<<";\n";
+                                    outfile << ind << "TupleFactory::getInstance().addWatcher(this,id_"<<index<<","<<(lit->isNegated() ? "true" : "false")<<");\n";
+                                outfile << --ind << "}\n";
+                            outfile << --ind << "}\n";
+                        }else{
+                            std::string prefix = "AuxMapHandler::getInstance().get_";
+                            std::string mapName = lit->getPredicateName()+"_";
+                            std::string terms = "";
+                            std::unordered_set<int> boundIndices;
+
+                            for(unsigned k=0; k<lit->getAriety(); k++){
+                                if(!lit->isVariableTermAt(k) || boundVars.count(lit->getTermAt(k))){
+                                    std::string term = lit->isVariableTermAt(k) || isInteger(lit->getTermAt(k)) ? lit->getTermAt(k) : "ConstantsManager::getInstance().mapConstant(\""+lit->getTermAt(k)+"\")";
+                                    mapName+=std::to_string(k)+"_";
+                                    terms += (terms != "" ? ","+term : term);
+                                    boundIndices.insert(k);
                                 }
                             }
+                            outfile << ind << "const std::vector<int>* tuplesU_"<<index<<" = &"<<prefix<<"u"<<mapName<<"()->getValuesVec({"<<terms<<"});\n";
+                            outfile << ind << "const std::vector<int>* tuples_"<<index<<" = &"<<prefix<<"p"<<mapName<<"()->getValuesVec({"<<terms<<"});\n";
+                            outfile << ind++ << "for(unsigned i=0; i<tuples_"<<index<<"->size()+tuplesU_"<<index<<"->size(); i++){\n";
+                            closingPars++;
+                                outfile << ind << "Tuple* tuple_"<<index<<"= i<tuples_"<<index<<"->size() ? TupleFactory::getInstance().getTupleFromInternalID(tuples_"<<index<<"->at(i)) : TupleFactory::getInstance().getTupleFromInternalID(tuplesU_"<<index<<"->at(i-tuples_"<<index<<"->size()));\n";
+                                outfile << ind++ << "if(tuple_"<<index<<"!= NULL){\n";
+                                closingPars++;
+                            for(unsigned k=0; k<lit->getAriety(); k++){
+                                if(lit->isVariableTermAt(k) && !boundIndices.count(k)){
+                                    if(!boundVars.count(lit->getTermAt(k))){
+                                        outfile << ind << "int "<< lit->getTermAt(k)<< " = tuple_"<<index<<"->at("<<k<<");\n";
+                                        boundVars.insert(lit->getTermAt(k));
+                                    }else{
+                                        outfile << ind++ << "if("<< lit->getTermAt(k)<< " == tuple_"<<index<<"->at("<<k<<")){\n";
+                                        closingPars++;
+                                    }
+                                }
+                            }
+                            outfile << ind << "int id_"<<index<<" = tuple_"<<index<<"->getId();\n";
+                            outfile << ind << "int& watchValue=watched[id_"<<index<<"];\n";
+                            outfile << ind++ << "if(watchValue < 1){\n";
+                                outfile << ind << "watchValue = watchValue != 0 ? 2 : 1;\n";
+                                outfile << ind << "TupleFactory::getInstance().addWatcher(this,id_"<<index<<",false);\n";
+                            outfile << --ind << "}\n";
                         }
-                        outfile << ind << "int id_"<<index<<" = tuple_"<<index<<"->getId();\n";
-                        outfile << ind << "int& watchValue=watched[id_"<<index<<"];\n";
-                        outfile << ind++ << "if(watchValue < 1){\n";
-                            outfile << ind << "watchValue = watchValue != 0 ? 2 : 1;\n";
-                            outfile << ind << "TupleFactory::getInstance().addWatcher(this,id_"<<index<<",false);\n";
-                        outfile << --ind << "}\n";
-                    }
-                }else{
-                    const aspc::ArithmeticRelation* ineq = (const aspc::ArithmeticRelation*) f;
-                    if(f->isBoundedValueAssignment(boundVars)){
-                        outfile << ind << "int "<<ineq->getAssignmentStringRep(boundVars)<<";"<<std::endl;
-                        boundVars.insert(ineq->getAssignedVariable(boundVars));
                     }else{
-                        outfile << ind++ << "if("<<ineq->getStringRep()<<"){"<<std::endl;
-                        closingPars++;
-                    }
-                }   
+                        const aspc::ArithmeticRelation* ineq = (const aspc::ArithmeticRelation*) f;
+                        if(f->isBoundedValueAssignment(boundVars)){
+                            outfile << ind << "int "<<ineq->getAssignmentStringRep(boundVars)<<";"<<std::endl;
+                            boundVars.insert(ineq->getAssignedVariable(boundVars));
+                        }else{
+                            outfile << ind++ << "if("<<ineq->getStringRep()<<"){"<<std::endl;
+                            closingPars++;
+                        }
+                    }   
+                }
+            while(closingPars > 0){
+                outfile << --ind << "}\n";
+                closingPars--;
             }
-        while(closingPars > 0){
-            outfile << --ind << "}\n";
-            closingPars--;
+        }
+    }else{
+        std::unordered_map<std::string,int> attached;
+        if(!rule.isConstraint()){
+            const std::vector<aspc::Atom>* headAtoms = &rule.getHead();
+            for(int i=0;i<headAtoms->size();i++){
+                const aspc::Atom* head = &headAtoms->at(i);
+                std::string predicate = head->getPredicateName();
+                auto attachedValue = attached.emplace(predicate,0);
+                if(attachedValue.first->second != 2){
+                    outfile << "{\n";
+                        outfile << ind << "const std::vector<int>* tuplesU = &AuxMapHandler::getInstance().get_u"<<head->getPredicateName()<<"_()->getValuesVec({});\n";
+                        outfile << ind << "const std::vector<int>* tuplesF = &AuxMapHandler::getInstance().get_f"<<head->getPredicateName()<<"_()->getValuesVec({});\n";
+                        outfile << ind << "const std::vector<int>* tuplesP = &AuxMapHandler::getInstance().get_p"<<head->getPredicateName()<<"_()->getValuesVec({});\n";
+                        
+                        std::unordered_set<std::string> boundVars;
+                        outfile << ind++ << "for(int i = 0; i < tuplesP->size() + tuplesF->size() + tuplesU->size(); i++){\n";
+                        
+                            int closingPars=0;
+                            outfile << ind << "int id = i < tuplesP->size() ? tuplesP->at(i) : (i < tuplesP->size()+tuplesF->size() ? tuplesF->at(i - tuplesP->size()) : tuplesU->at(i - tuplesP->size() - tuplesF->size()));\n";
+                            outfile << ind << "Tuple* tuple = TupleFactory::getInstance().getTupleFromInternalID(id);\n";
+                            for(unsigned k=0; k<head->getAriety(); k++){
+                                if(!head->isVariableTermAt(k) || boundVars.count(head->getTermAt(k))){
+                                    std::string term = isInteger(head->getTermAt(k)) || head->isVariableTermAt(k) ? head->getTermAt(k) : "ConstantsManager::getInstance().mapConstant(\""+head->getTermAt(k)+"\")";
+                                    outfile << ind++ << "if(tuple->at("<<k<<") == " << term << "){\n";
+                                    closingPars++;
+                                }else{
+                                    outfile << ind << "int "<<head->getTermAt(k) << " = tuple->at(" <<k<< ");\n"; 
+                                    boundVars.insert(head->getTermAt(k));
+                                }
+                            }
+                            if(attachedValue.first->second != 1)
+                                outfile << ind << "TupleFactory::getInstance().addWatcher(this,id,false);\n";
+                            
+                            if(attachedValue.first->second != -1)
+                                outfile << ind << "TupleFactory::getInstance().addWatcher(this,id,true);\n";
+                            
+                            attached[predicate]=2;
+                            while(closingPars>0){
+                                outfile << --ind << "}\n";
+                                closingPars--;
+                            }
+                        outfile << --ind << "}\n";
+                    outfile << "}\n";
+                }
+            }
+        }
+        const std::vector<const aspc::Formula*>* body = &rule.getFormulas();
+        for(int i=0;i<body->size();i++){
+            const aspc::Formula* formula = body->at(i);
+            if(!formula->isLiteral())
+                continue;
+            const aspc::Literal* lit = (const aspc::Literal*) formula;
+
+            std::string predicate = lit->getPredicateName();
+            auto attachedValue = attached.emplace(predicate,0);
+            if(attachedValue.first->second == 2)
+                continue;
+            int expected = lit->isNegated() ? -1 : 1;
+
+            if(attachedValue.first->second != expected){
+                outfile << ind++ << "{\n";
+                    outfile << ind << "const std::vector<int>* tuplesU = &AuxMapHandler::getInstance().get_u"<<lit->getPredicateName()<<"_()->getValuesVec({});\n";
+                    outfile << ind << "const std::vector<int>* tuplesF = &AuxMapHandler::getInstance().get_f"<<lit->getPredicateName()<<"_()->getValuesVec({});\n";
+                    outfile << ind << "const std::vector<int>* tuplesP = &AuxMapHandler::getInstance().get_p"<<lit->getPredicateName()<<"_()->getValuesVec({});\n";
+                    
+                    std::unordered_set<std::string> boundVars;
+                    outfile << ind++ << "for(int i = 0; i < tuplesP->size() + tuplesF->size() + tuplesU->size(); i++){\n";
+                    
+                        int closingPars=0;
+                        outfile << ind << "int id = i < tuplesP->size() ? tuplesP->at(i) : (i < tuplesP->size()+tuplesF->size() ? tuplesF->at(i - tuplesP->size()) : tuplesU->at(i - tuplesP->size() - tuplesF->size()));\n";
+                        outfile << ind << "Tuple* tuple = TupleFactory::getInstance().getTupleFromInternalID(id);\n";
+                        for(unsigned k=0; k<lit->getAriety(); k++){
+                            if(!lit->isVariableTermAt(k) || boundVars.count(lit->getTermAt(k))){
+                                std::string term = isInteger(lit->getTermAt(k)) || lit->isVariableTermAt(k) ? lit->getTermAt(k) : "ConstantsManager::getInstance().mapConstant(\""+lit->getTermAt(k)+"\")";
+                                outfile << ind++ << "if(tuple->at("<<k<<") == " << term << "){\n";
+                                closingPars++;
+                            }else{
+                                outfile << ind << "int "<<lit->getTermAt(k) << " = tuple->at(" <<k<< ");\n"; 
+                                boundVars.insert(lit->getTermAt(k));
+                            }
+                        }
+                        if(!rule.isConstraint()){
+                            if(attachedValue.first->second != 1)
+                                outfile << ind << "TupleFactory::getInstance().addWatcher(this,id,false);\n";
+                            
+                            if(attachedValue.first->second != -1)
+                                outfile << ind << "TupleFactory::getInstance().addWatcher(this,id,true);\n";
+                            
+                            attached[predicate]=2;
+                        }else{
+                            if(expected == 1)
+                                outfile << ind << "TupleFactory::getInstance().addWatcher(this,id,false);\n";
+                            else
+                                outfile << ind << "TupleFactory::getInstance().addWatcher(this,id,true);\n";
+                            attached[predicate]= attachedValue.first->second != 0 ? 2 : expected;
+                        }
+                        
+                        while(closingPars>0){
+                            outfile << --ind << "}\n";
+                            closingPars--;
+                        }
+                    outfile << --ind << "}\n";
+                outfile << --ind << "}\n";
+            }
         }
     }
+    
     outfile << --ind << "} //function\n";
 }
 void PropagatorCompiler::compileRuleLevelZero(unsigned ruleId,std::ofstream& outfile,Indentation& ind){

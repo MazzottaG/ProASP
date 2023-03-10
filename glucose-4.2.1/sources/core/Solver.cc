@@ -443,7 +443,7 @@ bool Solver::addClause_(vec <Lit> &ps) {
         return ok = false;
     }
     else if(ps.size() == 1) {
-        #ifdef DEBUG_PROP
+        #if defined(DEBUG_PROP) || defined(TRACE_SOLVER)
         std::cout << "propagate from addClause"<<std::endl;
         #endif
         uncheckedEnqueue(ps[0]);
@@ -1069,13 +1069,15 @@ void Solver::uncheckedEnqueue(Lit p, CRef from) {
     std::cout << "   Assigning " << var(p) << " at level "<<decisionLevel()<< (!sign(p) ? " true " : " false "); AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(var(p))); std::cout << std::endl;
     std::cout << "      Considered clause "; if(from != CRef_Undef) printClause(from); std::cout << std::endl;
     #endif
-    std::cout << "   Assigning " << var(p) << " at level "<<decisionLevel()<< (!sign(p) ? " true " : " false ");
     //  AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(var(p))); std::cout << std::endl;
     // std::cout << "      Considered clause "; if(from != CRef_Undef) printClause(from); std::cout << std::endl;
     assert(value(p) == l_Undef);
     assigns[var(p)] = lbool(!sign(p));
     vardata[var(p)] = mkVarData(from, decisionLevel());
     trail.push_(p);
+    #ifdef TRACE_SOLVER
+    std::cout << "   Enqueued " << var(p) << " at level "<<decisionLevel()<< (!sign(p) ? " true " : " false "); AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(var(p))); std::cout << std::endl;
+    #endif
 }
 
 
@@ -1212,23 +1214,33 @@ CRef Solver::propagate() {
         if(useUnaryWatched && confl == CRef_Undef) {
             confl = propagateUnaryWatches(p);
         }
-        if(var(p)>0){
-            conflictLiteral=-1;
-            #if defined(DEBUG_PROP) || defined(TRACE_SOLVER)
-            std::cout << "   Propagating "<<(lit < 0 ? "false ": "true ");AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(var(p)));std::cout << std::endl;
-            #endif
-            confl = Propagator::getInstance().propagateLiteral(this,lits,lit);
-            #if defined(DEBUG_PROP) || defined(TRACE_SOLVER)
-            std::cout << "   Exit Propagating "<<(lit < 0 ? "false ": "true ");AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(var(p)));std::cout << std::endl;
-            #endif
+        #if defined(TRACE_SOLVER)
+        std::cout << "Calling external propagators"<<std::endl;
+        #endif
+        if(confl == CRef_Undef){
+            if(var(p)>0){
+                conflictLiteral=-1;
+                #if defined(DEBUG_PROP) || defined(TRACE_SOLVER)
+                std::cout << "   Propagating "<<(lit < 0 ? "false ": "true ");AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(var(p)));std::cout << std::endl;
+                #endif
+                confl = Propagator::getInstance().propagateLiteral(this,lits,lit);
+                #if defined(DEBUG_PROP) || defined(TRACE_SOLVER)
+                std::cout << "   Exit Propagating "<<(lit < 0 ? "false ": "true ");AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(var(p)));std::cout << std::endl;
+                #endif
+            }
         }
+        #if defined(TRACE_SOLVER)
+        std::cout << "Next literal to propagate"<<std::endl;
+        #endif
         if(confl != CRef_Undef){
             return confl;
         }
     }
 
 
-
+    #if defined(TRACE_SOLVER)
+    std::cout << "Trail consumed"<<std::endl;
+    #endif
     propagations += num_props;
     simpDB_props -= num_props;
         
@@ -1960,7 +1972,8 @@ lbool Solver::solve_(bool do_simp, bool turn_off_simp) // Parameters are useless
             std::vector<unsigned>& visible=TupleFactory::getInstance().getVisibleAtoms();         
             for(unsigned id: visible){
                 TupleLight* t = TupleFactory::getInstance().getTupleFromInternalID(id);
-                if(t != NULL && t->isTrue()) AuxMapHandler::getInstance().printTuple(t);
+                if(t != NULL && t->isTrue()) {AuxMapHandler::getInstance().printTuple(t);}
+                // if(t != NULL && t->isFalse()) {std::cout << ":-";AuxMapHandler::getInstance().printTuple(t);}
             }
             std::cout << std::endl;
         }
