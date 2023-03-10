@@ -151,17 +151,40 @@ void DataStructureCompiler::buildAuxMapHandler(std::string executablePath,const 
 }
 std::pair<std::vector<std::vector<unsigned>>,std::vector<std::vector<unsigned>>> DataStructureCompiler::declarePropagatorDataStructure(const aspc::Rule& rule){
     std::cout << "Declaring structure for ";rule.print();
+    // std::cout << "----------------------- Before watcher -----------------------"<<std::endl;
+    // printAuxMap();
+    // std::cout << "--------------------------------------------------------------"<<std::endl;
     
-    // general order + ordering starting literal in the body + ordering from head atom
+    // general order + ordering starting literal in the body + ordering from head atom + watched struct
     auto body = rule.getFormulas();
     auto head = rule.getHead();
+    std::vector<unsigned> emptyIndices;
+
     if(!rule.isConstraint()){
-        std::vector<unsigned> boundIndices;
         if(body.size() == 1 && body[0]->isLiteral()){
-            std::vector<unsigned> boundIndices;
-            auxMapNameForPredicate[((const aspc::Literal*)body[0])->getPredicateName()].insert(boundIndices);
+            auxMapNameForPredicate[((const aspc::Literal*)body[0])->getPredicateName()].insert(emptyIndices);
         }
     }
+    {
+        //declaring watcher structure
+        if(!rule.isConstraint()){
+            for(aspc::Atom h : head){
+                auxMapNameForPredicate[h.getPredicateName()].insert(emptyIndices);
+            }
+        }else{
+            for(const aspc::Formula* f : body){
+                if(f->isLiteral()){
+                    std::string predicate = ((const aspc::Literal*)f)->getPredicateName();
+                    auxMapNameForPredicate[predicate].insert(emptyIndices);
+                }
+            }
+        }
+    }
+    
+    // std::cout << "----------------------- After watcher -----------------------"<<std::endl;
+    // printAuxMap();
+    // std::cout << "--------------------------------------------------------------"<<std::endl;
+    
     std::vector<std::vector<unsigned>> orderByStartersHead;
     for(unsigned starter = 0; starter < head.size(); starter++){
         orderByStartersHead.push_back({});

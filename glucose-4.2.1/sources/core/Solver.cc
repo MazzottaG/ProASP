@@ -2198,8 +2198,9 @@ CRef Solver::externalPropagation(Var var, bool negated,AbstractPropagator* prop)
         if(currentDecisionLevel == 0){
             reasonClause.clear();
             reasonClause.push( mkLit(var,negated));
-            addClause_(reasonClause);
-            return CRef_Undef;
+            if(addClause_(reasonClause))
+                return CRef_Undef;
+            return CRef_PropConf;
         }else{
             propagationClause = storePropagatorReason(literal);
         }
@@ -2214,8 +2215,9 @@ CRef Solver::externalPropagation(Var var, bool negated,AbstractPropagator* prop)
         #endif
         if(currentDecisionLevel == 0){
             reasonClause.clear();
-            addClause_(reasonClause);
-            return CRef_Undef;
+            if(addClause_(reasonClause))
+                return CRef_Undef;
+            return CRef_PropConf;
         }else{
             conflictLiteral=literal;
             return propagationClause;

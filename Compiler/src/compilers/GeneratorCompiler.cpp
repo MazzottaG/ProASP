@@ -197,7 +197,7 @@ void GeneratorCompiler::compileComponentRules(std::ofstream& outfile,Indentation
             outfile << (atom->isVariableTermAt(k) || isInteger(atom->getTermAt(k)) ? atom->getTermAt(k) : "ConstantsManager::getInstance().mapConstant(\""+atom->getTermAt(k)+"\")");
         }
         outfile << "}, AuxMapHandler::getInstance().get_"<<atom->getPredicateName()<<"(),"<<(originalPredicates.count(atom->getPredicateName()) ? "false" : "true")<<");\n";
-        outfile << ind << "if(TupleFactory::getInstance().isFact(head_"<<index<<"->getId())) continue;\n";
+        outfile << ind++ << "if(!TupleFactory::getInstance().isFact(head_"<<index<<"->getId())){\n";
             #ifdef DEBUG_GEN
             outfile << ind << "std::cout << \"Added tuple \";AuxMapHandler::getInstance().printTuple(head_"<<index<<");\n";
             #endif
@@ -210,7 +210,8 @@ void GeneratorCompiler::compileComponentRules(std::ofstream& outfile,Indentation
                     outfile << ind << "AuxMapHandler::getInstance().insertUndef(insertResult);\n";
                     outfile << ind << "while (head_"<<index<<"->getId() >= solver->nVars()) {solver->setFrozen(solver->newVar(),true);}\n";
                 outfile << --ind << "}\n";                        
-            }                                
+            }  
+        outfile << --ind << "}\n";                              
     }
     while (closingPars > 0){
         outfile << --ind << "}// closing"<<std::endl;
