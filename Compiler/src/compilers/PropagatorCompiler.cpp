@@ -19,6 +19,8 @@ void PropagatorCompiler::compileRuleFromStarter(unsigned ruleId, std::ofstream& 
     outfile << ind++ << "else{\n";
         outfile << ind << "if((literal > 0 && starter->isFalse()) || (literal < 0 && starter->isTrue())) {std::cout << \"Error: literal already assigned with different value\" <<std::endl; exit(180);}\n";
     outfile << --ind << "}\n";     
+    outfile << ind << "std::vector<Glucose::Lit> propagations;\n";
+
     aspc::Rule rule = program.getRule(ruleId);
     if(!rule.isConstraint()){
         // normal rules are assumed with one literal in the body
@@ -29,7 +31,8 @@ void PropagatorCompiler::compileRuleFromStarter(unsigned ruleId, std::ofstream& 
             // starter is head predicate 
             std::unordered_set<std::string> boundVars;
             outfile << ind++ << "if(starter->getPredicateName() == AuxMapHandler::getInstance().get_"<< head->getPredicateName() << "() && !TupleFactory::getInstance().isFact(starter->getId())){\n";
-            unsigned closingPars=1;
+                outfile << ind << "propagations.clear();\n";
+                unsigned closingPars=0;
                 for(unsigned k=0; k<head->getAriety();k++){
                     if(!head->isVariableTermAt(k) || boundVars.count(head->getTermAt(k))){
                         std::string term = isInteger(head->getTermAt(k)) || head->isVariableTermAt(k) ? head->getTermAt(k) : "ConstantsManager::getInstance().mapConstant(\""+head->getTermAt(k)+"\")";
@@ -301,11 +304,17 @@ void PropagatorCompiler::compileRuleFromStarter(unsigned ruleId, std::ofstream& 
                 }else{
                     //TODO head :- ineq
                 }
-            
-            while (closingPars > 0){
+                
+                while (closingPars > 0){
+                    outfile << --ind << "}\n";
+                    closingPars--;
+                }
+                outfile << ind++ << "for(unsigned i = 0; i< propagations.size(); i++){\n";
+                    outfile << ind << "lits.clear();\n";
+                    outfile << ind << "lits.push( propagations[i] );\n";
+                    outfile << ind << "solver->addClause_(lits);\n";
                 outfile << --ind << "}\n";
-                closingPars--;
-            }
+            outfile << --ind << "}\n";
         }
         {
             if(body->isLiteral()){
@@ -314,7 +323,8 @@ void PropagatorCompiler::compileRuleFromStarter(unsigned ruleId, std::ofstream& 
                 const aspc::Literal* lit = (const aspc::Literal*) body;
                 std::unordered_set<std::string> boundVars;
                 outfile << ind++ << "if(starter->getPredicateName() == AuxMapHandler::getInstance().get_"<< lit->getPredicateName() << "()){\n";
-                unsigned closingPars=1;
+                    outfile << ind << "propagations.clear();\n";
+                    unsigned closingPars=0;
                     for(unsigned k=0; k<lit->getAriety();k++){
                         if(!lit->isVariableTermAt(k) || boundVars.count(lit->getTermAt(k))){
                             std::string term = isInteger(lit->getTermAt(k)) || lit->isVariableTermAt(k) ? lit->getTermAt(k) : "ConstantsManager::getInstance().mapConstant(\""+lit->getTermAt(k)+"\")";
@@ -587,11 +597,16 @@ void PropagatorCompiler::compileRuleFromStarter(unsigned ruleId, std::ofstream& 
                             outfile << --ind << "}\n";
                         outfile << --ind << "}\n";
                     }
-                while (closingPars > 0){
+                    while (closingPars > 0){
+                        outfile << --ind << "}\n";
+                        closingPars--;
+                    }
+                    outfile << ind++ << "for(unsigned i = 0; i< propagations.size(); i++){\n";
+                        outfile << ind << "lits.clear();\n";
+                        outfile << ind << "lits.push( propagations[i] );\n";
+                        outfile << ind << "solver->addClause_(lits);\n";
                     outfile << --ind << "}\n";
-                    closingPars--;
-                }
-                
+                outfile << --ind << "}\n";
             }
         }
     }else{
@@ -609,7 +624,8 @@ void PropagatorCompiler::compileRuleFromStarter(unsigned ruleId, std::ofstream& 
                 if(rule.getSupportAtom() == i){
                     outfile << ind << "if(TupleFactory::getInstance().isFact(starter->getId())) return Glucose::CRef_Undef;\n";
                 }
-            unsigned closingPars=1;
+                outfile << ind << "propagations.clear();\n";
+                unsigned closingPars=0;
                 for(unsigned k=0; k<lit->getAriety();k++){
                     if(!lit->isVariableTermAt(k) || boundVars.count(lit->getTermAt(k))){
                         std::string term = isInteger(lit->getTermAt(k)) || lit->isVariableTermAt(k) ? lit->getTermAt(k) : "ConstantsManager::getInstance().mapConstant(\""+lit->getTermAt(k)+"\")";
@@ -776,10 +792,16 @@ void PropagatorCompiler::compileRuleFromStarter(unsigned ruleId, std::ofstream& 
                     outfile << ind << "solver->addClause_(lits);\n";
                     outfile << ind << "return Glucose::CRef_PropConf;\n";
                 outfile << --ind << "}\n";
-            while(closingPars > 0){
+                while(closingPars > 0){
+                    outfile << --ind << "}\n";
+                    closingPars--;
+                }
+                outfile << ind++ << "for(unsigned i = 0; i< propagations.size(); i++){\n";
+                    outfile << ind << "lits.clear();\n";
+                    outfile << ind << "lits.push( propagations[i] );\n";
+                    outfile << ind << "solver->addClause_(lits);\n";
                 outfile << --ind << "}\n";
-                closingPars--;
-            }
+            outfile << --ind << "}\n";
             
         }
     }
@@ -811,9 +833,11 @@ void PropagatorCompiler::printTuplePropagation(std::ofstream& outfile,Indentatio
         outfile << ind << "propagations.push_back((var >= 0) ? Glucose::mkLit(var) : Glucose::mkLit(-var,true));\n";
     }else{
         //  foundConflict -> violated clause is in solver
-        outfile << ind << "Glucose::CRef clause = solver->externalPropagation("<<tuplename<<"->getId(),var < 0,this);\n";
-        outfile << ind++ << "if(clause != Glucose::CRef_Undef)\n";
-            outfile << ind-- << "return clause;\n";
+        outfile << ind++ << "if(solver->currentLevel() > 0){\n";
+            outfile << ind << "Glucose::CRef clause = solver->externalPropagation("<<tuplename<<"->getId(),var < 0,this);\n";
+            outfile << ind++ << "if(clause != Glucose::CRef_Undef)\n";
+                outfile << ind-- << "return clause;\n";
+        outfile << --ind << "}else propagations.push_back((var >= 0) ? Glucose::mkLit(var) : Glucose::mkLit(-var,true));\n";
     }  
 }
 

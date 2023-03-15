@@ -2195,33 +2195,20 @@ CRef Solver::externalPropagation(Var var, bool negated,AbstractPropagator* prop)
     CRef propagationClause = CRef_Undef;
     unsigned currentDecisionLevel = decisionLevel();
     if(value(var) == l_Undef || toInt(value(var)) != negated){
-        if(currentDecisionLevel == 0){
-            reasonClause.clear();
-            reasonClause.push( mkLit(var,negated));
-            if(addClause_(reasonClause))
-                return CRef_Undef;
-            return CRef_PropConf;
-        }else{
-            propagationClause = storePropagatorReason(literal);
-        }
+        assert(currentDecisionLevel > 0);
+        propagationClause = storePropagatorReason(literal);
     }
 
     if(value(var) != l_Undef && toInt(value(var)) != negated){
-        // conflict detected
-        // printf("External propagation of already assigned literal\n");
+
         #ifdef TRACE_SOLVER
         std::cout << "   Found conflict on "<<literal;AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(var));std::cout << std::endl;
         std::cout << "      Violated clause "; if(propagationClause != CRef_Undef) printClause(propagationClause); std::cout << std::endl;
         #endif
-        if(currentDecisionLevel == 0){
-            reasonClause.clear();
-            if(addClause_(reasonClause))
-                return CRef_Undef;
-            return CRef_PropConf;
-        }else{
-            conflictLiteral=literal;
-            return propagationClause;
-        }
+        assert(currentDecisionLevel > 0);
+        conflictLiteral=literal;
+        return propagationClause;
+        
     }else if(value(var) == l_Undef && currentDecisionLevel>0){
         
         #ifdef TRACE_SOLVER
