@@ -5,6 +5,8 @@ CXXFLAGS := -std=c++17 -Wall -Wextra
 
 LIB		:= Compiler/lib
 ANTLR	:= libantlr4-runtime.a
+GLUCOSE_GEN_SRC	:= glucose-4.2.1/sources/simp/generators
+GLUCOSE_PROP_SRC	:= glucose-4.2.1/sources/simp/propagators
 
 SRC 	:= .
 REQUIRED_LIB	:= $(LIB)/linux-$(ANTLR)
@@ -18,5 +20,12 @@ else
 endif
 
 compile:
+	if [ ! -d "$(GLUCOSE_GEN_SRC)" ]; then \
+        mkdir $(GLUCOSE_GEN_SRC); \
+    fi
+	if [ ! -d "$(GLUCOSE_PROP_SRC)" ]; then \
+        mkdir $(GLUCOSE_PROP_SRC); \
+    fi
+	
 	cp $(REQUIRED_LIB) $(LIB)/$(ANTLR)
 	$(CXX) $(CXXFLAGS) $(SRC)/ProAsp.cpp -o dist/proasp
