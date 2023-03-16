@@ -312,7 +312,7 @@ void PropagatorCompiler::compileRuleFromStarter(unsigned ruleId, std::ofstream& 
                 outfile << ind++ << "for(unsigned i = 0; i< propagations.size(); i++){\n";
                     outfile << ind << "lits.clear();\n";
                     outfile << ind << "lits.push( propagations[i] );\n";
-                    outfile << ind << "solver->addClause_(lits);\n";
+                    outfile << ind << "if(!solver->addClause_(lits)) return Glucose::CRef_PropConf;\n";
                 outfile << --ind << "}\n";
             outfile << --ind << "}\n";
         }
@@ -604,7 +604,7 @@ void PropagatorCompiler::compileRuleFromStarter(unsigned ruleId, std::ofstream& 
                     outfile << ind++ << "for(unsigned i = 0; i< propagations.size(); i++){\n";
                         outfile << ind << "lits.clear();\n";
                         outfile << ind << "lits.push( propagations[i] );\n";
-                        outfile << ind << "solver->addClause_(lits);\n";
+                        outfile << ind << "if(!solver->addClause_(lits)) return Glucose::CRef_PropConf;\n";
                     outfile << --ind << "}\n";
                 outfile << --ind << "}\n";
             }
@@ -799,7 +799,7 @@ void PropagatorCompiler::compileRuleFromStarter(unsigned ruleId, std::ofstream& 
                 outfile << ind++ << "for(unsigned i = 0; i< propagations.size(); i++){\n";
                     outfile << ind << "lits.clear();\n";
                     outfile << ind << "lits.push( propagations[i] );\n";
-                    outfile << ind << "solver->addClause_(lits);\n";
+                    outfile << ind << "if(!solver->addClause_(lits)) return Glucose::CRef_PropConf;\n";
                 outfile << --ind << "}\n";
             outfile << --ind << "}\n";
             
