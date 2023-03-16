@@ -7,7 +7,7 @@ LIB		:= Compiler/lib
 ANTLR	:= libantlr4-runtime.a
 GLUCOSE_GEN_SRC	:= glucose-4.2.1/sources/simp/generators
 GLUCOSE_PROP_SRC	:= glucose-4.2.1/sources/simp/propagators
-
+OUTPUT	:= dist
 SRC 	:= .
 REQUIRED_LIB	:= $(LIB)/linux-$(ANTLR)
 ifeq ($(OS),Windows_NT)
@@ -26,6 +26,10 @@ compile:
 	if [ ! -d "$(GLUCOSE_PROP_SRC)" ]; then \
         mkdir $(GLUCOSE_PROP_SRC); \
     fi
-	
+	if [ ! -d "$(OUTPUT)" ]; then \
+        mkdir $(OUTPUT); \
+    fi
+
 	cp $(REQUIRED_LIB) $(LIB)/$(ANTLR)
-	$(CXX) $(CXXFLAGS) $(SRC)/ProAsp.cpp -o dist/proasp
+	
+	$(CXX) $(CXXFLAGS) $(SRC)/ProAsp.cpp -o $(OUTPUT)/proasp
