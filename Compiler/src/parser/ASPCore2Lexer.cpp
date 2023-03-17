@@ -1,5 +1,5 @@
 
-// Generated from ASPCore2.g4 by ANTLR 4.11.1
+// Generated from ASPCore2.g4 by ANTLR 4.12.0
 
 
 #include "ASPCore2Lexer.h"
@@ -41,7 +41,7 @@ struct ASPCore2LexerStaticData final {
   std::unique_ptr<antlr4::atn::ATN> atn;
 };
 
-std::once_flag aspcore2lexerLexerOnceFlag;
+::antlr4::internal::OnceFlag aspcore2lexerLexerOnceFlag;
 ASPCore2LexerStaticData *aspcore2lexerLexerStaticData = nullptr;
 
 void aspcore2lexerLexerInitialize() {
@@ -420,5 +420,5 @@ const atn::ATN& ASPCore2Lexer::getATN() const {
 
 
 void ASPCore2Lexer::initialize() {
-  std::call_once(aspcore2lexerLexerOnceFlag, aspcore2lexerLexerInitialize);
+  ::antlr4::internal::call_once(aspcore2lexerLexerOnceFlag, aspcore2lexerLexerInitialize);
 }

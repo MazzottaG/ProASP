@@ -1,5 +1,5 @@
 
-// Generated from ASPCore2.g4 by ANTLR 4.11.1
+// Generated from ASPCore2.g4 by ANTLR 4.12.0
 
 
 #include "ASPCore2Listener.h"
@@ -36,7 +36,7 @@ struct ASPCore2ParserStaticData final {
   std::unique_ptr<antlr4::atn::ATN> atn;
 };
 
-std::once_flag aspcore2ParserOnceFlag;
+::antlr4::internal::OnceFlag aspcore2ParserOnceFlag;
 ASPCore2ParserStaticData *aspcore2ParserStaticData = nullptr;
 
 void aspcore2ParserInitialize() {
@@ -546,9 +546,9 @@ ASPCore2Parser::ProgramContext* ASPCore2Parser::program() {
     setState(213);
     _errHandler->sync(this);
     _la = _input->LA(1);
-    while (((_la & ~ 0x3fULL) == 0) &&
-      ((1ULL << _la) & 10685123022471228) != 0 || (((_la - 65) & ~ 0x3fULL) == 0) &&
-      ((1ULL << (_la - 65)) & 127) != 0) {
+    while ((((_la & ~ 0x3fULL) == 0) &&
+      ((1ULL << _la) & 10685123022471228) != 0) || ((((_la - 65) & ~ 0x3fULL) == 0) &&
+      ((1ULL << (_la - 65)) & 127) != 0)) {
       setState(210);
       rule_();
       setState(215);
@@ -3099,8 +3099,8 @@ ASPCore2Parser::Arithop2Context* ASPCore2Parser::arithop2() {
     enterOuterAlt(_localctx, 1);
     setState(448);
     _la = _input->LA(1);
-    if (!(((_la & ~ 0x3fULL) == 0) &&
-      ((1ULL << _la) & 1835008) != 0)) {
+    if (!((((_la & ~ 0x3fULL) == 0) &&
+      ((1ULL << _la) & 1835008) != 0))) {
     _errHandler->recoverInline(this);
     }
     else {
@@ -4054,8 +4054,8 @@ ASPCore2Parser::IdentifierContext* ASPCore2Parser::identifier() {
     enterOuterAlt(_localctx, 1);
     setState(515);
     _la = _input->LA(1);
-    if (!(((_la & ~ 0x3fULL) == 0) &&
-      ((1ULL << _la) & 28) != 0)) {
+    if (!((((_la & ~ 0x3fULL) == 0) &&
+      ((1ULL << _la) & 28) != 0))) {
     _errHandler->recoverInline(this);
     }
     else {
@@ -5457,8 +5457,8 @@ ASPCore2Parser::Aggregate_functionContext* ASPCore2Parser::aggregate_function() 
     enterOuterAlt(_localctx, 1);
     setState(604);
     _la = _input->LA(1);
-    if (!(((_la & ~ 0x3fULL) == 0) &&
-      ((1ULL << _la) & 2061584302080) != 0)) {
+    if (!((((_la & ~ 0x3fULL) == 0) &&
+      ((1ULL << _la) & 2061584302080) != 0))) {
     _errHandler->recoverInline(this);
     }
     else {
@@ -6550,8 +6550,8 @@ ASPCore2Parser::Extatom_conv_typeContext* ASPCore2Parser::extatom_conv_type() {
     enterOuterAlt(_localctx, 1);
     setState(701);
     _la = _input->LA(1);
-    if (!((((_la - 58) & ~ 0x3fULL) == 0) &&
-      ((1ULL << (_la - 58)) & 127) != 0)) {
+    if (!(((((_la - 58) & ~ 0x3fULL) == 0) &&
+      ((1ULL << (_la - 58)) & 127) != 0))) {
     _errHandler->recoverInline(this);
     }
     else {
@@ -9619,5 +9619,5 @@ ASPCore2Parser::Aggregate_elements_heuristicContext* ASPCore2Parser::aggregate_e
 }
 
 void ASPCore2Parser::initialize() {
-  std::call_once(aspcore2ParserOnceFlag, aspcore2ParserInitialize);
+  ::antlr4::internal::call_once(aspcore2ParserOnceFlag, aspcore2ParserInitialize);
 }
