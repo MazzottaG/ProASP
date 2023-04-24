@@ -21,7 +21,7 @@ class GeneratorCompiler{
 
         void computeSCC();
         void buildPositiveDG();
-        const std::vector<std::unordered_set<std::string>>& getComponents(){if(!builtSCC) computeSCC(); return components;}
+        const std::vector<std::set<std::string>>& getComponents(){if(!builtSCC) computeSCC(); return components;}
     private:
         aspc::Program program;
         DataStructureCompiler* auxMapCompiler;
@@ -34,7 +34,7 @@ class GeneratorCompiler{
         std::vector<std::string> localPredicatesName;
         GraphWithTarjanAlgorithm pdg;
         std::vector<std::vector<int>> scc;
-        std::vector<std::unordered_set<std::string>> components;
+        std::vector<std::set<std::string>> components;
         bool builtSCC;
         std::string executablePath;
         bool solvedByGenerator;         

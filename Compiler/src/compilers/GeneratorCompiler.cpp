@@ -292,7 +292,7 @@ void GeneratorCompiler::computeSCC(){
         scc = pdg.SCC();
         for(unsigned componentId=0;componentId<scc.size(); componentId++){
             components.push_back({});
-            std::unordered_set<std::string>* component=&components.back();
+            std::set<std::string>* component=&components.back();
             for(unsigned i=0;i<scc[componentId].size();i++){
                 component->insert(localPredicatesName[scc[componentId][i]]);
             }

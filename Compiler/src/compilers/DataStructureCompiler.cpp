@@ -294,7 +294,7 @@ std::pair<std::vector<std::vector<unsigned>>,std::vector<std::vector<unsigned>>>
     }    
     return std::make_pair(orderByStarters,orderByStartersHead);
 }
-std::vector<std::vector<unsigned>> DataStructureCompiler::declareGeneratorDataStructure(const aspc::Rule& rule,const std::unordered_set<std::string>& component){
+std::vector<std::vector<unsigned>> DataStructureCompiler::declareGeneratorDataStructure(const aspc::Rule& rule,const std::set<std::string>& component){
     std::cout << "Declaring structure for ";rule.print();
     // general order + ordering starting from positive literal in the same component
     auto body = rule.getFormulas();

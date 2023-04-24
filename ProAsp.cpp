@@ -28,7 +28,7 @@ class Exec{
 class Run: public Exec{
     virtual void build(const std::string& src,const std::string& file){
         commands=std::vector<std::string>({
-            src+"/glucose-4.2.1/sources/simp/glucose -no-pre -verb=0 "+file
+            src+"/glucose-4.2.1/sources/simp/glucose -no-pre "+file
         });
     }
 };

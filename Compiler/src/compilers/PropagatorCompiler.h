@@ -41,7 +41,7 @@ class PropagatorCompiler{
         
         GraphWithTarjanAlgorithm pdg;
         std::vector<std::vector<int>> scc;
-        std::vector<std::unordered_set<std::string>> components;
+        std::vector<std::set<std::string>> components;
         bool builtSCC;
 };
 #endif
