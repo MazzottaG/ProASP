@@ -60,12 +60,15 @@ void GeneratorCompiler::buildComponentGenerator(int componentId){
                     outfile << ind << "Tuple* starter = TupleFactory::getInstance().getTupleFromInternalID(stack.back());\n";
                     outfile << ind << "stack.pop_back();\n";
                     outfile << ind++ << "if(starter != NULL){\n";
+                    outfile << ind << "const auto& insertResult = starter->setStatus(Undef);\n";
+                    outfile << ind++ << "if(insertResult.second){\n";
                         #ifdef DEBUG_GEN
                         outfile << ind << "std::cout << \"Added tuple \";AuxMapHandler::getInstance().printTuple(starter);\n";
                         #endif
                         outfile << ind << "TupleFactory::getInstance().removeFromCollisionsList(starter->getId());\n";
-                        outfile << ind << "AuxMapHandler::getInstance().insertUndef(std::make_pair(starter,true));\n";
+                        outfile << ind << "AuxMapHandler::getInstance().insertUndef(insertResult);\n";
                         outfile << ind << "while (starter->getId() >= solver->nVars()) {solver->setFrozen(solver->newVar(),true);}\n";
+                    outfile << --ind << "}else continue;\n";
                     for(const std::string& predicate: components[componentId]){
                         for(unsigned ruleIndex : program.getRulesForPredicate(predicate)){
                             aspc::Rule r = program.getRule(ruleIndex);
@@ -198,17 +201,16 @@ void GeneratorCompiler::compileComponentRules(std::ofstream& outfile,Indentation
             #ifdef DEBUG_GEN
             outfile << ind << "std::cout << \"Added tuple \";AuxMapHandler::getInstance().printTuple(head_"<<index<<");\n";
             #endif
-            outfile << ind << "const auto& insertResult = head_"<<index<<"->setStatus(Undef);\n";
-            outfile << ind++ << "if(insertResult.second){\n";
-            
             if(isRecursive){
                 outfile << ind << "stack.push_back(head_"<<index<<"->getId());\n";
             }else{
-                outfile << ind << "TupleFactory::getInstance().removeFromCollisionsList(head_"<<index<<"->getId());\n";
-                outfile << ind << "AuxMapHandler::getInstance().insertUndef(insertResult);\n";
-                outfile << ind << "while (head_"<<index<<"->getId() >= solver->nVars()) {solver->setFrozen(solver->newVar(),true);}\n";
+                outfile << ind << "const auto& insertResult = head_"<<index<<"->setStatus(Undef);\n";
+                outfile << ind++ << "if(insertResult.second){\n";
+                    outfile << ind << "TupleFactory::getInstance().removeFromCollisionsList(head_"<<index<<"->getId());\n";
+                    outfile << ind << "AuxMapHandler::getInstance().insertUndef(insertResult);\n";
+                    outfile << ind << "while (head_"<<index<<"->getId() >= solver->nVars()) {solver->setFrozen(solver->newVar(),true);}\n";
+                outfile << --ind << "}\n";                        
             }  
-            outfile << --ind << "}\n";                        
         outfile << --ind << "}\n";                              
     }
     while (closingPars > 0){

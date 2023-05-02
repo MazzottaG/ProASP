@@ -9,6 +9,7 @@ class Rewriter{
         void computeCompletion();
         void addOriginalConstraint();
         void computeGlobalPredicates();
+        void findEDB();
 
         const std::vector<std::string>& getPredicateNames()const {return predicateNames;}
         const std::unordered_map<std::string,unsigned>& getPredicateId()const {return predicateId;}
@@ -34,6 +35,8 @@ class Rewriter{
 
         std::vector<std::string> auxPredicates;
         std::unordered_map<std::string,unsigned> auxPredicateId;
+
+        std::unordered_set<std::string> edbPredicates;
 
 };
 #endif

@@ -1,5 +1,15 @@
 #include "Rewriter.h"
+void Rewriter::findEDB(){
+    for(std::string predicate : predicateNames){
+        auto rules = program.getRulesForPredicate(predicate);
+        std::cout << "Predicate: "<<predicate<< " Rule count:"<<rules.size()<<std::endl;
+        if(rules.size() == 0) {
+            std::cout << "   Found EDB "<<predicate<<std::endl;
+            edbPredicates.insert(predicate);
+        }
 
+    }
+}
 void Rewriter::addOriginalConstraint(){
     for(unsigned i=0; i<program.getRulesSize();i++){
         auto rule = program.getRule(i);
@@ -89,6 +99,7 @@ void Rewriter::computeGlobalPredicates(){
     }
 }
 void Rewriter::computeCompletion(){
+    findEDB();
     for(unsigned i=0; i<singleHeadForPredicate.getRulesSize(); i++){
         aspc::Rule rule = singleHeadForPredicate.getRule(i);
         if(rule.isConstraint()) {
@@ -148,7 +159,6 @@ void Rewriter::computeCompletion(){
                 predicate = "aux_"+std::to_string(auxPredicates.size());
                 auxPredicateId[predicate]=auxPredicates.size(); 
                 auxPredicates.push_back(predicate);
-                
                 terms = auxTerms;
             }
 
@@ -180,6 +190,8 @@ void Rewriter::computeCompletion(){
             int supAtom = buildingAux ? -1 :0;
             for(unsigned k=0;k<bodyLiterals.size();k++){
                 // Adding :- aux, not l in propagator only
+                // if(edbPredicates.count(bodyLiterals[k].getPredicateName()))
+                //     continue;
                 aspc::Rule constraint(
                     {},
                     {aspc::Literal(false,aspc::Atom(predicate,terms)),aspc::Literal(!bodyLiterals[k].isNegated(),bodyLiterals[k].getAtom())},
