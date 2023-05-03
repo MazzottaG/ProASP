@@ -149,6 +149,8 @@ class Solver : public Clone {
     vec<Lit>& getReasonClause(){return reasonClause;}
     bool isConflictPropagation(Var,bool);
     bool isAssigned(Var);
+    int getLiteralLevel(Var v);
+    bool isConsistent(Var,bool);
     CRef storeConflictClause();
     inline CRef currentLevel(){return decisionLevel();}
     inline CRef levelFromPropagator(Var var){return level(var);}

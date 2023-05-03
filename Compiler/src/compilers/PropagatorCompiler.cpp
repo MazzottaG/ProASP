@@ -1123,16 +1123,16 @@ void PropagatorCompiler::compileRuleWatcher(unsigned ruleId,std::ofstream& outfi
                         int closingPars=0;
                         outfile << ind << "int id = i < tuplesP->size() ? tuplesP->at(i) : (i < tuplesP->size()+tuplesF->size() ? tuplesF->at(i - tuplesP->size()) : tuplesU->at(i - tuplesP->size() - tuplesF->size()));\n";
                         outfile << ind << "Tuple* tuple = TupleFactory::getInstance().getTupleFromInternalID(id);\n";
-                        for(unsigned k=0; k<lit->getAriety(); k++){
-                            if(!lit->isVariableTermAt(k) || boundVars.count(lit->getTermAt(k))){
-                                std::string term = isInteger(lit->getTermAt(k)) || lit->isVariableTermAt(k) ? lit->getTermAt(k) : "ConstantsManager::getInstance().mapConstant(\""+lit->getTermAt(k)+"\")";
-                                outfile << ind++ << "if(tuple->at("<<k<<") == " << term << "){\n";
-                                closingPars++;
-                            }else{
-                                outfile << ind << "int "<<lit->getTermAt(k) << " = tuple->at(" <<k<< ");\n"; 
-                                boundVars.insert(lit->getTermAt(k));
-                            }
-                        }
+                        // for(unsigned k=0; k<lit->getAriety(); k++){
+                        //     if(!lit->isVariableTermAt(k) || boundVars.count(lit->getTermAt(k))){
+                        //         std::string term = isInteger(lit->getTermAt(k)) || lit->isVariableTermAt(k) ? lit->getTermAt(k) : "ConstantsManager::getInstance().mapConstant(\""+lit->getTermAt(k)+"\")";
+                        //         outfile << ind++ << "if(tuple->at("<<k<<") == " << term << "){\n";
+                        //         closingPars++;
+                        //     }else{
+                        //         outfile << ind << "int "<<lit->getTermAt(k) << " = tuple->at(" <<k<< ");\n"; 
+                        //         boundVars.insert(lit->getTermAt(k));
+                        //     }
+                        // }
                         if(!rule.isConstraint()){
                             if(attachedValue.first->second != 1)
                                 outfile << ind << "TupleFactory::getInstance().addWatcher(this,id,false);\n";

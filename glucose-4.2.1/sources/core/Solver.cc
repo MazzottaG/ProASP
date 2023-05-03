@@ -2277,6 +2277,12 @@ void Solver::addLiteralToReason(Var var, bool negated){
     if(level(var) > 0 || value(var) == l_Undef)
         reasonClause.push(mkLit(var,negated));
 }
+int Solver::getLiteralLevel(Var v){
+    return level(v);
+}
+bool Solver::isConsistent(Var var, bool negated){
+    return value(var) != l_Undef && ((value(var) == l_True && !negated) || (value(var) == l_False && negated));
+}
 bool Solver::isConflictPropagation(Var var, bool negated){
     return value(var) != l_Undef && toInt(value(var)) != negated;
 }
