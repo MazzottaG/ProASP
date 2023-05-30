@@ -1654,10 +1654,11 @@ void PropagatorCompiler::compile(){
         outfile << ind << "#include \"../propagators/"<<className<<".h\"\n\n";
     }
     outfile << ind++ << "Propagator::Propagator(){\n";
-    for(unsigned ruleId : propagatorOrder){
-        std::string className="Rule_"+std::to_string(ruleId)+"_Propagator";
-        outfile << ind << "propagators.push_back(new "<<className<<"());\n";
-    }
+        outfile << ind << "active=false;\n";
+        for(unsigned ruleId : propagatorOrder){
+            std::string className="Rule_"+std::to_string(ruleId)+"_Propagator";
+            outfile << ind << "propagators.push_back(new "<<className<<"());\n";
+        }
     outfile << --ind << "}\n";
     outfile.close();
 

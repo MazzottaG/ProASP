@@ -32,6 +32,7 @@ class Propagator{
         }
         
         Glucose::CRef propagateLiteral(Glucose::Solver* s,Glucose::vec<Glucose::Lit>& lits,int literal){
+            if(!active) return Glucose::CRef_Undef;
             for(AbstractPropagator* prop : TupleFactory::getInstance().getWatcher(literal<0 ? -literal : literal,literal<0)){
                 Glucose::CRef clause = prop->propagate(s,lits,literal);
                 if(clause != Glucose::CRef_Undef)
@@ -59,8 +60,10 @@ class Propagator{
                 #endif
             }
         }
+        void activate(){active=true;}
     private:    
         Propagator();
+        bool active;
         std::vector<AbstractPropagator*> propagators;
 };
 

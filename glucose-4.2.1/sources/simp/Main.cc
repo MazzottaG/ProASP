@@ -319,6 +319,7 @@ int main(int argc, char** argv)
                 if(!solver->okay())
                     break;
             } 
+            Propagator::getInstance().activate();
             if(S.okay())  
                 Propagator::getInstance().propagateAtLevel0(&S,lits);
         }
