@@ -5,7 +5,7 @@ void GeneratorCompiler::compile(){
 }
 void GeneratorCompiler::buildComponentGenerator(int componentId){
     Indentation ind(0);
-    std::string className="Comp_"+std::to_string(componentId)+"_Gen";
+    std::string className=compPrefix+"_"+std::to_string(componentId)+"_Gen";
     std::string executorPath = executablePath + "/../../glucose-4.2.1/sources/simp/generators/"+className+".h";
     std::ofstream outfile(executorPath);
     if(!outfile.is_open()){
@@ -60,15 +60,28 @@ void GeneratorCompiler::buildComponentGenerator(int componentId){
                     outfile << ind << "Tuple* starter = TupleFactory::getInstance().getTupleFromInternalID(stack.back());\n";
                     outfile << ind << "stack.pop_back();\n";
                     outfile << ind++ << "if(starter != NULL){\n";
-                    outfile << ind << "const auto& insertResult = starter->setStatus(Undef);\n";
-                    outfile << ind++ << "if(insertResult.second){\n";
-                        #ifdef DEBUG_GEN
-                        outfile << ind << "std::cout << \"Added tuple \";AuxMapHandler::getInstance().printTuple(starter);\n";
-                        #endif
-                        outfile << ind << "TupleFactory::getInstance().removeFromCollisionsList(starter->getId());\n";
-                        outfile << ind << "AuxMapHandler::getInstance().insertUndef(insertResult);\n";
-                        outfile << ind << "while (starter->getId() >= solver->nVars()) {solver->setFrozen(solver->newVar(),true);}\n";
-                    outfile << --ind << "}else continue;\n";
+                    if(isDatalog){
+                        outfile << ind << "const auto& insertResult = starter->setStatus(True);\n";
+                        outfile << ind++ << "if(insertResult.second){\n";
+                            #ifdef DEBUG_GEN
+                            outfile << ind << "std::cout << \"Added tuple \";AuxMapHandler::getInstance().printTuple(starter);\n";
+                            #endif
+                            outfile << ind << "TupleFactory::getInstance().removeFromCollisionsList(starter->getId());\n";
+                            outfile << ind << "AuxMapHandler::getInstance().insertTrue(insertResult);\n";
+                            if(!modelFound)
+                                outfile << ind << "while (starter->getId() >= solver->nVars()) {solver->setFrozen(solver->newVar(),true);}\n";
+                        outfile << --ind << "}else continue;\n";
+                    }else{
+                        outfile << ind << "const auto& insertResult = starter->setStatus(Undef);\n";
+                        outfile << ind++ << "if(insertResult.second){\n";
+                            #ifdef DEBUG_GEN
+                            outfile << ind << "std::cout << \"Added tuple \";AuxMapHandler::getInstance().printTuple(starter);\n";
+                            #endif
+                            outfile << ind << "TupleFactory::getInstance().removeFromCollisionsList(starter->getId());\n";
+                            outfile << ind << "AuxMapHandler::getInstance().insertUndef(insertResult);\n";
+                            outfile << ind << "while (starter->getId() >= solver->nVars()) {solver->setFrozen(solver->newVar(),true);}\n";
+                        outfile << --ind << "}else continue;\n";
+                    }
                     for(const std::string& predicate: components[componentId]){
                         for(unsigned ruleIndex : program.getRulesForPredicate(predicate)){
                             aspc::Rule r = program.getRule(ruleIndex);
@@ -100,7 +113,7 @@ void GeneratorCompiler::buildComponentGenerator(int componentId){
     outfile.close();
 }
 void GeneratorCompiler::compileComponentRules(std::ofstream& outfile,Indentation& ind,unsigned starter,unsigned componentId,bool isRecursive,int ruleIndex){
-    std::string className="Comp_"+std::to_string(componentId)+"_Gen";
+    std::string className=compPrefix+"_"+std::to_string(componentId)+"_Gen";
     aspc::Rule r = program.getRule(ruleIndex);
     const std::vector<const aspc::Formula*>& body = r.getFormulas();
     std::unordered_set<std::string> boundVars;
@@ -138,9 +151,17 @@ void GeneratorCompiler::compileComponentRules(std::ofstream& outfile,Indentation
                 }
                 outfile << "}, AuxMapHandler::getInstance().get_"<<lit->getPredicateName()<<"());\n";
                 if(lit->isNegated()){
-                    outfile << ind++ << "if(boundTuple_"<<index<<" == NULL || !boundTuple_"<<index<<"->isTrue()){\n";
+                    if(isDatalog){
+                        outfile << ind++ << "if(boundTuple_"<<index<<" == NULL || boundTuple_"<<index<<"->isFalse()){\n";
+                    }else{
+                        outfile << ind++ << "if(boundTuple_"<<index<<" == NULL || !boundTuple_"<<index<<"->isTrue()){\n";
+                    }
                 }else{
-                    outfile << ind++ << "if(boundTuple_"<<index<<" != NULL && !boundTuple_"<<index<<"->isFalse()){\n";
+                    if(isDatalog){
+                        outfile << ind++ << "if(boundTuple_"<<index<<" != NULL && boundTuple_"<<index<<"->isTrue()){\n";
+                    }else{
+                        outfile << ind++ << "if(boundTuple_"<<index<<" != NULL && !boundTuple_"<<index<<"->isFalse()){\n";
+                    }
                 }
                 closingPars++;
             }else{
@@ -157,11 +178,19 @@ void GeneratorCompiler::compileComponentRules(std::ofstream& outfile,Indentation
                         boundIndices.insert(k);
                     }
                 }
-                outfile << ind << "const std::vector<int>* tuplesU_"<<index<<" = &"<<prefix<<"u"<<mapName<<"()->getValuesVec({"<<terms<<"});\n";
                 outfile << ind << "const std::vector<int>* tuples_"<<index<<" = &"<<prefix<<"p"<<mapName<<"()->getValuesVec({"<<terms<<"});\n";
-                outfile << ind++ << "for(unsigned i=0; i<tuples_"<<index<<"->size()+tuplesU_"<<index<<"->size(); i++){\n";
+                if(!isDatalog)
+                    outfile << ind << "const std::vector<int>* tuplesU_"<<index<<" = &"<<prefix<<"u"<<mapName<<"()->getValuesVec({"<<terms<<"});\n";
+                if(!isDatalog)
+                    outfile << ind++ << "for(unsigned i=0; i<tuples_"<<index<<"->size()+tuplesU_"<<index<<"->size(); i++){\n";
+                else
+                    outfile << ind++ << "for(unsigned i=0; i<tuples_"<<index<<"->size(); i++){\n";
                 closingPars++;
-                    outfile << ind << "Tuple* tuple_"<<index<<"= i<tuples_"<<index<<"->size() ? TupleFactory::getInstance().getTupleFromInternalID(tuples_"<<index<<"->at(i)) : TupleFactory::getInstance().getTupleFromInternalID(tuplesU_"<<index<<"->at(i-tuples_"<<index<<"->size()));\n";
+                    if(!isDatalog)
+                        outfile << ind << "Tuple* tuple_"<<index<<"= i<tuples_"<<index<<"->size() ? TupleFactory::getInstance().getTupleFromInternalID(tuples_"<<index<<"->at(i)) : TupleFactory::getInstance().getTupleFromInternalID(tuplesU_"<<index<<"->at(i-tuples_"<<index<<"->size()));\n";
+                    else
+                        outfile << ind << "Tuple* tuple_"<<index<<"= TupleFactory::getInstance().getTupleFromInternalID(tuples_"<<index<<"->at(i));\n";
+
                     outfile << ind++ << "if(tuple_"<<index<<"!= NULL){\n";
                     closingPars++;
                 for(unsigned k=0; k<lit->getAriety(); k++){
@@ -204,12 +233,22 @@ void GeneratorCompiler::compileComponentRules(std::ofstream& outfile,Indentation
             if(isRecursive){
                 outfile << ind << "stack.push_back(head_"<<index<<"->getId());\n";
             }else{
-                outfile << ind << "const auto& insertResult = head_"<<index<<"->setStatus(Undef);\n";
-                outfile << ind++ << "if(insertResult.second){\n";
-                    outfile << ind << "TupleFactory::getInstance().removeFromCollisionsList(head_"<<index<<"->getId());\n";
-                    outfile << ind << "AuxMapHandler::getInstance().insertUndef(insertResult);\n";
-                    outfile << ind << "while (head_"<<index<<"->getId() >= solver->nVars()) {solver->setFrozen(solver->newVar(),true);}\n";
-                outfile << --ind << "}\n";                        
+                if(isDatalog){
+                    outfile << ind << "const auto& insertResult = head_"<<index<<"->setStatus(True);\n";
+                    outfile << ind++ << "if(insertResult.second){\n";
+                        outfile << ind << "TupleFactory::getInstance().removeFromCollisionsList(head_"<<index<<"->getId());\n";
+                        outfile << ind << "AuxMapHandler::getInstance().insertTrue(insertResult);\n";
+                        if(!modelFound)
+                            outfile << ind << "while (head_"<<index<<"->getId() >= solver->nVars()) {solver->setFrozen(solver->newVar(),true);}\n";
+                    outfile << --ind << "}\n";
+                }else{
+                    outfile << ind << "const auto& insertResult = head_"<<index<<"->setStatus(Undef);\n";
+                    outfile << ind++ << "if(insertResult.second){\n";
+                        outfile << ind << "TupleFactory::getInstance().removeFromCollisionsList(head_"<<index<<"->getId());\n";
+                        outfile << ind << "AuxMapHandler::getInstance().insertUndef(insertResult);\n";
+                        outfile << ind << "while (head_"<<index<<"->getId() >= solver->nVars()) {solver->setFrozen(solver->newVar(),true);}\n";
+                    outfile << --ind << "}\n";
+                }
             }  
         outfile << --ind << "}\n";                              
     }
@@ -221,22 +260,22 @@ void GeneratorCompiler::compileComponentRules(std::ofstream& outfile,Indentation
 void GeneratorCompiler::buildGenerator(){
     computeSCC();
     Indentation ind(0);
-    std::string executorPath = executablePath + "/../../glucose-4.2.1/sources/simp/generators/Generator.cc";
+    std::string executorPath = executablePath + "/../../glucose-4.2.1/sources/simp/generators/"+generatorClass+".cc";
     std::ofstream outfile(executorPath);
     if(!outfile.is_open()){
         std::cout << "Error unable to open Generator file "<<executorPath<<std::endl;
         exit(180);
     } 
 
-    outfile << ind << "#include \"../solver/Generator.h\"\n\n";
+    outfile << ind << "#include \"../solver/"<<generatorClass<<".h\"\n\n";
     for(int componentId = components.size()-1; componentId >= 0; componentId--){
-        std::string className="Comp_"+std::to_string(componentId)+"_Gen";
+        std::string className=compPrefix+"_"+std::to_string(componentId)+"_Gen";
         outfile << ind << "#include \"../generators/"<<className<<".h\"\n\n";
     }
-    outfile << ind++ << "Generator::Generator(){\n";
+    outfile << ind++ <<generatorClass<<"::"<<generatorClass<<"(){\n";
     for(int componentId = components.size()-1; componentId >= 0; componentId--){
         buildComponentGenerator(componentId);
-        std::string className="Comp_"+std::to_string(componentId)+"_Gen";
+        std::string className=compPrefix+"_"+std::to_string(componentId)+"_Gen";
         outfile << ind << "generators.push_back(new "<<className<<"());\n";
         outfile << ind << "solvedByGenerator = " << (solvedByGenerator ? "true" : "false")<<";\n";
     }

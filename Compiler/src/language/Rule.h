@@ -119,7 +119,8 @@ namespace aspc {
         void updateJoinTupleName(unsigned int formulaIndex,std::string joinTupleName);
         int getSupportAtom()const {return supportAtom;}
         void setSupportAtom(int id){supportAtom=id;}
-        
+        bool extractLabeledFormula(std::unordered_map<std::string,int>& predToComponent,const std::vector<int>& sccLabel,int label,std::vector<bool>& extraction,std::unordered_set<std::string>& positiveEDBVar)const;
+       
     private:
         std::vector<aspc::Atom> head;
         std::vector<aspc::Literal> bodyLiterals;

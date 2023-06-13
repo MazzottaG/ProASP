@@ -47,6 +47,7 @@ namespace aspc {
     class Program {
     public:
         Program();
+        Program(const aspc::Program& p);
         virtual ~Program();
         void newRule(){}
         void addRule(const aspc::Rule & r);

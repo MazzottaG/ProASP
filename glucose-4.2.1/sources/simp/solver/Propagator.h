@@ -4,6 +4,7 @@
 #include <iostream>
 #include <vector>
 #include "AuxMapHandler.h"
+#include "ModelExpansion.h"
 
 class Propagator{
     public:
@@ -30,7 +31,9 @@ class Propagator{
                 prop->propagateLevelZero(s,lits);
             }
         }
-        
+        void expandModel(){
+            ModelExpansion::getInstance().generate(NULL);
+        }
         Glucose::CRef propagateLiteral(Glucose::Solver* s,Glucose::vec<Glucose::Lit>& lits,int literal){
             if(!active) return Glucose::CRef_Undef;
             for(AbstractPropagator* prop : TupleFactory::getInstance().getWatcher(literal<0 ? -literal : literal,literal<0)){
@@ -39,6 +42,12 @@ class Propagator{
                     return clause;
             }
             return Glucose::CRef_Undef;
+        }
+        void init(){
+            for(AbstractPropagator* prop : propagators){
+                prop->init();
+            }
+            return;
         }
 
         void unrollLiteral(unsigned x){

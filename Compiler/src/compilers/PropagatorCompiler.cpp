@@ -1561,39 +1561,6 @@ void PropagatorCompiler::compileRuleLevelZero(unsigned ruleId,std::ofstream& out
         outfile << --ind << "}\n";
     outfile << --ind << "} //function\n";
 }
-// void PropagatorCompiler::computePropagatorOrder(){
-    
-    // computeSCC();
-    // int programSize = program.getRulesSize();
-    // propagatorOrder.clear();
-    // std::vector<bool> visitedRules(programSize,false);
-
-    // for(int componentId = components.size()-1;componentId >=0; componentId--){
-    //     std::cout << "Component "<<componentId << ":";
-    //     for(std::string predicate : components[componentId]){
-    //         std::cout << " " << predicate;
-    //         for(unsigned ruleId : program.getRulesForPredicate(predicate)){
-    //             propagatorOrder.push_back(ruleId);
-    //             visitedRules[ruleId]=true;
-    //         }
-    //         for(unsigned ruleId = 0; ruleId < programSize; ruleId++){
-    //             const aspc::Rule& r = program.getRule(ruleId);
-    //             if(r.isConstraint() && ruleLabel[ruleId]){
-    //                 if(r.getBodyLiterals().back().getPredicateName() == predicate){
-    //                     if(!visitedRules[ruleId]) propagatorOrder.push_back(ruleId);
-    //                     visitedRules[ruleId]=true;
-    //                 }
-    //             }
-    //         }
-    //     }
-    //     std::cout << std::endl;
-    // }
-    // for(unsigned ruleId = 0; ruleId < programSize; ruleId++){
-    //     if(program.getRule(ruleId).isConstraint() && !ruleLabel[ruleId]) 
-    //         propagatorOrder.push_back(ruleId);
-    // }
-    
-// }
 void PropagatorCompiler::computePropagatorOrder(){
     
     int programSize = program.getRulesSize();
@@ -1671,64 +1638,10 @@ void PropagatorCompiler::buildAuxMapHandler(){
 }
 
 void PropagatorCompiler::buildPositiveDG(){
-    unsigned programSize = program.getRulesSize();
-    for(unsigned ruleId = 0; ruleId < programSize; ruleId++){
-        const aspc::Rule& r = program.getRule(ruleId);
-        if(r.isConstraint()){
-            if(ruleLabel[ruleId]){
-                std::vector<aspc::Literal> body = r.getBodyLiterals();
-                aspc::Atom head(body.back().getAtom());
-                auto it =local_predicates.emplace(head.getPredicateName(),localPredicatesName.size());
-                if(it.second){
-                    pdg.addNode(localPredicatesName.size());
-                    localPredicatesName.push_back(head.getPredicateName());
-                }
-                for(unsigned i = 0 ; i<body.size()-1; i++){
-                    if(body[i].isPositiveLiteral()){
-                        auto itBody =local_predicates.emplace(body[i].getPredicateName(),localPredicatesName.size());
-                        if(itBody.second){
-                            pdg.addNode(localPredicatesName.size());
-                            localPredicatesName.push_back(body[i].getPredicateName());
-                        }
-                        pdg.addEdge(itBody.first->second,it.first->second);
-                    }
-                }
-            }
-            continue;
-        }
-        for(const aspc::Atom& a : r.getHead()){
-            auto it =local_predicates.emplace(a.getPredicateName(),localPredicatesName.size());
-            if(it.second){
-                pdg.addNode(localPredicatesName.size());
-                localPredicatesName.push_back(a.getPredicateName());
-            }
-        }
-        for(const aspc::Literal& l : r.getBodyLiterals()){
-            if(l.isPositiveLiteral()){
-                auto it =local_predicates.emplace(l.getPredicateName(),localPredicatesName.size());
-                if(it.second){
-                    pdg.addNode(localPredicatesName.size());
-                    localPredicatesName.push_back(l.getPredicateName());
-                }
-                for(const aspc::Atom& a : r.getHead()){
-                    unsigned headPred =local_predicates[a.getPredicateName()];
-                    pdg.addEdge(it.first->second,headPred);
-                }
-            }
-        }
-    }
+    std::cout << "Error: calling dismissed method"<<std::endl;
+    exit(180);
 }
 void PropagatorCompiler::computeSCC(){
-    if(!builtSCC){
-        builtSCC=true;
-        buildPositiveDG();
-        scc = pdg.SCC();
-        for(unsigned componentId=0;componentId<scc.size(); componentId++){
-            components.push_back({});
-            std::set<std::string>* component=&components.back();
-            for(unsigned i=0;i<scc[componentId].size();i++){
-                component->insert(localPredicatesName[scc[componentId][i]]);
-            }
-        }
-    }
+    std::cout << "Error: calling dismissed method"<<std::endl;
+    exit(180);
 }

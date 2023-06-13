@@ -37,7 +37,13 @@ void GraphWithTarjanAlgorithm::addNode(unsigned int v) {
         for (unsigned int i = adj.size(); i <= v; i++)
             adj.push_back(list<int>());
 }
-
+bool GraphWithTarjanAlgorithm::existsEdge(unsigned int v, unsigned int w) {
+    if(v >= adj.size()) return false;
+    for(list<int>::const_iterator it=adj[v].begin(); it != adj[v].end(); it++ ){
+        if(w == *it) return true;
+    }
+    return false;
+}
 void GraphWithTarjanAlgorithm::addEdge(unsigned int v, unsigned int w) {
     if (v >= adj.size() || w >= adj.size()) {
         if (v >= w)

@@ -63,6 +63,7 @@ class GraphWithTarjanAlgorithm
 public:
     GraphWithTarjanAlgorithm(){}
     void addEdge(unsigned int v, unsigned int w);   // function to add an edge to graph
+    bool existsEdge(unsigned int v, unsigned int w);   // function to check an edge into graph
     void addNode(unsigned int v);   // function to add a node to graph
     const std::vector< std::vector <int> > SCC() ;    // prints strongly connected components
     unsigned getNodeSize(){adj.size();}

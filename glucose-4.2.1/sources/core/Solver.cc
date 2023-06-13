@@ -1968,6 +1968,7 @@ lbool Solver::solve_(bool do_simp, bool turn_off_simp) // Parameters are useless
         model.growTo(nVars());
         for(int i = 0; i < nVars(); i++) model[i] = value(i);
         if(true){
+            Propagator::getInstance().expandModel();
             std::cout << "Answer: ";
             std::vector<unsigned>& visible=TupleFactory::getInstance().getVisibleAtoms();         
             for(unsigned id: visible){

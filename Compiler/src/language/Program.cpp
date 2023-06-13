@@ -44,7 +44,9 @@ using namespace std;
 aspc::Program::Program() {
 
 }
+aspc::Program::Program(const aspc::Program& p):rules(p.rules),facts(p.facts),predicates(p.predicates),aggregatePredicates(p.aggregatePredicates),rulesForPredicate(p.rulesForPredicate),rules_by_type(p.rules_by_type),stratified(p.stratified),tight(p.tight){
 
+}
 aspc::Program::~Program() {
 
 }

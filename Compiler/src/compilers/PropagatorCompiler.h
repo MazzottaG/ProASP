@@ -11,7 +11,7 @@
 
 class PropagatorCompiler{
     public:
-        PropagatorCompiler(const aspc::Program& pg,const std::string& execPath, const std::vector<bool>& label, DataStructureCompiler* mapCompiler):program(pg), executablePath(execPath), ruleLabel(label), auxMapCompiler(mapCompiler),builtSCC(false){}
+        PropagatorCompiler(const aspc::Program& pg,const std::string& execPath, DataStructureCompiler* mapCompiler):program(pg), executablePath(execPath), auxMapCompiler(mapCompiler),builtSCC(false){}
         void compile();
         void buildAuxMapHandler();
         void compileRuleLevelZero(unsigned ruleId,std::ofstream&,Indentation&);

@@ -1,15 +1,4 @@
 #include "Rewriter.h"
-void Rewriter::findEDB(){
-    for(std::string predicate : predicateNames){
-        auto rules = program.getRulesForPredicate(predicate);
-        std::cout << "Predicate: "<<predicate<< " Rule count:"<<rules.size()<<std::endl;
-        if(rules.size() == 0) {
-            std::cout << "   Found EDB "<<predicate<<std::endl;
-            edbPredicates.insert(predicate);
-        }
-
-    }
-}
 void Rewriter::addOriginalConstraint(){
     for(unsigned i=0; i<program.getRulesSize();i++){
         auto rule = program.getRule(i);
@@ -99,7 +88,6 @@ void Rewriter::computeGlobalPredicates(){
     }
 }
 void Rewriter::computeCompletion(){
-    findEDB();
     for(unsigned i=0; i<singleHeadForPredicate.getRulesSize(); i++){
         aspc::Rule rule = singleHeadForPredicate.getRule(i);
         if(rule.isConstraint()) {

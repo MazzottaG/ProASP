@@ -336,6 +336,55 @@ void aspc::Rule::orderBodyFormulasFromStarter(unsigned starter, std::vector<unsi
     // }
     
 }
+
+bool aspc::Rule::extractLabeledFormula(std::unordered_map<std::string,int>& predToComponent, const std::vector<int>& sccLabel,int label,std::vector<bool>& extraction,std::unordered_set<std::string>& positiveEDBVar)const{
+    int countExtractedLiteral = 0;
+    std::unordered_set<std::string> negativeEDBVar;
+    for(unsigned fIndex = 0; fIndex < formulas.size(); fIndex++){
+        const aspc::Formula* f = formulas[fIndex];
+        if(f->isLiteral()){
+            const aspc::Literal* literal = (const aspc::Literal*) f;
+            int component = predToComponent[literal->getPredicateName()];
+            if(sccLabel[component] == label){
+                extraction[fIndex] = true;
+                countExtractedLiteral++;
+                literal->addVariablesToSet(literal->isPositiveLiteral() ? positiveEDBVar: negativeEDBVar);
+            }
+        }
+    }
+    std::cout << "Found "<<countExtractedLiteral<<" for rule ";print();
+    if(countExtractedLiteral<2) return false;
+
+    bool newVar=true;
+    while(newVar){
+        newVar=false;
+        for(unsigned fIndex = 0; fIndex < formulas.size(); fIndex++){
+            const aspc::Formula* f = formulas[fIndex];
+            if(!f->isLiteral()){
+                const aspc::ArithmeticRelation* ineq = (const aspc::ArithmeticRelation*) f;
+                if(ineq->isBoundedValueAssignment(positiveEDBVar)){
+                    std::string var = ineq->getAssignedVariable(positiveEDBVar);
+                    if(negativeEDBVar.count(var) && !positiveEDBVar.count(var)){
+                        extraction[fIndex] = true;
+                        positiveEDBVar.insert(var);
+                        newVar=true;
+                    }
+                }
+            }
+        }
+    }
+    for(unsigned fIndex = 0; fIndex < formulas.size(); fIndex++){
+        const aspc::Formula* f = formulas[fIndex];
+        if(!f->isLiteral()){
+            const aspc::ArithmeticRelation* ineq = (const aspc::ArithmeticRelation*) f;
+            if(ineq->isBoundedRelation(positiveEDBVar)){
+                extraction[fIndex] = true;
+            }
+        }else if(!f->isPositiveLiteral() && !f->isBoundedLiteral(positiveEDBVar))
+            return false;
+    }
+    return true;
+}
 void aspc::Rule::orderBodyFormulas(std::vector<unsigned>& orderedBodyFormulas)const{
     std::unordered_set<std::string> boundVariables;
     std::unordered_set<unsigned> selectedFormulas;

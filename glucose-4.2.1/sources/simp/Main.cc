@@ -62,6 +62,8 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "../simp/datastructures/TupleFactory.h"
 #include "../simp/utils/ConstantsManager.h"
 #include "../simp/solver/Generator.h"
+#include "../simp/solver/InstanceExpansion.h"
+#include "../simp/solver/ModelExpansion.h"
 #include "../simp/solver/Propagator.h"
 #include "../simp/solver/AuxMapHandler.h"
 // #include "../simp/solver/InputReader.h"
@@ -304,6 +306,12 @@ int main(int argc, char** argv)
             
             std::vector<unsigned> facts;
             read_asp(solver,argv[argc-1],facts);
+            int lastFact = TupleFactory::getInstance().size();
+            InstanceExpansion::getInstance().generate(&S);
+            int lastExpandedFact = TupleFactory::getInstance().size();
+            for(int id = lastFact; id < lastExpandedFact; id++){
+                facts.push_back(id);
+            }
             TupleFactory::getInstance().storeFactSize();
             Generator::getInstance().generate(&S);
             Propagator::getInstance().attachWatchers();
