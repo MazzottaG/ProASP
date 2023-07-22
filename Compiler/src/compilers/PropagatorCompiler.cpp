@@ -4,21 +4,6 @@
 void PropagatorCompiler::compileRuleFromStarter(unsigned ruleId, std::ofstream& outfile, Indentation& ind){
     outfile << ind++ << "Glucose::CRef propagate(Glucose::Solver* solver,Glucose::vec<Glucose::Lit>& lits,int literal) override {\n";
     outfile << ind << "Tuple* starter = TupleFactory::getInstance().getTupleFromInternalID( literal > 0 ? literal : -literal);\n";
-    outfile << ind << "if(starter == NULL){if(literal != 0){std::cout << \"Error: unable to find starting literal\" <<std::endl; exit(180);}}\n";
-    #ifdef DEBUG_PROP
-    outfile << ind << "std::cout << \"Propagator "<<ruleId<<": Propagating \"<<literal << \" \"; AuxMapHandler::getInstance().printTuple(starter); std::cout << std::endl;\n";
-    #endif
-    outfile << ind++ << "if(starter->isUndef()){\n";
-        outfile << ind << "const auto& insertResult = starter->setStatus(literal > 0 ? True : False);\n";
-        outfile << ind++ << "if(insertResult.second){\n";
-            outfile << ind << "TupleFactory::getInstance().removeFromCollisionsList(starter->getId());\n";
-            outfile << ind << "if(literal > 0) AuxMapHandler::getInstance().insertTrue(insertResult);\n";
-            outfile << ind << "else AuxMapHandler::getInstance().insertFalse(insertResult);\n";
-        outfile << --ind << "}\n";    
-    outfile << --ind << "}\n";
-    outfile << ind++ << "else{\n";
-        outfile << ind << "if((literal > 0 && starter->isFalse()) || (literal < 0 && starter->isTrue())) {std::cout << \"Error: literal already assigned with different value\" <<std::endl; exit(180);}\n";
-    outfile << --ind << "}\n";     
     outfile << ind << "std::vector<Glucose::Lit> propagations;\n";
 
     aspc::Rule rule = program.getRule(ruleId);

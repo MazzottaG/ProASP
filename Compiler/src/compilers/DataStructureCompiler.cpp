@@ -9,6 +9,9 @@ void DataStructureCompiler::printAuxMap()const{
         }
     }
 }
+void DataStructureCompiler::addAuxMap(std::string predicate,std::vector<unsigned> terms){
+    auxMapNameForPredicate[predicate].insert(terms);
+}
 void DataStructureCompiler::buildAuxMapHandler(std::string executablePath,const std::vector<std::string>& predNames){
     Indentation ind(0);
     std::string executorPath = executablePath + "/../../glucose-4.2.1/sources/simp/solver/AuxMapHandler.h";
@@ -83,12 +86,13 @@ void DataStructureCompiler::buildAuxMapHandler(std::string executablePath,const 
             outfile << ind++ << "void printTuple(const Tuple* t){\n";
                 // outfile << ind << "if(t->isFalse()) std::cout << \"not \";\n";
                 // outfile << ind << "if(t->isUndef()) std::cout << \"undef \";\n";
+                outfile << ind << "if(t->getPredicateName() == -1) {std::cout << t->getId(); return;}\n";
                 outfile << ind << "std::cout << unmapPredicate(t->getPredicateName()) << \"(\";\n";
                 outfile << ind++ << "for(int i=0;i<t->size();i++){\n";
                     outfile << ind << "if(i>0) std::cout << \",\";\n";
                     outfile << ind << "std::cout << ConstantsManager::getInstance().unmapConstant(t->at(i));\n";
                 outfile << --ind << "}\n";
-                outfile << ind << "std::cout << \"). \";\n";
+                outfile << ind << "std::cout << \") \";\n";
             outfile << --ind << "}\n";
             
         ind--;

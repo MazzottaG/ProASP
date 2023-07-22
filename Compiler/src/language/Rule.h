@@ -120,7 +120,17 @@ namespace aspc {
         int getSupportAtom()const {return supportAtom;}
         void setSupportAtom(int id){supportAtom=id;}
         bool extractLabeledFormula(std::unordered_map<std::string,int>& predToComponent,const std::vector<int>& sccLabel,int label,std::vector<bool>& extraction,std::unordered_set<std::string>& positiveEDBVar)const;
-       
+        int rewriteHead(const std::unordered_map<std::string,std::string>& remapped_predicates){
+            std::string headPredicate(head[0].getPredicateName());
+            std::vector<std::string> headTerms(head[0].getTerms());
+            auto it = remapped_predicates.find(headPredicate);
+            if(it!=remapped_predicates.end()){
+                head.clear();
+                head.push_back(aspc::Atom(it->second,headTerms));
+                return headTerms.size();
+            }
+            return -1;
+        }
     private:
         std::vector<aspc::Atom> head;
         std::vector<aspc::Literal> bodyLiterals;

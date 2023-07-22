@@ -217,8 +217,10 @@ bool SimpSolver::addClause_(vec<Lit>& ps)
     if (use_rcheck && implied(ps))
         return true;
 
-    if (!Solver::addClause_(ps))
+    if (!Solver::addClause_(ps)){
         return false;
+    }
+
 
     if(!parsing && certifiedUNSAT)
         addToDrat(ps, true);
@@ -226,7 +228,6 @@ bool SimpSolver::addClause_(vec<Lit>& ps)
     if (use_simplification && clauses.size() == nclauses + 1){
         CRef          cr = clauses.last();
         const Clause& c  = ca[cr];
-
         // NOTE: the clause is added to the queue immediately and then
         // again during 'gatherTouchedClauses()'. If nothing happens
         // in between, it will only be checked once. Otherwise, it may

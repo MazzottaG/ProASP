@@ -47,7 +47,7 @@ namespace aspc {
     class Program {
     public:
         Program();
-        Program(const aspc::Program& p);
+        Program(const aspc::Program&);
         virtual ~Program();
         void newRule(){}
         void addRule(const aspc::Rule & r);
@@ -90,6 +90,27 @@ namespace aspc {
                     preds.insert(l.getPredicateName());
                 }
             }
+        }
+        void printRuleIdForPredicate()const{
+            for(auto pair: rulesForPredicate){
+                std::cout << "Rules for "<<pair.first<<" :";
+                for(int ruleId: pair.second){
+                    std::cout << " "<<ruleId;
+                }
+                std::cout << std::endl;
+            }
+        }
+        void findHeadPredicates(std::unordered_set<std::string>& preds)const{
+            for(const aspc::Rule& r : rules){
+                for(const aspc::Atom& a : r.getHead()){
+                    preds.insert(a.getPredicateName());
+                }
+            }
+        }
+        
+        int rewriteHead(std::string predicate,int ruleId, const std::unordered_map<std::string,std::string>& remapped_predicates){
+            aspc::Rule* rule = &rules[ruleId];
+            return rule->getHead()[0].getPredicateName() == predicate ? rule->rewriteHead(remapped_predicates) : -1;
         }
     private:
         std::vector<aspc::Rule> rules; //only rules are compiled

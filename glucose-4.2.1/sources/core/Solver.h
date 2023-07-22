@@ -169,6 +169,7 @@ class Solver : public Clone {
     // Display clauses and literals
     void printLit(Lit l);
     void printClause(CRef c);
+    void printGeneratedClauses();
     void printInitialClause(CRef c);
 
     // Variable mode:

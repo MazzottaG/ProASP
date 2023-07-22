@@ -54,6 +54,7 @@ public:
     Indentation & operator++();
     Indentation operator--(int);
     Indentation & operator--();
+    int getDepth()const {return depth;}
 private:
     int depth;
 };

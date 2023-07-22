@@ -66,7 +66,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "../simp/solver/ModelExpansion.h"
 #include "../simp/solver/Propagator.h"
 #include "../simp/solver/AuxMapHandler.h"
-// #include "../simp/solver/InputReader.h"
+#include "../simp/solver/SatProgramBuilder.h"
 
 #include <fstream>
 #include <stdlib.h>
@@ -309,13 +309,32 @@ int main(int argc, char** argv)
             int lastFact = TupleFactory::getInstance().size();
             InstanceExpansion::getInstance().generate(&S);
             int lastExpandedFact = TupleFactory::getInstance().size();
+            std::cout << "%%%%%%%%%%%%%%%%%%% Instance Expansion %%%%%%%%%%%%%%%%%%%"<<std::endl;
             for(int id = lastFact; id < lastExpandedFact; id++){
+                AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(id));
+                std::cout << std::endl;
                 facts.push_back(id);
             }
+            std::cout << "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%"<<std::endl;
             TupleFactory::getInstance().storeFactSize();
+            TupleFactory::getInstance().initClauseGen();
+            TupleFactory::getInstance().initConstraintGen();
             Generator::getInstance().generate(&S);
+            SatProgramBuilder::getInstance().computeCompletion(&S);
+            std::cout << "p cnf "<<TupleFactory::getInstance().size()-1<<" " << S.nClauses()+facts.size()<<std::endl;
+            for(int i=1;i<TupleFactory::getInstance().size(); i++){
+                std::cout << "c "<<i<<" ";
+                AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(i));
+                std::cout << std::endl;
+            }
+            S.printGeneratedClauses();
+            for(unsigned id : facts){
+                std::cout << id << " 0"<<std::endl;
+            } 
+            std::cout << "End cnf"<<std::endl;
+            TupleFactory::getInstance().destroyClauses();
+            TupleFactory::getInstance().destroyConstraints();
             Propagator::getInstance().attachWatchers();
-            
             for(unsigned id : facts){
                 #ifdef DEBUG_PROP
                 std::cout << "Adding facts in glucose "<<id<<std::endl;

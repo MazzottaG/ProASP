@@ -5,12 +5,14 @@
 #include "../utils/SharedFunctions.h"
 class Analyzer{
     private:
+        std::vector<bool> inputLabel;
         aspc::Program program;
         GraphWithTarjanAlgorithm dependencyGraph;
         std::vector<std::string> idToPredicate;
         std::unordered_map<std::string,unsigned> predicateToId;
 
         // Rewriter output
+        std::vector<bool> eagerLabel;
         aspc::Program datalogPrg;
         aspc::Program eagerPrg;
         aspc::Program lazyPrg;
@@ -271,8 +273,10 @@ class Analyzer{
             const std::vector<const aspc::Formula*>* body = &rule->getFormulas();
             bool onlyDatalogLiteral = labelFormulas(sccLabel,body,predToComponent,formulaLabeling);
             if(onlyDatalogLiteral){
-                if(rule->isConstraint())
+                if(rule->isConstraint()){
                     eagerPrg.addRule(*rule);
+                    eagerLabel.push_back(inputLabel[ruleId]);
+                }
                 else
                     datalogPrg.addRule(*rule);
                 return DATALOG_BODY;
@@ -330,6 +334,7 @@ class Analyzer{
         }
         void buildPrograms(const std::vector<std::vector<int>>& scc,const std::vector<int>&  sccLabel,std::unordered_map<std::string,int>& predToComponent){
             unsigned componentId = scc.size()-1;
+            eagerLabel.clear();
             while (componentId >= 0){
                 for(int predicateId : scc[componentId]){
                     std::string predicate = idToPredicate[predicateId];
@@ -338,7 +343,8 @@ class Analyzer{
                         const aspc::Rule* rule = &program.getRule(ruleId);
                         if(sccLabel[componentId] == TYPE_EAGER){
                             std::vector<int> formulaLabeling(rule->getFormulas().size(),UNK_TYPE);
-                            int extracted = extractJoinRule(rule,ruleId,sccLabel,predToComponent,formulaLabeling);
+                            int extracted = inputLabel[ruleId] ? NOT_EXTRACTED : extractJoinRule(rule,ruleId,sccLabel,predToComponent,formulaLabeling);
+                            // int extracted = NOT_EXTRACTED;
                             if(extracted == EXTRACTED_JOIN){
                                 std::vector<aspc::Literal> literals;
                                 std::vector<aspc::ArithmeticRelation> ineqs;
@@ -356,8 +362,11 @@ class Analyzer{
                                     }
                                 }
                                 eagerPrg.addRule(aspc::Rule(rule->getHead(),literals,ineqs,false));
+                                eagerLabel.push_back(inputLabel[ruleId]);
+
                             }else if(extracted == NOT_EXTRACTED){
                                 eagerPrg.addRule(*rule);
+                                eagerLabel.push_back(inputLabel[ruleId]);
                             }
                         }
                         else{
@@ -373,7 +382,8 @@ class Analyzer{
                 const aspc::Rule* rule = &program.getRule(ruleId);
                 if(!rule->isConstraint()) continue;
                 std::vector<int> formulaLabeling(rule->getFormulas().size(),UNK_TYPE);
-                int extracted = extractJoinRule(rule,ruleId,sccLabel,predToComponent,formulaLabeling);
+                int extracted = inputLabel[ruleId] ? NOT_EXTRACTED : extractJoinRule(rule,ruleId,sccLabel,predToComponent,formulaLabeling);
+                // int extracted = NOT_EXTRACTED;
                 if(extracted == EXTRACTED_JOIN){
                     std::vector<aspc::Literal> literals;
                     std::vector<aspc::ArithmeticRelation> ineqs;
@@ -391,8 +401,10 @@ class Analyzer{
                         }
                     }
                     eagerPrg.addRule(aspc::Rule({},literals,ineqs,false));
+                    eagerLabel.push_back(inputLabel[ruleId]);
                 }else if(extracted == NOT_EXTRACTED){
                     eagerPrg.addRule(*rule);
+                    eagerLabel.push_back(inputLabel[ruleId]);
                 }
             }
             std::cout << "------------- DATALOG -------------"<<std::endl;
@@ -452,6 +464,7 @@ class Analyzer{
         
         
     public:
+
         const int UNK_LAZY  = 0;
         const int NOT_LAZY  = 1;
         const int LAZY      = 2;
@@ -469,11 +482,11 @@ class Analyzer{
         const int EXTRACTED_JOIN    = 1;
         const int NOT_EXTRACTED     = 2;
 
-        Analyzer(const aspc::Program& p):program(p){
+        Analyzer(const aspc::Program& p,const std::vector<bool>& labels):program(p),inputLabel(labels){
             buildDependecyGraph();
             splitProgram();
         }
-
+        const std::vector<bool>& getEagerLabel()const {return eagerLabel;}
         const aspc::Program& getDatalog()const {return datalogPrg;}
         const aspc::Program& getEager()const {return eagerPrg;}
         const aspc::Program& getLazy()const {return lazyPrg;}

@@ -1,9 +1,7 @@
 #include <iostream>
-#include "antlr4-runtime.h"
-#include "parser/ASPCore2Lexer.h"
-#include "parser/ASPCore2Parser.h"
-#include "parser/ASPCore2CompileProgramListener.h"
+#include "compilers/ProgramReader.h"
 #include "compilers/GeneratorCompiler.h"
+#include "compilers/HybridGenerator.h"
 #include "compilers/PropagatorCompiler.h"
 #include "datastructures/TupleFactory.h"
 #include "rewriting/Rewriter.h"
@@ -13,21 +11,23 @@
 
 int main(int argc, char *argv[])
 {
-	std::string filename(argv[1]);
-	antlr4::ANTLRFileStream input;
-	ASPCore2CompileProgramListener listener;
-	input.loadFromFile(filename);
-	ASPCore2Lexer lexer (&input);
-	antlr4::CommonTokenStream tokens(&lexer);
-	ASPCore2Parser parser (&tokens);
-	parser.addParseListener(&listener);
-	parser.program();
-	Analyzer analyzer(listener.getProgram());
-	
-	std::unordered_set<std::string> originalPredicates;
-	listener.getProgram().findPredicates(originalPredicates);
-	Rewriter r(analyzer.getEager(),analyzer.getIdToPredicate(),analyzer.getPredicateToId());
+	ProgramReader reader(argc,argv);
+	Analyzer analyzer(reader.getInputProgram(),reader.getInputProgramLabel());
 
+	aspc::Program eagerProgram(analyzer.getEager());
+	std::vector<bool> eagerLabels(analyzer.getEagerLabel());
+	std::vector<std::string> idToPredicate(analyzer.getIdToPredicate());
+	std::unordered_map<std::string,unsigned> predicateToId(analyzer.getPredicateToId());
+
+	reader.labelHybridRule(eagerProgram,eagerLabels,idToPredicate,predicateToId);
+	int rulesSize=eagerProgram.getRulesSize();
+	aspc::Program propagatorProgram;
+	for(int ruleId=0; ruleId<rulesSize; ruleId++){
+		if(!eagerLabels[ruleId])
+			propagatorProgram.addRule(eagerProgram.getRule(ruleId));
+	}
+	Rewriter r(propagatorProgram,idToPredicate,predicateToId);
+	
 	r.reduceToSigleHeadForPredicate();
 	r.computeCompletion();
 	r.computeGlobalPredicates();
@@ -38,6 +38,14 @@ int main(int argc, char *argv[])
 	std::cout<<"-----\n";
 	std::cout<<"Generator Program\n";
 	std::cout<<"-----\n";
+	std::vector<bool> generatorRuleLabel(r.getGeneratorProgram().getRulesSize(),false);
+	for(int ruleId=0; ruleId<eagerProgram.getRulesSize(); ruleId++){
+		if(eagerLabels[ruleId]){
+			r.addToGroundRule(eagerProgram.getRule(ruleId));
+			generatorRuleLabel.push_back(true);
+		}
+
+	}
 	r.getGeneratorProgram().print();
 	std::cout<<"-----\n";
 	std::cout<<"Propagator Program\n";
@@ -54,9 +62,12 @@ int main(int argc, char *argv[])
 		}
 	}
 	DataStructureCompiler dc;
+	std::unordered_set<std::string> originalPredicates(reader.getOriginalPredicates());
 	GeneratorCompiler datalogCompiler (analyzer.getDatalog(),executablePath,analyzer.getIdToPredicate(),analyzer.getPredicateToId(),&dc,true,originalPredicates,"InstanceExpansion",true,"InstExp",false);
 	datalogCompiler.compile();
-	GeneratorCompiler genCompiler (r.getGeneratorProgram(),executablePath,r.getPredicateNames(),r.getPredicateId(),&dc,true,originalPredicates,"Generator",false,"Comp",false);
+	// GeneratorCompiler genCompiler (r.getGeneratorProgram(),executablePath,r.getPredicateNames(),r.getPredicateId(),&dc,true,originalPredicates,"Generator",false,"Comp",false);
+	// genCompiler.compile();
+	HybridGenerator genCompiler(r.getGeneratorProgram(), generatorRuleLabel, executablePath, r.getPredicateNames(), r.getPredicateId(), &dc,originalPredicates);
 	genCompiler.compile();
 	GeneratorCompiler lazyCompiler (analyzer.getLazy(),executablePath,analyzer.getIdToPredicate(),analyzer.getPredicateToId(),&dc,true,originalPredicates,"ModelExpansion",true,"ModExp",true);
 	lazyCompiler.compile();

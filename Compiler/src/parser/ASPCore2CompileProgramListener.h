@@ -82,6 +82,13 @@ public:
     }
     return tight;
   }
+  void addPredicate(std::string predicate){
+    if(!predicateId.count(predicate)){
+      predicateId[predicate]=predicateNames.size();
+      predicateNames.push_back(predicate);
+    }
+  }
+  
   bool checkStratified(){
     bool stratified = true;
     auto scc = dg.SCC();

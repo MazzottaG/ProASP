@@ -57,13 +57,26 @@ class AbstractPropagator;
 class TupleFactory{
 
     private:
-        TupleFactory(/* args */){
+        TupleFactory(/* args */):generatorClauseSet(NULL),clauseIDToTuple(NULL),clauseIDToLength(NULL){
             //storage.push_back(TupleLight());
-            internalIDToTuple.push_back(new TupleLight());
+            addExtraSymbol();
             generated=false;
         }
+        std::unordered_set<TupleLight*,TuplePointerHash,TuplePointerEq>* generatorClauseSet;
+        std::vector<TupleLight*>* clauseIDToTuple;
+        std::vector<unsigned>* clauseIDToLength;
+
+        std::unordered_set<TupleLight*,TuplePointerHash,TuplePointerEq>* generatorConstraint;
+        std::vector<TupleLight*>* constraintIDToTuple;
+        std::vector<unsigned>* constraintIDToLength;
+
         std::vector<std::unordered_set<TupleLight*,TuplePointerHash,TuplePointerEq>> tupleToInternalVarSets;
         std::vector<TupleLight*> internalIDToTuple;
+
+        std::unordered_map<int,std::unordered_set<int>> auxAtomsForLiteral;
+        std::unordered_map<int,std::unordered_set<int>> atomsForLiteral;
+        std::unordered_set<int> trackedForSupport;
+
         std::vector<std::vector<AbstractPropagator*>> negativeWatcher;
         std::vector<std::vector<AbstractPropagator*>> positiveWatcher;
         static std::vector<AbstractPropagator*> EMPTY_WATCHER;
@@ -82,7 +95,29 @@ class TupleFactory{
         unsigned factSize;
         
     public:
-        
+        std::unordered_map<int,std::unordered_set<int>>& getAuxsForLiteral(){
+            return auxAtomsForLiteral;
+        }
+        void addAuxForLiteral(int var,int auxVar){
+            auxAtomsForLiteral[var].insert(auxVar);
+        }
+        std::unordered_map<int,std::unordered_set<int>>& getAtomsForLiteral(){
+            return atomsForLiteral;
+        }
+        void addAtomForLiteral(int var,int atom){
+            atomsForLiteral[var].insert(atom);
+        }
+        int addExtraSymbol(){
+            internalIDToTuple.push_back(new TupleLight());
+            internalIDToTuple.back()->setId(internalIDToTuple.size()-1);
+            return internalIDToTuple.size()-1;
+        }
+        void trackLiteral(int lit){
+            trackedForSupport.insert(lit);
+        }
+        void untrackLiteral(int lit){
+            trackedForSupport.erase(lit);
+        }
         Glucose::vec<Glucose::Lit>& explain(unsigned var){
             assert(var<internalIDToTuple.size());
             return internalIDToTuple[var]->getReasonLits();
@@ -189,6 +224,107 @@ class TupleFactory{
             // assert(it->getWaspID() == id);
             return *it;
         }
+
+        // %%%%%%%%%%%%%%%%%%%%%%%%% Constraint Grounding Methods %%%%%%%%%%%%%%%%%%%%%%%%%
+        void initConstraintGen(){
+            if(generatorConstraint == NULL)
+                generatorConstraint = new std::unordered_set<TupleLight*,TuplePointerHash,TuplePointerEq>();
+            if(constraintIDToTuple == NULL)
+                constraintIDToTuple = new std::vector<TupleLight*>();
+            if(constraintIDToLength == NULL)
+                constraintIDToLength = new std::vector<unsigned>();
+        }
+        void addNewInternalConstraint(std::vector<int> terms){
+            std::sort(terms.begin(),terms.end());
+            bufferTuple.setContent(terms.data(),terms.size(),-1);
+            auto it = generatorConstraint->find(&bufferTuple);
+            if(it==generatorConstraint->end()){
+                TupleLight* trueReference = new TupleLight(bufferTuple);
+                generatorConstraint->insert(trueReference);
+                constraintIDToTuple->push_back(trueReference);
+                constraintIDToLength->push_back(terms.size());
+                trueReference->setId(constraintIDToTuple->size()-1);
+                bufferTuple.clearContent();
+                return;
+            }
+            bufferTuple.clearContent();
+            // assert(it->second == -1);
+            return ;
+        }
+
+        //WARNING Returned tuple should be destroyed by the method caller
+        std::pair<TupleLight*,unsigned> popConstraint()const{
+            TupleLight * res = constraintIDToTuple==NULL || constraintIDToTuple->size() == 0 ? NULL : constraintIDToTuple->back();
+            unsigned res_len = constraintIDToLength==NULL || constraintIDToLength->size() == 0 ? 0 : constraintIDToLength->back();
+            if(res != NULL) {
+                constraintIDToTuple->pop_back();
+                constraintIDToLength->pop_back();
+            }
+            return std::make_pair(res,res_len);
+        }
+        void destroyConstraints(){
+            std::cout << "Destroying"<<std::endl;
+            assert(constraintIDToTuple!=NULL && constraintIDToTuple->size() == 0);
+            delete constraintIDToTuple;
+            delete constraintIDToLength;
+            delete generatorConstraint;
+            constraintIDToTuple=NULL;
+            constraintIDToLength=NULL;
+            generatorConstraint=NULL;
+        }
+        // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+        // %%%%%%%%%%%%%%%%%%%%%%%%% Rule Grounding Methods %%%%%%%%%%%%%%%%%%%%%%%%%
+        void initClauseGen(){
+            if(generatorClauseSet == NULL)
+                generatorClauseSet = new std::unordered_set<TupleLight*,TuplePointerHash,TuplePointerEq>();
+            if(clauseIDToTuple == NULL)
+                clauseIDToTuple = new std::vector<TupleLight*>();
+            if(clauseIDToLength == NULL)
+                clauseIDToLength = new std::vector<unsigned>();
+        }
+        
+        //store new internal tuple and return smart reference to it
+        TupleLight* addNewInternalClause(std::vector<int> terms){
+            std::sort(terms.begin(),terms.end());
+            bufferTuple.setContent(terms.data(),terms.size(),-1);
+            auto it = generatorClauseSet->find(&bufferTuple);
+            if(it==generatorClauseSet->end()){
+                TupleLight* trueReference = new TupleLight(bufferTuple);
+                generatorClauseSet->insert(trueReference);
+                clauseIDToTuple->push_back(trueReference);
+                clauseIDToLength->push_back(terms.size());
+                trueReference->setId(clauseIDToTuple->size()-1);
+                bufferTuple.clearContent();
+                return trueReference;
+            }
+            bufferTuple.clearContent();
+            return *it;
+        }
+        //WARNING Returned tuple should be destroyed by the method caller
+        std::pair<TupleLight*,unsigned> popClause()const{
+            TupleLight * res = clauseIDToTuple==NULL || clauseIDToTuple->size() == 0 ? NULL : clauseIDToTuple->back();
+            unsigned res_len = clauseIDToLength==NULL || clauseIDToLength->size() == 0 ? 0 : clauseIDToLength->back();
+            if(res != NULL) {
+                clauseIDToTuple->pop_back();
+                clauseIDToLength->pop_back();
+            }
+            return std::make_pair(res,res_len);
+        }
+        void destroyClauses(){
+            std::cout << "Destroying Clauses"<<std::endl;
+            assert(clauseIDToTuple!=NULL && clauseIDToTuple->size() == 0);
+            delete clauseIDToTuple;
+            delete clauseIDToLength;
+            delete generatorClauseSet;
+            clauseIDToTuple=NULL;
+            clauseIDToLength=NULL;
+            generatorClauseSet=NULL;
+        }
+        // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
         //store new internal tuple and return smart reference to it
         TupleLight* addNewInternalTuple(std::vector<int> terms,int predName,bool hidden=false){
             bufferTuple.setContent(terms.data(),terms.size(),predName);

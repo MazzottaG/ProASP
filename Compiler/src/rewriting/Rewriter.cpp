@@ -7,6 +7,9 @@ void Rewriter::addOriginalConstraint(){
         }
     }
 }
+void Rewriter::addToGroundRule(const aspc::Rule& r){
+    generatorProgram.addRule(r);
+}
 void Rewriter::reduceToSigleHeadForPredicate(){
     for(std::string predicate:predicateNames){
         auto rules = program.getRulesForPredicate(predicate);

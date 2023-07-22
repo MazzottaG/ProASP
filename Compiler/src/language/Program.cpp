@@ -44,9 +44,18 @@ using namespace std;
 aspc::Program::Program() {
 
 }
-aspc::Program::Program(const aspc::Program& p):rules(p.rules),facts(p.facts),predicates(p.predicates),aggregatePredicates(p.aggregatePredicates),rulesForPredicate(p.rulesForPredicate),rules_by_type(p.rules_by_type),stratified(p.stratified),tight(p.tight){
-
+aspc::Program::Program(const aspc::Program& p):facts(p.facts),predicates(p.predicates),aggregatePredicates(p.aggregatePredicates),stratified(p.stratified),tight(p.tight){
+    for(int i=0;i<p.getRulesSize();i++){
+        addRule(p.getRule(i));
+    }
+    for(auto pair: p.rulesForPredicate){
+        rulesForPredicate[pair.first]=pair.second;
+    }
+    for(auto pair: p.rules_by_type){
+        rules_by_type[pair.first]=pair.second;
+    }
 }
+
 aspc::Program::~Program() {
 
 }

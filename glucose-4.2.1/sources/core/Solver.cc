@@ -408,8 +408,10 @@ Var Solver::newVar(bool sign, bool dvar) {
 
 bool Solver::addClause_(vec <Lit> &ps) {
     assert(decisionLevel() == 0);
-    if(!ok) return false;
-
+    if(!ok) {
+        std::cout << "   Solver::addClause_ return false because not ok"<<std::endl;
+        return false;
+    }
     // Check if clause is satisfied and remove false/duplicate literals:
     sort(ps);
 
@@ -446,13 +448,23 @@ bool Solver::addClause_(vec <Lit> &ps) {
         #if defined(DEBUG_PROP) || defined(TRACE_SOLVER)
         std::cout << "propagate from addClause"<<std::endl;
         #endif
+        // std::cout << "Adding unit clause into glucose ";
+        // if(sign(ps[0])) {std::cout << "-";AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(var(ps[0])));}
+        // else {AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(var(ps[0])));}
+        // std::cout << std::endl;
         uncheckedEnqueue(ps[0]);
+        ok = (propagate() == CRef_Undef);
+        // if(!ok)
+        //     std::cout << "   Solver::addClause_ return false because propagate() != CRef_Undef"<<std::endl;
+        // return ok;
         return ok = (propagate() == CRef_Undef);
     } else {
         CRef cr = ca.alloc(ps, false);
         clauses.push(cr);
         attachClause(cr);
-
+        std::cout << "Adding clause into glucose ";
+        printClause(cr);
+        std::cout << std::endl;
     }
 
     return true;
@@ -1107,6 +1119,12 @@ CRef Solver::propagate() {
     vec<Lit> lits;
     while(qhead < trail.size()) {
         Lit p = trail[qhead++]; // 'p' is enqueued fact to propagate.
+        #ifdef TRACE_SOLVER
+        std::cout << "Propagating ";
+        if(sign(p)) {std::cout << "-";AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(var(p)));}
+        else {AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(var(p)));}
+        std::cout << " as "<<(value(p) == l_True ? "True" : "False")<<std::endl;
+        #endif
         int lit = !sign(p) ? var(p): -var(p); 
         bool noConflict = confl == CRef_Undef;
         
@@ -1798,19 +1816,33 @@ lbool Solver::search(int nof_conflicts) {
         }
     }
 }
-
-inline void Solver::printClause(CRef cr)
+void Solver::printGeneratedClauses(){
+    for(int i=0; i<clauses.size(); i++){
+        printClause(clauses[i]);
+        std::cout << std::endl;
+    }
+    
+}
+void Solver::printClause(CRef cr)
 {
     if(cr == CRef_Prop) return;
     Clause &c = ca[cr];
     for (int i = 0; i < c.size(); i++){
         if(var(c[i]) > 0){
-            if(value(var(c[i])) == l_True) AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(var(c[i])));
-            if(value(var(c[i])) == l_False) std::cout << "-";AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(var(c[i])));
-            // printLit(c[i]);
-            printf(" ");
+            // ----------------------------- Print by truth with name -----------------------------
+            // if(value(var(c[i])) == l_True) {AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(var(c[i])));}
+            // if(value(var(c[i])) == l_False) {std::cout << "-";AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(var(c[i])));}
+            // printf(" ");
+            // ----------------------------- Print by sign with name -----------------------------
+            // if(sign(c[i])) {std::cout << "-";AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(var(c[i])));}
+            // else {AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(var(c[i])));}
+            // printf(" ");
+            // ----------------------------- Print by sign with id -----------------------------
+            if(sign(c[i])) {std::cout << "-" <<var(c[i])<<" ";}
+            else {std::cout << var(c[i]) << " ";}
         }
     }
+    std::cout << "0";
 }
 double Solver::progressEstimate() const {
     double progress = 0;

@@ -9,6 +9,7 @@ class Rewriter{
         void computeCompletion();
         void addOriginalConstraint();
         void computeGlobalPredicates();
+        void addToGroundRule(const aspc::Rule&);
 
         const std::vector<std::string>& getPredicateNames()const {return predicateNames;}
         const std::unordered_map<std::string,unsigned>& getPredicateId()const {return predicateId;}
