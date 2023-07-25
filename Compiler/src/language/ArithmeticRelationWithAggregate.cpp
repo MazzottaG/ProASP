@@ -59,6 +59,7 @@ aspc::ArithmeticRelationWithAggregate::ArithmeticRelationWithAggregate(bool isLo
         comparisonType = aspc::GTE;
         plusOne=true;
     }else if(comparisonType == aspc::LT){
+        std::cout << "Switching sign: it was " << (negated ? "" : " not ") << "negated and now it is " << (!negated ? "" : " not ") << "negated" << std::endl;
         negated=!negated;
         comparisonType = aspc::GTE;
     }else if(comparisonType==aspc::LTE){

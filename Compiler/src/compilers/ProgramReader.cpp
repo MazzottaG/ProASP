@@ -24,6 +24,10 @@ ProgramReader::ProgramReader(int argc, char *argv[]){
 					toGroundPredicates.insert(h.getPredicateName());
 				else propagatorPredicates.insert(h.getPredicateName());
 			}
+			if(label && listener.getProgram().getRule(i).containsAggregate()){
+				std::cout << "Rules with aggregates cannot be grounded yet. Coming soon ..."<<std::endl;
+				exit(180);
+			}
 		}
 		programSize=listener.getProgram().getRulesSize();
 		label=!label;

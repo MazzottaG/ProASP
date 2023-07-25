@@ -29,6 +29,7 @@ int main(int argc, char *argv[])
 	Rewriter r(propagatorProgram,idToPredicate,predicateToId);
 	
 	r.reduceToSigleHeadForPredicate();
+	r.rewriteAggregates();
 	r.computeCompletion();
 	r.computeGlobalPredicates();
 
@@ -48,6 +49,8 @@ int main(int argc, char *argv[])
 	}
 	r.getGeneratorProgram().print();
 	std::cout<<"-----\n";
+    exit(180);
+
 	std::cout<<"Propagator Program\n";
 	std::cout<<"-----\n";
 	r.getPropagatorsProgram().print();

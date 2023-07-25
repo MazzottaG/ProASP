@@ -26,6 +26,9 @@ class  ASPCore2CompileProgramListener : public ASPCore2BaseListener {
     std::vector<bool> buildingAtomsPolarity;
     std::vector<aspc::ArithmeticRelation> buildingRels;
     std::vector<aspc::ArithmeticExpression> buildingExpression;
+    std::vector<aspc::ArithmeticRelationWithAggregate> buildingAggregates;
+    aspc::ComparisonType aggrComparison;
+    aspc::ArithmeticExpression guard;
     
     aspc::Program program;
     std::vector<aspc::Atom> head;
@@ -41,16 +44,30 @@ class  ASPCore2CompileProgramListener : public ASPCore2BaseListener {
     std::vector<std::string> freshvariables;
     
     bool addedAtom;
+    int atomStart;
     bool naf;
     int expNestingLevel;
     int factorNestingLevel;
     int lastTerminalSize;
+
+    bool readingAggregate;
+    int aggregateStartIndex;
+    int guardStartIndex;
+    bool isGuardExpression;
+    int aggrBodyLiteralStart;
+    int aggrBodyIneqsStart;
+    bool nafAggregate;
+
 public:
   virtual void enterProgram(ASPCore2Parser::ProgramContext * /*ctx*/) override { 
       naf=false;
+      atomStart=-1;
       expNestingLevel = -1;
       factorNestingLevel = -1;
       lastTerminalSize = -1;
+      readingAggregate=false;
+      aggregateStartIndex=-1;
+      guardStartIndex=-1;
   }
   
   bool checkTight(){
@@ -113,9 +130,11 @@ public:
     }
     return stratified;
   }
+  
   const aspc::Program& getProgram()const {return program;} 
   const std::vector<std::string>& getPredicateNames()const {return predicateNames;} 
   const std::unordered_map<std::string,unsigned>& getPredicateIds()const {return predicateId;} 
+  
   virtual void exitProgram(ASPCore2Parser::ProgramContext * /*ctx*/) override { 
     std::cout << "Program built"<<std::endl;
     program.setTight(checkTight());
@@ -135,7 +154,16 @@ public:
     freshvariables.clear();
   }
   virtual void exitSimple_rule(ASPCore2Parser::Simple_ruleContext * /*ctx*/) override {
-    aspc::Rule rule(head,bodyLiterals,buildingRels,false);
+    // std::cout << "Found Body Literals: ";
+    // for(aspc::Literal body : bodyLiterals) body.print(); 
+    // std::cout << std::endl;
+    // std::cout << "Found Body Inequality: ";
+    // for(aspc::ArithmeticRelation body : buildingRels) body.print(); 
+    // std::cout << std::endl;
+    // std::cout << "Found Body Aggregates: ";
+    // for(aspc::ArithmeticRelationWithAggregate body : buildingAggregates) body.print(); 
+    // std::cout << std::endl;
+    aspc::Rule rule(head,bodyLiterals,buildingRels,buildingAggregates,false,false);
     bool safe = true;
     for(int i=0;i<buildingRels.size();i++){
       if(!buildingRels[i].isBoundedRelation(positiveBodyVars)){
@@ -157,15 +185,15 @@ public:
       exit(180);
     }
     addDependencies(rule);    
-    // rule.print();
     program.addRule(rule);
     buildingAtoms.clear();
     buildingExpression.clear();
     buildingRels.clear();
+    buildingAggregates.clear();
     head.clear();
     buildingAtomsPolarity.clear();
     bodyLiterals.clear();
-    
+    std::cout << "parsed rule ";rule.print();
   }
   void addDependencies(aspc::Rule& r) {
     if(!r.isConstraint()){
@@ -274,8 +302,9 @@ public:
   }
 
   virtual void enterNaf_literal_aggregate(ASPCore2Parser::Naf_literal_aggregateContext * /*ctx*/) override { 
+    std::cout << "Found naf literal aggregate"<<std::endl;
     naf=false;
-
+    nafAggregate=false;
   }
   virtual void exitNaf_literal_aggregate(ASPCore2Parser::Naf_literal_aggregateContext * /*ctx*/) override {
   }
@@ -289,14 +318,15 @@ public:
   }
 
   virtual void enterAtom(ASPCore2Parser::AtomContext * /*ctx*/) override { 
+    atomStart=terminals.size();
   }
   virtual void exitAtom(ASPCore2Parser::AtomContext * /*ctx*/) override {
     for(int i=0;i<buildingExpression.size();i++){
       std::cout << buildingExpression[i].getStringRep() << std::endl;
     }
     std::cout << "------------"<<std::endl;
-    if(terminals.size() > 0){
-      std::string predicateName = terminals[0];
+    if(terminals.size() > atomStart){
+      std::string predicateName = terminals[atomStart];
       auto it = predicateId.emplace(predicateName,predicateNames.size());
       if(it.second){
         predicateNames.push_back(predicateName);
@@ -305,7 +335,7 @@ public:
       }
       std::vector<std::string> terms;
       int expTermId=0;
-      for(int i = 1; i < terminals.size(); i++){
+      for(int i = atomStart+1; i < terminals.size(); i++){
         if(terminals[i]==""){
           aspc::ArithmeticExpression* exp = &buildingExpression[expTermId];
           if(exp->isSingleTerm()){
@@ -326,7 +356,7 @@ public:
       buildingAtoms.push_back(a);
       buildingExpression.clear();
       addedAtom=true;
-      terminals.clear();
+      while(terminals.size() > atomStart) terminals.pop_back();
 
     }else{
       std::cout << "WARNING: Unable to build atom"<<std::endl;
@@ -347,7 +377,7 @@ public:
 
   virtual void enterBuiltin_atom(ASPCore2Parser::Builtin_atomContext * /*ctx*/) override { }
   virtual void exitBuiltin_atom(ASPCore2Parser::Builtin_atomContext * /*ctx*/) override {
-    if(terminals.size() != 3){
+    if(terminals.size() < 3){
       std::cout << "WARNING: Unable to read builtin atom"<<std::endl;
       std::cout << "Remaining symbols"<<std::endl;
       for(const std::string& s: terminals){
@@ -366,7 +396,9 @@ public:
     aspc::ArithmeticExpression right = terminals.back() == "" ? buildingExpression.back() : aspc::ArithmeticExpression(terminals.back());
     aspc::ArithmeticExpression left = terminals[terminals.size()-3] == "" ? buildingExpression[buildingExpression.size()-2] : aspc::ArithmeticExpression(terminals[terminals.size()-3]);
     buildingRels.push_back(aspc::ArithmeticRelation(left,right,aspc::ArithmeticRelation::string2ComparisonType[terminals[terminals.size()-2]]));
-    terminals.clear();
+    terminals.pop_back();
+    terminals.pop_back();
+    terminals.pop_back();
   }
 
   virtual void enterCompareop(ASPCore2Parser::CompareopContext * /*ctx*/) override { }
@@ -391,6 +423,7 @@ public:
   virtual void exitTerm(ASPCore2Parser::TermContext * /*ctx*/) override { }
 
   virtual void enterExpr(ASPCore2Parser::ExprContext * /*ctx*/) override {
+    if(guardStartIndex > 0) isGuardExpression=true;
     expNestingLevel++;
     if(expNestingLevel>1){
       std::cout << "Error parsing expression: accepted format X+Y where X and Y are either symbolic or numberic terms"<<std::endl;
@@ -463,7 +496,7 @@ public:
   virtual void enterLeftward_left_aggregate(ASPCore2Parser::Leftward_left_aggregateContext * /*ctx*/) override { }
   virtual void exitLeftward_left_aggregate(ASPCore2Parser::Leftward_left_aggregateContext * /*ctx*/) override { }
 
-  virtual void enterLeft_aggregate(ASPCore2Parser::Left_aggregateContext * /*ctx*/) override { }
+  virtual void enterLeft_aggregate(ASPCore2Parser::Left_aggregateContext * /*ctx*/) override { std::cout << "Error: leftward not supported yet. Coming soon ..."<<std::endl; exit(180); }
   virtual void exitLeft_aggregate(ASPCore2Parser::Left_aggregateContext * /*ctx*/) override { }
 
   virtual void enterLower_guard_rightward_left_aggregate(ASPCore2Parser::Lower_guard_rightward_left_aggregateContext * /*ctx*/) override { }
@@ -472,17 +505,78 @@ public:
   virtual void enterRightward_left_aggregate(ASPCore2Parser::Rightward_left_aggregateContext * /*ctx*/) override { }
   virtual void exitRightward_left_aggregate(ASPCore2Parser::Rightward_left_aggregateContext * /*ctx*/) override { }
 
-  virtual void enterUpper_guard_leftward_right_aggregate(ASPCore2Parser::Upper_guard_leftward_right_aggregateContext * /*ctx*/) override { }
-  virtual void exitUpper_guard_leftward_right_aggregate(ASPCore2Parser::Upper_guard_leftward_right_aggregateContext * /*ctx*/) override { }
+  void startGuard(){
+    guardStartIndex=terminals.size(); 
+    isGuardExpression=false;
+    std::cout << "start reading guard"<<std::endl;
+  }
+  void endGuard(){
+    aggrComparison = aspc::ArithmeticRelation::string2ComparisonType[terminals[guardStartIndex]];
+    for(int i=guardStartIndex;i<terminals.size();i++)
+      std::cout << terminals[i]<< " ";
+    if(isGuardExpression) {
+      aspc::ArithmeticExpression* exp = &buildingExpression.back();
+      guard.copy(exp);
+      buildingExpression.pop_back();
+      std::cout << guard.getStringRep();
+    }
+    while(terminals.size()>guardStartIndex) terminals.pop_back();
+    std::cout << std::endl;
+    guardStartIndex=-1;
+  }
+  virtual void enterUpper_guard_leftward_right_aggregate(ASPCore2Parser::Upper_guard_leftward_right_aggregateContext * /*ctx*/) override { 
+    startGuard(); 
+  }
+  virtual void exitUpper_guard_leftward_right_aggregate(ASPCore2Parser::Upper_guard_leftward_right_aggregateContext * /*ctx*/) override { 
+    endGuard();
+  }
 
-  virtual void enterUpper_guard_rightward_right_aggregate(ASPCore2Parser::Upper_guard_rightward_right_aggregateContext * /*ctx*/) override { }
-  virtual void exitUpper_guard_rightward_right_aggregate(ASPCore2Parser::Upper_guard_rightward_right_aggregateContext * /*ctx*/) override { }
+  virtual void enterUpper_guard_rightward_right_aggregate(ASPCore2Parser::Upper_guard_rightward_right_aggregateContext * /*ctx*/) override { 
+    startGuard();
+  }
+  virtual void exitUpper_guard_rightward_right_aggregate(ASPCore2Parser::Upper_guard_rightward_right_aggregateContext * /*ctx*/) override { 
+    endGuard();
+  }
 
   virtual void enterRight_aggregate(ASPCore2Parser::Right_aggregateContext * /*ctx*/) override { }
   virtual void exitRight_aggregate(ASPCore2Parser::Right_aggregateContext * /*ctx*/) override { }
 
-  virtual void enterAggregate_atom(ASPCore2Parser::Aggregate_atomContext * /*ctx*/) override { }
-  virtual void exitAggregate_atom(ASPCore2Parser::Aggregate_atomContext * /*ctx*/) override { }
+  virtual void enterAggregate_atom(ASPCore2Parser::Aggregate_atomContext * /*ctx*/) override {
+    readingAggregate = true;
+    aggrBodyLiteralStart = buildingAtoms.size();
+    aggrBodyIneqsStart = buildingRels.size();
+    aggregateStartIndex = terminals.size();
+    std::cout << "Literals starts from id "<<aggrBodyLiteralStart<<std::endl;
+  }
+  virtual void exitAggregate_atom(ASPCore2Parser::Aggregate_atomContext * /*ctx*/) override { 
+    readingAggregate = false;
+    std::vector<std::string> variables;
+    for(int i=aggregateStartIndex+1; i<terminals.size(); i++){
+      variables.push_back(terminals[i]);
+    }
+    while (terminals.size() > aggregateStartIndex) terminals.pop_back();
+
+    std::vector<aspc::Literal> literals;
+    for(int i=aggrBodyLiteralStart; i<buildingAtoms.size();i++){
+      literals.push_back(aspc::Literal(buildingAtomsPolarity[i],buildingAtoms[i]));
+    }
+    while(buildingAtoms.size() > aggrBodyLiteralStart) buildingAtoms.pop_back();
+    
+    std::vector<aspc::ArithmeticRelation> ineqs;
+    for(int i=aggrBodyIneqsStart; i<buildingRels.size();i++){
+      ineqs.push_back(aspc::ArithmeticRelation(buildingRels[i]));
+    }
+    while(buildingRels.size() > aggrBodyIneqsStart) buildingRels.pop_back();
+    
+    aspc::Aggregate aggregate(literals,ineqs, variables, terminals[aggregateStartIndex]);
+    buildingAggregates.push_back(aspc::ArithmeticRelationWithAggregate (false,guard,aggregate,aggrComparison,nafAggregate));
+    std::cout << "Parsed aggregates ";
+    buildingAggregates.back().print();
+    aggregateStartIndex=-1;
+    aggrBodyLiteralStart=-1;
+    aggrBodyIneqsStart=-1;
+    std::cout << std::endl;
+  }
 
   virtual void enterLeftwardop(ASPCore2Parser::LeftwardopContext * /*ctx*/) override { }
   virtual void exitLeftwardop(ASPCore2Parser::LeftwardopContext * /*ctx*/) override { }
@@ -644,6 +738,13 @@ public:
       if(node->getSymbol()->getType() == ASPCore2Parser::NAF){
         naf=true;
       }
+      if(node->getSymbol()->getType() == ASPCore2Parser::AGGR_COUNT || node->getSymbol()->getType() == ASPCore2Parser::AGGR_SUM){
+        std::cout << "reading function "<<node->getText()<<std::endl;
+        nafAggregate = naf;
+      }
+      std::cout << "Terminals stack:";
+      for(std::string t : terminals) std::cout << " " << t;
+      std::cout << std::endl;
   }
   virtual void visitErrorNode(antlr4::tree::ErrorNode * /*node*/) override { }
 

@@ -77,6 +77,18 @@ namespace aspc {
         void setTerm2(std::string term){
             term2=term;
         }
+        void setOperation(char op){
+            operation=op;
+        }
+        void setSingleTerm(bool single){
+            singleTerm=single;
+        }
+        void copy(aspc::ArithmeticExpression* exp){
+            setTerm1(exp->getTerm1());
+            setTerm2(exp->getTerm2());
+            setOperation(exp->getOperation());
+            setSingleTerm(exp->isSingleTerm());
+        }
         std::vector<std::string> getAllTerms() const;
         
         std::string getStringRep() const;
