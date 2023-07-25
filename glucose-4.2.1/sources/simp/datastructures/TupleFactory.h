@@ -118,6 +118,15 @@ class TupleFactory{
         void untrackLiteral(int lit){
             trackedForSupport.erase(lit);
         }
+        bool isTracked(int lit){
+            return trackedForSupport.count(lit) > 0;
+        }
+        std::pair<bool,int> popTracked(){
+            bool empty = trackedForSupport.empty();
+            int elem = empty ? 0 : *trackedForSupport.begin();
+            if(!empty) trackedForSupport.erase(elem);
+            return std::make_pair(!empty, elem);
+        }
         Glucose::vec<Glucose::Lit>& explain(unsigned var){
             assert(var<internalIDToTuple.size());
             return internalIDToTuple[var]->getReasonLits();

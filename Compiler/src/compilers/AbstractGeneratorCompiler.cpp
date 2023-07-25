@@ -35,6 +35,8 @@ void AbstractGeneratorCompiler::compileSingleStarter(bool recursive,std::vector<
                     outfile << ind++ << "if(tuple_"<<index<<" == NULL || !tuple_"<<index<<"->isTrue()){\n";
                 }else{
                     outfile << ind++ << "if(tuple_"<<index<<" != NULL && !tuple_"<<index<<"->isFalse()){\n";
+                    if(!rule->isConstraint())
+                        closingPars += printTrackedCheck("tuple_"+std::to_string(index));
                 }
             
                 closingPars++;
@@ -70,6 +72,8 @@ void AbstractGeneratorCompiler::compileSingleStarter(bool recursive,std::vector<
                         }
                     }
                 }
+                if(!rule->isConstraint())
+                    closingPars += printTrackedCheck("tuple_"+std::to_string(index));
             }
         }else{
             const aspc::ArithmeticRelation* ineq = (const aspc::ArithmeticRelation*) f;
@@ -95,6 +99,7 @@ void AbstractGeneratorCompiler::compileSingleStarter(bool recursive,std::vector<
             outfile << "}, AuxMapHandler::getInstance().get_"<<atom->getPredicateName()<<"(),"<<(predicateIds.count(atom->getPredicateName()) ? "false" : "true")<<");\n";
             
             outfile << ind++ << "if(!TupleFactory::getInstance().isFact(head_"<<index<<"->getId())){\n";
+                printUntrackLiteral("head_"+std::to_string(index));
                 printAddSP(index);
                 #ifdef DEBUG_GEN
                 outfile << ind << "std::cout << \"Added tuple \";AuxMapHandler::getInstance().printTuple(head_"<<index<<");\n";

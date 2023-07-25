@@ -83,3 +83,8 @@ void GrounderGenCompiler::printAddClause(std::vector<unsigned> order,bool starte
 void GrounderGenCompiler::printAddSP(int index){
     outfile << ind << "TupleFactory::getInstance()."<<(rule->getFormulas().size() != 1 ? "addAuxForLiteral" : "addAtomForLiteral")<<"(head_"<<index<<"->getId(),clauseTuple->getId());\n";
 }
+
+int GrounderGenCompiler::printTrackedCheck(std::string tuplename){
+    outfile << ind++ << "if(!TupleFactory::getInstance().isTracked("<<tuplename<<"->getId())){\n";
+    return 1;
+}

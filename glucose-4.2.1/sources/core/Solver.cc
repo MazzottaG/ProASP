@@ -2001,13 +2001,19 @@ lbool Solver::solve_(bool do_simp, bool turn_off_simp) // Parameters are useless
         for(int i = 0; i < nVars(); i++) model[i] = value(i);
         if(true){
             Propagator::getInstance().expandModel();
-            std::cout << "Answer: ";
+            //std::cout << "Answer: ";
+            std::cout << "START MODEL"<<std::endl;
             std::vector<unsigned>& visible=TupleFactory::getInstance().getVisibleAtoms();         
             for(unsigned id: visible){
                 TupleLight* t = TupleFactory::getInstance().getTupleFromInternalID(id);
                 if(t != NULL && t->isTrue()) {AuxMapHandler::getInstance().printTuple(t);}
+                if(t != NULL && t->isFalse()) {std::cout<<"-";AuxMapHandler::getInstance().printTuple(t);}
+                std::cout << std::endl;
                 // if(t != NULL && t->isFalse()) {std::cout << ":-";AuxMapHandler::getInstance().printTuple(t);}
+                if(t->getPredicateName() == AuxMapHandler::getInstance().get_edge()){
+                }
             }
+            std::cout << "END MODEL"<<std::endl;
             std::cout << std::endl;
         }
     } else if(status == l_False && conflict.size() == 0)

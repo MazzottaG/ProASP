@@ -16,6 +16,10 @@ class AbstractGeneratorCompiler{
         virtual void printAddClause(std::vector<unsigned>,bool){}
         virtual void printAddConstraintClause(std::vector<unsigned>,bool){}
         virtual void printAddSP(int index){}
+        virtual void printUntrackLiteral(std::string tuplename){
+            outfile << ind << "TupleFactory::getInstance().untrackLiteral("<<tuplename<<"->getId());\n";
+        }
+        virtual int printTrackedCheck(std::string tuplename){ return 0;}
         void compileSingleStarter(bool recursive,std::vector<unsigned> order,unsigned starter);
         std::unordered_map<std::string,std::set<std::vector<unsigned>>> getUsedAuxMaps()const{return usedAuxMap;}
         std::vector<std::vector<unsigned>> reorderRule();

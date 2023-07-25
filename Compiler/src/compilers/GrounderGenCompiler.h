@@ -12,5 +12,6 @@ class GrounderGenCompiler : public AbstractGeneratorCompiler{
         void printAddConstraintClause(std::vector<unsigned>,bool);
         void printAddSP(int);
         void compileConstraintGrounder();
+        int printTrackedCheck(std::string tuplename);
 };
 #endif

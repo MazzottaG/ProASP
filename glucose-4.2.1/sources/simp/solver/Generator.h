@@ -16,9 +16,10 @@ class Generator{
 
         }
         bool isSolvedByGenerator()const {return solvedByGenerator;}
-        void generate(Glucose::SimpSolver* s){
+        void generate(Glucose::SimpSolver* s,std::vector<int>& falseAtoms){
             for(AbstractGenerator* gen : generators) {
                 gen->generate(s);
+                gen->propagateTrackedLiteral(s,falseAtoms);
             }
         }
     private:

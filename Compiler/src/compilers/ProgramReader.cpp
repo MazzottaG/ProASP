@@ -3,6 +3,7 @@
 ProgramReader::ProgramReader(int argc, char *argv[]){
     // True -> toGroundRule
 	// False -> toCompileRule
+	
 	label = false;
 	unsigned programSize=0;
 	for(int fileIndex = 1; fileIndex<3; fileIndex++){

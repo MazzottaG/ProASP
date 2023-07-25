@@ -67,6 +67,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "../simp/solver/Propagator.h"
 #include "../simp/solver/AuxMapHandler.h"
 #include "../simp/solver/SatProgramBuilder.h"
+#include "../simp/utils/SharedFunctions.h"
 
 #include <fstream>
 #include <stdlib.h>
@@ -124,7 +125,52 @@ static void SIGINT_exit(int signum) {
 
 //=================================================================================================
 // Main:
-int parseTuple(const std::string & literalString) {
+int parseTuple(const std::string & literalString,std::vector<std::pair<std::string,std::vector<std::string>>>& parsedTuple,std::set<std::string>& alphanumericConstants) {
+    std::vector<std::string> terms;
+    std::string predicateName;
+    unsigned i = 0;
+    for (i = 0; i < literalString.size(); i++) {
+        if (literalString[i] == '(') {
+            predicateName = literalString.substr(0, i);
+            break;
+        }
+        if (i == literalString.size() - 1) {
+            predicateName = literalString.substr(0);
+        }
+    }
+    for (; i < literalString.size(); i++) {
+        char c = literalString[i];
+        if ((c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_' || c == '-') {
+            int start = i;
+            int openBrackets = 0;
+            while ((c != ' ' && c != ',' && c != ')') || openBrackets > 0) {
+                if (c == '(') {
+                    openBrackets++;
+                } else if (c == ')') {
+                    openBrackets--;
+                }
+                i++;
+                c = literalString[i];
+            }
+            std::string term = literalString.substr(start, i - start);
+            if(!isInteger(term))
+                alphanumericConstants.insert(term);
+            terms.push_back(term);
+            // terms.push_back(ConstantsManager::getInstance().mapConstant(literalString.substr(start, i - start)));
+        }
+    }
+    parsedTuple.push_back(std::make_pair(predicateName,terms));
+    // TupleLight* tuple=TupleFactory::getInstance().addNewInternalTuple(terms, AuxMapHandler::getInstance().getPredicateId(predicateName));
+
+    // const auto& insertResult = tuple->setStatus(True);
+    // if(insertResult.second){
+    //     TupleFactory::getInstance().removeFromCollisionsList(tuple->getId());
+    //     AuxMapHandler::getInstance().insertTrue(insertResult);
+    //     return tuple->getId();
+    // }
+    return -1;
+}
+int parseTupleUndef(const std::string & literalString) {
     std::vector<int> terms;
     std::string predicateName;
     unsigned i = 0;
@@ -154,18 +200,38 @@ int parseTuple(const std::string & literalString) {
             terms.push_back(ConstantsManager::getInstance().mapConstant(literalString.substr(start, i - start)));
         }
     }
-    TupleLight* tuple=TupleFactory::getInstance().addNewInternalTuple(terms, AuxMapHandler::getInstance().getPredicateId(predicateName));
-
-    const auto& insertResult = tuple->setStatus(True);
-    if(insertResult.second){
-        TupleFactory::getInstance().removeFromCollisionsList(tuple->getId());
-        AuxMapHandler::getInstance().insertTrue(insertResult);
-        return tuple->getId();
+    TupleLight* tuple=TupleFactory::getInstance().find(terms, AuxMapHandler::getInstance().getPredicateId(predicateName));
+    return tuple != NULL ? tuple->getId(): -1;
+}
+void read_model_constraints(std::string filename,std::vector<std::vector<int>>& constraints){
+    std::ifstream inputFile(filename);
+    string line;
+    if (inputFile.is_open()){
+        while ( getline (inputFile,line) ){
+            unsigned start=0;
+            std::vector<int> literals;
+            for(unsigned i=0;i<line.size();i++){
+                if(line[i] == ' '){
+                    int tupleId = parseTupleUndef(line[start] == '-' ? line.substr(start+1,i-start) : line.substr(start,i-start));
+                    // std::cout << "reading "<<(line[start] == '-' ? line.substr(start+1,i-start) : line.substr(start,i-start))<<" "<<tupleId<<std::endl;
+                    if(tupleId > 0){
+                        literals.push_back(line[start] == '-' ? -tupleId : tupleId);
+                    }
+                    start=i+1;
+                }
+            }
+            constraints.push_back(literals);
+        }
+        inputFile.close();
+        
     }
-    return -1;
+    else cout << "Unable to open file"<<std::endl;
+
 }
 void read_asp(Solver* solver,std::string filename,std::vector<unsigned>& facts){
     std::ifstream inputFile(filename);
+    std::vector<std::pair<std::string,std::vector<std::string>>> parsedTuples;
+    std::set<std::string> alphanumericConstants;
     string line;
     if (inputFile.is_open()){
         while ( getline (inputFile,line) ){
@@ -174,7 +240,7 @@ void read_asp(Solver* solver,std::string filename,std::vector<unsigned>& facts){
             for(unsigned i=0;i<line.size();i++){
                 if(line[i] == '.'){
                     skip=true;
-                    int tupleId = parseTuple(line.substr(start,i-start));
+                    int tupleId = parseTuple(line.substr(start,i-start),parsedTuples,alphanumericConstants);
                     if(tupleId > 0){
                         facts.push_back(tupleId);
                     }
@@ -192,6 +258,23 @@ void read_asp(Solver* solver,std::string filename,std::vector<unsigned>& facts){
         
     }
     else cout << "Unable to open file"<<std::endl;
+    for(const std::string& constant : alphanumericConstants){
+        ConstantsManager::getInstance().mapConstant(constant);
+    }
+    for(auto& parsedTuple : parsedTuples){
+        std::vector<int> terms;
+        for(std::string& term : parsedTuple.second){
+            terms.push_back(ConstantsManager::getInstance().mapConstant(term));
+        }
+        TupleLight* tuple=TupleFactory::getInstance().addNewInternalTuple(terms, AuxMapHandler::getInstance().getPredicateId(parsedTuple.first));
+
+        const auto& insertResult = tuple->setStatus(True);
+        if(insertResult.second){
+            TupleFactory::getInstance().removeFromCollisionsList(tuple->getId());
+            AuxMapHandler::getInstance().insertTrue(insertResult);
+            facts.push_back(tuple->getId());
+        }
+    }
 
 }
 int main(int argc, char** argv)
@@ -303,7 +386,6 @@ int main(int argc, char** argv)
             while (0 >= solver->nVars()) solver->newVar();
             lits.push( mkLit(0) );
             solver->addClause_(lits);
-            
             std::vector<unsigned> facts;
             read_asp(solver,argv[argc-1],facts);
             int lastFact = TupleFactory::getInstance().size();
@@ -319,7 +401,8 @@ int main(int argc, char** argv)
             TupleFactory::getInstance().storeFactSize();
             TupleFactory::getInstance().initClauseGen();
             TupleFactory::getInstance().initConstraintGen();
-            Generator::getInstance().generate(&S);
+            std::vector<int> falseAtoms;
+            Generator::getInstance().generate(&S,falseAtoms);
             SatProgramBuilder::getInstance().computeCompletion(&S);
             std::cout << "p cnf "<<TupleFactory::getInstance().size()-1<<" " << S.nClauses()+facts.size()<<std::endl;
             for(int i=1;i<TupleFactory::getInstance().size(); i++){
@@ -331,6 +414,8 @@ int main(int argc, char** argv)
             for(unsigned id : facts){
                 std::cout << id << " 0"<<std::endl;
             } 
+            for(int id : falseAtoms)
+                std::cout << -id << " 0"<<std::endl;
             std::cout << "End cnf"<<std::endl;
             TupleFactory::getInstance().destroyClauses();
             TupleFactory::getInstance().destroyConstraints();
@@ -345,7 +430,34 @@ int main(int argc, char** argv)
                 solver->addClause_(lits);
                 if(!solver->okay())
                     break;
-            } 
+            }
+            while (!falseAtoms.empty()){
+                int id = falseAtoms.back();
+                falseAtoms.pop_back();
+                #ifdef DEBUG_PROP
+                std::cout << "Adding false atoms in glucose -"<<id<<std::endl;
+                #endif
+                lits.clear();
+                lits.push( mkLit(id,true));
+                solver->addClause_(lits);
+                if(!solver->okay())
+                    break;
+            }
+            std::vector<std::vector<int>> constraints;
+            read_model_constraints("constraints.lp",constraints);
+            std::cout << "Found "<<constraints.size()<<" constraints"<<std::endl;
+            for(std::vector<int> constraint : constraints){
+                lits.clear();
+                for(int literal : constraint){
+                    bool negated = literal<0;
+                    lits.push( mkLit(negated ? -literal : literal, !negated));
+                    std::cout << -literal << " ";
+                }
+                std::cout << "0"<<std::endl;
+                solver->addClause_(lits);
+                if(!solver->okay())
+                    break;
+            }
             Propagator::getInstance().activate();
             if(S.okay())  
                 Propagator::getInstance().propagateAtLevel0(&S,lits);
