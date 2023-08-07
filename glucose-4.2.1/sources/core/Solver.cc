@@ -453,7 +453,7 @@ bool Solver::addClause_(vec <Lit> &ps) {
         // else {AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(var(ps[0])));}
         // std::cout << std::endl;
         uncheckedEnqueue(ps[0]);
-        ok = (propagate() == CRef_Undef);
+        // ok = (propagate() == CRef_Undef);
         // if(!ok)
         //     std::cout << "   Solver::addClause_ return false because propagate() != CRef_Undef"<<std::endl;
         // return ok;
@@ -714,6 +714,7 @@ void Solver::analyze(CRef confl, vec <Lit> &out_learnt, vec <Lit> &selectors, in
     bool startAnalyze=true;
     do {
         if(confl == CRef_Prop){
+            
             vec<Lit> &c = startAnalyze ? reasonClause : TupleFactory::getInstance().explain(var(p));
             // Special case for binary clauses
             // The first one has to be SAT            
@@ -724,13 +725,14 @@ void Solver::analyze(CRef confl, vec <Lit> &out_learnt, vec <Lit> &selectors, in
                 Lit tmp = c[0];
                 c[0] = c[1], c[1] = tmp;
             }
-
+            
             for(int j = (p == lit_Undef) ? 0 : 1; j < c.size(); j++) {
                 
                 Lit q = c[j];
-
+                
                 if(!seen[var(q)]) {
                     if(level(var(q)) == 0) {
+            
                     } else { // Here, the old case
                         if(!isSelector(var(q)))
                             varBumpActivity(var(q));
@@ -754,9 +756,12 @@ void Solver::analyze(CRef confl, vec <Lit> &out_learnt, vec <Lit> &selectors, in
                                 out_learnt.push(q);
                         }
                     }
-                } //else stats[sumResSeen]++;
-            }
+                }else{
 
+                }
+                    //else stats[sumResSeen]++;
+            }
+            
         }else{
             assert(confl != CRef_Undef); // (otherwise should be UIP)
             Clause &c = ca[confl];
@@ -1125,6 +1130,7 @@ CRef Solver::propagate() {
         else {AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(var(p)));}
         std::cout << " as "<<(value(p) == l_True ? "True" : "False")<<std::endl;
         #endif
+        
         int lit = !sign(p) ? var(p): -var(p); 
         bool noConflict = confl == CRef_Undef;
         
@@ -1147,7 +1153,7 @@ CRef Solver::propagate() {
                 uncheckedEnqueue(imp, wbin[k].cref);
             }
         }
-
+    
         // Now propagate other 2-watched clauses
         for(i = j = (Watcher *) ws, end = i + ws.size(); i != end;) {
             // Try to avoid inspecting the clause:
@@ -1623,8 +1629,9 @@ lbool Solver::search(int nof_conflicts) {
         std::cout << "PropagateFromSearch"<<std::endl;
         #endif
         CRef confl = propagate();
-
+        
         if(confl != CRef_Undef) {
+
             #if defined(DEBUG_PROP) || defined(TRACE_SOLVER)
             std::cout << "   Conflict detected" <<std::endl;
             #endif
@@ -1676,7 +1683,6 @@ lbool Solver::search(int nof_conflicts) {
 
             learnt_clause.clear();
             selectors.clear();
-            
             analyze(confl, learnt_clause, selectors, backtrack_level, nblevels, szWithoutSelectors);
             
             stats[sumSizes]+= learnt_clause.size();
@@ -2010,8 +2016,6 @@ lbool Solver::solve_(bool do_simp, bool turn_off_simp) // Parameters are useless
                 if(t != NULL && t->isFalse()) {std::cout<<"-";AuxMapHandler::getInstance().printTuple(t);}
                 std::cout << std::endl;
                 // if(t != NULL && t->isFalse()) {std::cout << ":-";AuxMapHandler::getInstance().printTuple(t);}
-                if(t->getPredicateName() == AuxMapHandler::getInstance().get_edge()){
-                }
             }
             std::cout << "END MODEL"<<std::endl;
             std::cout << std::endl;

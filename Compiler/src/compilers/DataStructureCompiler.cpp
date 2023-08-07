@@ -12,7 +12,7 @@ void DataStructureCompiler::printAuxMap()const{
 void DataStructureCompiler::addAuxMap(std::string predicate,std::vector<unsigned> terms){
     auxMapNameForPredicate[predicate].insert(terms);
 }
-void DataStructureCompiler::buildAuxMapHandler(std::string executablePath,const std::vector<std::string>& predNames){
+void DataStructureCompiler::buildAuxMapHandler(std::string executablePath,const std::vector<std::string>& predNames,const std::unordered_map<std::string,std::string>& predicateToStruct){
     Indentation ind(0);
     std::string executorPath = executablePath + "/../../glucose-4.2.1/sources/simp/solver/AuxMapHandler.h";
     std::ofstream outfile(executorPath);
@@ -71,11 +71,13 @@ void DataStructureCompiler::buildAuxMapHandler(std::string executablePath,const 
                         std::string printElse = !firstIf ? "else " : "";
                         auto it = auxMaps.find(predicate);
                         if(it!=auxMaps.end()){
+                            auto itPredStruct = predicateToStruct.find(predicate);
+                            std::string predStruct = itPredStruct == predicateToStruct.end() ? "" : itPredStruct->second;
                             outfile << ind++ << printElse << "if(insertResult.first->getPredicateName() == AuxMapHandler::getInstance().get_"<<predicate<<"()){\n";
                             for(const std::vector<unsigned>& indices : it->second){
                                 outfile << ind << "AuxMapHandler::getInstance().get_"<<pair.second<< predicate << "_";
                                 for(unsigned k :indices) outfile << k << "_";
-                                outfile <<"()->insert2Vec(*insertResult.first);\n";
+                                outfile <<"()->insert2"<<predStruct<<"(*insertResult.first);\n";
                             }
                             outfile << --ind << "}\n";
                             firstIf=false;        

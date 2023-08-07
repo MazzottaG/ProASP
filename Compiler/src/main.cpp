@@ -49,11 +49,71 @@ int main(int argc, char *argv[])
 	}
 	r.getGeneratorProgram().print();
 	std::cout<<"-----\n";
-    exit(180);
 
 	std::cout<<"Propagator Program\n";
 	std::cout<<"-----\n";
 	r.getPropagatorsProgram().print();
+	const aspc::Program* prgProp = &r.getPropagatorsProgram();
+	const aspc::Program* prgGen = &r.getGeneratorProgram();
+	const aspc::Program* prgLazy = &analyzer.getLazy();
+	const aspc::Program* prgDatalog = &analyzer.getDatalog();
+	std::unordered_map<std::string,std::string> predicateToStruct;
+	std::unordered_map<std::string,unsigned> predicateToAggrIndex;
+	std::unordered_map<std::string,std::string> aggrIdToAggrSet;
+	for(unsigned ruleId = 0; ruleId<prgProp->getRulesSize(); ruleId++){
+		const aspc::Rule* rule = &prgProp->getRule(ruleId);
+		if(rule->containsAggregate() && rule->getArithmeticRelationsWithAggregate()[0].getAggregate().isSum()){
+			const aspc::Atom* head = &rule->getHead()[0];
+			const aspc::Literal* body = &rule->getArithmeticRelationsWithAggregate()[0].getAggregate().getAggregateLiterals()[0];
+			std::string aggrIdTuple = head->getPredicateName();
+			std::string aggrSetTuple = body->getPredicateName();
+			for(unsigned k=0; k<head->getAriety(); k++){
+				aggrIdTuple+="@"+head->getTermAt(k);
+			}
+			for(unsigned k=0; k<body->getAriety(); k++){
+				aggrSetTuple+="@"+body->getTermAt(k);
+			}
+
+			aggrIdToAggrSet[aggrIdTuple]=aggrSetTuple;
+		}
+	}
+	for(const aspc::Program* prg : {prgProp,prgGen,prgLazy,prgDatalog})
+		for(unsigned ruleId = 0; ruleId<prg->getRulesSize(); ruleId++){
+			const aspc::Rule* rule = &prg->getRule(ruleId);
+			const std::vector<aspc::Atom>* head = &rule->getHead();
+			for(unsigned id = 0; id<head->size(); id++){
+				std::string predicate = head->at(id).getPredicateName();
+				predicateToStruct.emplace(predicate,"Vec");
+			}
+			const std::vector<aspc::Literal>* body = &rule->getBodyLiterals();
+			for(unsigned id = 0; id<body->size(); id++){
+				std::string predicate = body->at(id).getPredicateName();
+				predicateToStruct.emplace(predicate,"Vec");
+			}
+			const std::vector<aspc::ArithmeticRelationWithAggregate>* aggregates = &rule->getArithmeticRelationsWithAggregate();
+			for(unsigned id = 0; id<aggregates->size(); id++){
+				const aspc::ArithmeticRelationWithAggregate* aggregate = &aggregates->at(id);
+				const std::vector<aspc::Literal>* aggregateBody = &aggregate->getAggregate().getAggregateLiterals();
+				for(unsigned id1 = 0; id1<aggregateBody->size(); id1++){
+					// WARNING: works with the assumption that only one literal appears in the aggregate body
+					const aspc::Literal* lit = &aggregateBody->at(id1);
+					std::string predicate = lit->getPredicateName();
+					predicateToStruct[predicate]="Set";
+					std::string aggrVar = aggregate->getAggregate().getAggregateVariables().at(0);
+					for(unsigned k = 0; k < lit->getAriety();k++){
+						if(lit->isVariableTermAt(k) && lit->getTermAt(k) == aggrVar){
+							predicateToAggrIndex[predicate] = k;
+							break;
+						}
+					}
+				}
+			}
+		}
+	std::cout << " %%%%%%%%%%%%%%% Pred to Struct %%%%%%%%%%%%%%% "<<std::endl;
+	for(auto pair : predicateToStruct){
+		std::cout << pair.first << " -> "<<pair.second<<std::endl;
+	}
+	std::cout << " %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% "<<std::endl;
 	std::cout<<"-----\n";
 	std::cout<<"Builder finished\n";
 	std::string executablePathAndName = argv[0];
@@ -66,15 +126,15 @@ int main(int argc, char *argv[])
 	}
 	DataStructureCompiler dc;
 	std::unordered_set<std::string> originalPredicates(reader.getOriginalPredicates());
-	GeneratorCompiler datalogCompiler (analyzer.getDatalog(),executablePath,analyzer.getIdToPredicate(),analyzer.getPredicateToId(),&dc,true,originalPredicates,"InstanceExpansion",true,"InstExp",false);
+	GeneratorCompiler datalogCompiler (analyzer.getDatalog(),executablePath,analyzer.getIdToPredicate(),analyzer.getPredicateToId(),&dc,true,originalPredicates,"InstanceExpansion",true,"InstExp",false,predicateToStruct);
 	datalogCompiler.compile();
 	// GeneratorCompiler genCompiler (r.getGeneratorProgram(),executablePath,r.getPredicateNames(),r.getPredicateId(),&dc,true,originalPredicates,"Generator",false,"Comp",false);
 	// genCompiler.compile();
-	HybridGenerator genCompiler(r.getGeneratorProgram(), generatorRuleLabel, executablePath, r.getPredicateNames(), r.getPredicateId(), &dc,originalPredicates);
+	HybridGenerator genCompiler(r.getGeneratorProgram(), generatorRuleLabel, executablePath, r.getPredicateNames(), r.getPredicateId(), &dc,originalPredicates,predicateToStruct,predicateToAggrIndex,aggrIdToAggrSet);
 	genCompiler.compile();
-	GeneratorCompiler lazyCompiler (analyzer.getLazy(),executablePath,analyzer.getIdToPredicate(),analyzer.getPredicateToId(),&dc,true,originalPredicates,"ModelExpansion",true,"ModExp",true);
+	GeneratorCompiler lazyCompiler (analyzer.getLazy(),executablePath,analyzer.getIdToPredicate(),analyzer.getPredicateToId(),&dc,true,originalPredicates,"ModelExpansion",true,"ModExp",true,predicateToStruct);
 	lazyCompiler.compile();
-	PropagatorCompiler propCompiler (r.getPropagatorsProgram(),executablePath,&dc);
+	PropagatorCompiler propCompiler (r.getPropagatorsProgram(),executablePath,&dc,predicateToStruct);
 	propCompiler.compile();
-	dc.buildAuxMapHandler(executablePath,r.getPredicateNames());
+	dc.buildAuxMapHandler(executablePath,r.getPredicateNames(),predicateToStruct);
 }

@@ -72,6 +72,9 @@ class VectorAsSet
         bool insert( const T& value );
         
         inline unsigned size() const;
+        inline unsigned capacity() const {return data.capacity();}
+
+        T* getData(){ return data.data();}
         
     private:
         VectorAsSet( const VectorAsSet& init );

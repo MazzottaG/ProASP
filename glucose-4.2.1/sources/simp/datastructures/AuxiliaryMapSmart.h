@@ -65,7 +65,7 @@ public:
     virtual ~AuxiliaryMapSmart() {
     }
 
-    inline const std::vector< int >& getValuesVec(const std::vector<int>& key) const {
+    inline std::vector< int >& getValuesVec(const std::vector<int>& key) {
         std::bitset<S> keyCode;
         valueToPos(key,keyCode);
         const auto it = tuples.find(keyCode);
@@ -87,7 +87,7 @@ public:
     // }
 
     // inline const std::set< int, AggregateSetCmp >& getValuesSet(const std::vector<int>& key) const {
-    inline const IndexedSet& getValuesSet(const std::vector<int>& key) const {
+    inline IndexedSet& getValuesSet(const std::vector<int>& key) {
         std::bitset<S> keyCode;
         valueToPos(key,keyCode);
         const auto it = tuples.find(keyCode);
@@ -181,21 +181,21 @@ protected:
     // std::unordered_map<std::bitset<S>, std::variant < std::vector< int >, std::variant< std::set< int, AggregateSetCmp>, std::set<int> > > > tuples;
     unsigned keySize;
     std::vector<unsigned> keyIndices;
-    static const std::vector< int > EMPTY_RESULT_VEC;
+    static std::vector< int > EMPTY_RESULT_VEC;
     // static const std::set< int, AggregateSetCmp > EMPTY_RESULT_SET;
-    static const IndexedSet EMPTY_RESULT_SET;
+    static IndexedSet EMPTY_RESULT_SET;
 
 
 };
 
 template<size_t S>
-const std::vector< int > AuxiliaryMapSmart<S>::EMPTY_RESULT_VEC;
+std::vector< int > AuxiliaryMapSmart<S>::EMPTY_RESULT_VEC;
 
 // template<size_t S>
 // const std::set< int, AggregateSetCmp > AuxiliaryMapSmart<S>::EMPTY_RESULT_SET;
 
 template<size_t S>
-const IndexedSet AuxiliaryMapSmart<S>::EMPTY_RESULT_SET;
+IndexedSet AuxiliaryMapSmart<S>::EMPTY_RESULT_SET;
 
 #endif /* AUXILIARYMAPSMART_H */
 

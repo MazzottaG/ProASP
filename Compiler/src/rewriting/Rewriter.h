@@ -46,6 +46,7 @@ class Rewriter{
         std::unordered_map<std::string,unsigned> auxPredicateId;
 
         std::unordered_map<std::string,AggrSetPredicate> aggrSetPredicates;
+        std::unordered_map<std::string,int> prgPredicatAsAggSet;
         std::unordered_set<std::string> bodyPredicates;
         std::unordered_set<std::string> aggrIdPredicates;
 

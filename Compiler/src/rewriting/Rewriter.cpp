@@ -193,13 +193,51 @@ std::pair<bool,std::pair<std::string,AggrSetPredicate>> Rewriter::buildAggregate
         }
         
     }else{
-
         //Aggregate contains only one bound literal considering body variables and aggregation variables
-        
         const aspc::Literal* literal = &aggregateLiterals[0];
-        aggregateSetPredicate=literal->getPredicateName();
-        for(unsigned i=0; i<literal->getAriety(); i++){
-            aggrSet.addTerm(literal->getTermAt(i));
+        int prevAggrVarIndex = prgPredicatAsAggSet.count(literal->getPredicateName()) != 0 ? prgPredicatAsAggSet[literal->getPredicateName()] : -1;
+        int aggrVarIndex = -1;
+        std::string aggrVar = aggregareRelation.getAggregate().getAggregateVariables()[0];
+        for(unsigned k = 0; k<literal->getAriety(); k++){
+            if(literal->isVariableTermAt(k) && literal->getTermAt(k) == aggrVar){
+                if(k == prevAggrVarIndex){
+                    aggrVarIndex=prevAggrVarIndex;
+                    break;
+                }else if(aggrVarIndex < 0){
+                    aggrVarIndex = k;
+                }
+            }
+        }
+        if(prevAggrVarIndex < 0 || prevAggrVarIndex == aggrVarIndex){
+            aggregateSetPredicate=literal->getPredicateName();
+            prgPredicatAsAggSet[aggregateSetPredicate]=aggrVarIndex;
+            for(unsigned i=0; i<literal->getAriety(); i++){
+                aggrSet.addTerm(literal->getTermAt(i));
+            }        
+        }else{
+            clearData();
+            buildingHead.push_back(aspc::Atom(aggregateSetPredicate,literal->getTerms()));
+            buildingBody.push_back(*literal);
+            std::unordered_set<std::string> aggrSetDistinctTerms;
+            for(std::string v :aggregareRelation.getAggregate().getAggregateVariables()){
+                if(aggrSetDistinctTerms.count(v)==0){
+                    aggrSetDistinctTerms.insert(v);
+                    aggrSet.addTerm(v);
+                }
+            }
+            for(const aspc::Literal& l:aggregateLiterals){
+                for(unsigned i=0; i<l.getAriety(); i++){
+                    std::string v = l.getTermAt(i);
+                    if((!l.isVariableTermAt(i) || bodyVariables.count(v)!=0) && aggrSetDistinctTerms.count(v)==0){
+                        aggrSetDistinctTerms.insert(v);
+                        aggrSet.addTerm(v);
+                    }
+                }
+                aggrSet.addLiteral(l);
+            }      
+            aggrSetPredicates[aggregateSetPredicate]=aggrSet;
+            addRuleAfterAggregate();
+            writeRule=true;
         }
     }
     return std::pair<bool,std::pair<std::string,AggrSetPredicate>>(writeRule,std::pair<std::string,AggrSetPredicate>(aggregateSetPredicate,aggrSet));
@@ -458,6 +496,20 @@ void Rewriter::computeGlobalPredicates(){
         predicateId[predicate]=predicateNames.size();
         predicateNames.push_back(predicate);
     }
+    for(std::string predicate : aggrIdPredicates){
+        predicateId[predicate]=predicateNames.size();
+        predicateNames.push_back(predicate);
+    }
+    for(auto predicate : aggrSetPredicates){
+        if(predicate.first == "") continue;
+        predicateId[predicate.first]=predicateNames.size();
+        predicateNames.push_back(predicate.first);
+    }
+    for(std::string predicate : bodyPredicates){
+        predicateId[predicate]=predicateNames.size();
+        predicateNames.push_back(predicate);
+    }
+    
 }
 void Rewriter::computeCompletion(){
     for(unsigned i=0; i<afterAggregate.getRulesSize(); i++){
@@ -484,7 +536,18 @@ void Rewriter::computeCompletion(){
             }
         }
         std::vector<aspc::Literal> bodyLiterals = rule.getBodyLiterals();
-        if(rule.getBodySize() > 1){
+        bool analyze_body = rule.getBodySize() > 1;
+        if(!analyze_body && rule.getBodyLiterals().size() >= 1){
+            const aspc::Literal* literal = &rule.getBodyLiterals()[0];
+            for(unsigned k = 0; k < literal->getAriety(); k++){
+                for(unsigned k1 = k+1; k1 < literal->getAriety(); k1++){
+                    if(literal->isVariableTermAt(k) && literal->isVariableTermAt(k1) && literal->getTermAt(k) == literal->getTermAt(k1)){
+                        analyze_body=true;
+                    }
+                }   
+            }
+        } 
+        if(analyze_body){
             std::unordered_set<std::string> positiveBodyVars;
             std::vector<std::string> auxTerms;
             for(unsigned k=0; k<bodyLiterals.size(); k++){

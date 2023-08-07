@@ -110,6 +110,13 @@ public:
         copy.sz = sz;
         memcpy(copy.data,data,sizeof(T)*cap);
     }
+    
+    //// ADDED FOR COPYING VectorAsSet
+    void copyFrom(T* content,int size){
+        clear();
+        growTo(size);
+        memcpy(data,content,sizeof(T)*size);
+    }
 
 };
 

@@ -6,17 +6,20 @@ void AbstractGeneratorCompiler::compileSingleStarter(bool recursive,std::vector<
     unsigned closingPars = 1;
     if(starter < rule->getFormulas().size()){
         const aspc::Literal* startingLit = (const aspc::Literal*) rule->getFormulas()[starter];
-        outfile << ind++ << "if(starter->getPredicateName() == AuxMapHandler::getInstance().get_"<<startingLit->getPredicateName()<<"()){\n";
-        for(unsigned k=0; k<startingLit->getAriety(); k++){
-            if(!startingLit->isVariableTermAt(k) || boundVars.count(startingLit->getTermAt(k))){
-                std::string term = isInteger(startingLit->getTermAt(k)) || startingLit->isVariableTermAt(k) ? startingLit->getTermAt(k) : "ConstantsManager::getInstance().mapConstant("+startingLit->getTermAt(k)+")";
-                outfile << ind++ << "if(starter->at("<<k<<") == " << term << "){\n";
-                closingPars++;
-            }else{
-                outfile << ind << "int "<<startingLit->getTermAt(k) << " = starter->at(" <<k<< ");\n"; 
-                boundVars.insert(startingLit->getTermAt(k));
+        if(startingLit->getPredicateName() != ""){
+            outfile << ind++ << "if(starter->getPredicateName() == AuxMapHandler::getInstance().get_"<<startingLit->getPredicateName()<<"()){\n";
+            for(unsigned k=0; k<startingLit->getAriety(); k++){
+                if(!startingLit->isVariableTermAt(k) || boundVars.count(startingLit->getTermAt(k))){
+                    std::string term = isInteger(startingLit->getTermAt(k)) || startingLit->isVariableTermAt(k) ? startingLit->getTermAt(k) : "ConstantsManager::getInstance().mapConstant(\""+startingLit->getTermAt(k)+"\")";
+                    outfile << ind++ << "if(starter->at("<<k<<") == " << term << "){\n";
+                    closingPars++;
+                }else{
+                    outfile << ind << "int "<<startingLit->getTermAt(k) << " = starter->at(" <<k<< ");\n"; 
+                    boundVars.insert(startingLit->getTermAt(k));
+                }
             }
-        }
+        }else
+            closingPars=0;
     }else{
         outfile << ind++ << "{\n";
     }
@@ -24,6 +27,7 @@ void AbstractGeneratorCompiler::compileSingleStarter(bool recursive,std::vector<
         const aspc::Formula* f = rule->getFormulas()[index];
         if(f->isLiteral()){
             const aspc::Literal* lit = (const aspc::Literal*)f;
+            if(lit->getPredicateName() == "") continue;
             if(lit->isBoundedLiteral(boundVars)){
                 outfile << ind << "Tuple* tuple_"<<index<<"=TupleFactory::getInstance().find({";
                 for(unsigned k=0; k<lit->getAriety(); k++){
@@ -45,6 +49,8 @@ void AbstractGeneratorCompiler::compileSingleStarter(bool recursive,std::vector<
                 std::string mapName = lit->getPredicateName()+"_";
                 std::string terms = "";
                 std::unordered_set<int> boundIndices;
+                std::string predStruct = predicateToStruct[lit->getPredicateName()];
+                std::string structType = predStruct == "Vec" ? "std::vector<int>*" : "IndexedSet*";
 
                 for(unsigned k=0; k<lit->getAriety(); k++){
                     if(!lit->isVariableTermAt(k) || boundVars.count(lit->getTermAt(k))){
@@ -54,11 +60,14 @@ void AbstractGeneratorCompiler::compileSingleStarter(bool recursive,std::vector<
                         boundIndices.insert(k);
                     }
                 }
-                outfile << ind << "const std::vector<int>* tuplesU_"<<index<<" = &"<<prefix<<"u"<<mapName<<"()->getValuesVec({"<<terms<<"});\n";
-                outfile << ind << "const std::vector<int>* tuples_"<<index<<" = &"<<prefix<<"p"<<mapName<<"()->getValuesVec({"<<terms<<"});\n";
-                outfile << ind++ << "for(unsigned i=0; i<tuples_"<<index<<"->size()+tuplesU_"<<index<<"->size(); i++){\n";
+                outfile << ind << structType<<" tuplesU_"<<index<<" = &"<<prefix<<"u"<<mapName<<"()->getValues"<<predStruct<<"({"<<terms<<"});\n";
+                outfile << ind << structType<<" tuples_"<<index<<" = &"<<prefix<<"p"<<mapName<<"()->getValues"<<predStruct<<"({"<<terms<<"});\n";
+                
+                outfile << ind++ << "for(auto i=tuples_"<<index<<"->begin(); i!=tuplesU_"<<index<<"->end(); i++){\n";
                 closingPars++;
-                    outfile << ind << "Tuple* tuple_"<<index<<"= i<tuples_"<<index<<"->size() ? TupleFactory::getInstance().getTupleFromInternalID(tuples_"<<index<<"->at(i)) : TupleFactory::getInstance().getTupleFromInternalID(tuplesU_"<<index<<"->at(i-tuples_"<<index<<"->size()));\n";
+                    outfile << ind << "if(i == tuples_"<<index<<"->end()) i=tuplesU_"<<index<<"->begin();\n";
+                    outfile << ind << "if(i == tuplesU_"<<index<<"->end()) break;\n";
+                    outfile << ind << "Tuple* tuple_"<<index<<"= TupleFactory::getInstance().getTupleFromInternalID(*i);\n";
                     outfile << ind++ << "if(tuple_"<<index<<"!= NULL){\n";
                     closingPars++;
                 for(unsigned k=0; k<lit->getAriety(); k++){
@@ -114,7 +123,7 @@ void AbstractGeneratorCompiler::compileSingleStarter(bool recursive,std::vector<
                         outfile << ind << "while (head_"<<index<<"->getId() >= solver->nVars()) {solver->setFrozen(solver->newVar(),true);}\n";
                     outfile << --ind << "}\n";                        
                 }  
-            outfile << --ind << "}\n";                              
+            outfile << --ind << "}//close if fact\n";                              
         }
     }else{
         printAddConstraintClause(order,starter < rule->getFormulas().size());

@@ -8,7 +8,7 @@
 class AbstractGeneratorCompiler{
 
     public:
-        AbstractGeneratorCompiler(std::ofstream& file,int indentation,const aspc::Rule* r,const std::vector<std::string>& predNames,const std::unordered_map<std::string,unsigned>& predIds):outfile(file),ind(indentation),rule(r),predicateNames(predNames),predicateIds(predIds),auxliteral("aux_body"){}
+        AbstractGeneratorCompiler(std::ofstream& file,int indentation,const aspc::Rule* r,const std::vector<std::string>& predNames,const std::unordered_map<std::string,unsigned>& predIds,const std::unordered_map<std::string,std::string>& predToStruct):outfile(file),ind(indentation),rule(r),predicateNames(predNames),predicateIds(predIds),auxliteral("aux_body"),predicateToStruct(predToStruct){}
         
         void compileFromStarter(bool recursive);
         void compileNoStarter(bool recursive);
@@ -33,5 +33,6 @@ class AbstractGeneratorCompiler{
 
         std::unordered_map<std::string,std::set<std::vector<unsigned>>> usedAuxMap;
         const std::string auxliteral; 
+        std::unordered_map<std::string,std::string> predicateToStruct;
 };
 #endif

@@ -125,7 +125,7 @@ void GeneratorCompiler::compileComponentRules(std::ofstream& outfile,Indentation
         closingPars++;
         for(unsigned k=0; k<startingLit->getAriety(); k++){
             if(!startingLit->isVariableTermAt(k) || boundVars.count(startingLit->getTermAt(k))){
-                std::string term = isInteger(startingLit->getTermAt(k)) || startingLit->isVariableTermAt(k) ? startingLit->getTermAt(k) : "ConstantsManager::getInstance().mapConstant("+startingLit->getTermAt(k)+")";
+                std::string term = isInteger(startingLit->getTermAt(k)) || startingLit->isVariableTermAt(k) ? startingLit->getTermAt(k) : "ConstantsManager::getInstance().mapConstant(\""+startingLit->getTermAt(k)+"\")";
                 outfile << ind++ << "if(starter->at("<<k<<") == " << term << "){\n";
                 closingPars++;
             }else{
@@ -169,6 +169,8 @@ void GeneratorCompiler::compileComponentRules(std::ofstream& outfile,Indentation
                 std::string mapName = lit->getPredicateName()+"_";
                 std::string terms = "";
                 std::unordered_set<int> boundIndices;
+                std::string predStruct = predicateToStruct[lit->getPredicateName()];
+                std::string structType = predStruct == "Vec" ? "std::vector<int>*" : "IndexedSet*";
 
                 for(unsigned k=0; k<lit->getAriety(); k++){
                     if(!lit->isVariableTermAt(k) || boundVars.count(lit->getTermAt(k))){
@@ -178,18 +180,23 @@ void GeneratorCompiler::compileComponentRules(std::ofstream& outfile,Indentation
                         boundIndices.insert(k);
                     }
                 }
-                outfile << ind << "const std::vector<int>* tuples_"<<index<<" = &"<<prefix<<"p"<<mapName<<"()->getValuesVec({"<<terms<<"});\n";
+
+                outfile << ind << structType <<" tuples_"<<index<<" = &"<<prefix<<"p"<<mapName<<"()->getValues"<<predStruct<<"({"<<terms<<"});\n";
+                if(!isDatalog){
+                    outfile << ind << structType << " tuplesU_"<<index<<" = &"<<prefix<<"u"<<mapName<<"()->getValues"<<predStruct<<"({"<<terms<<"});\n";
+                }
                 if(!isDatalog)
-                    outfile << ind << "const std::vector<int>* tuplesU_"<<index<<" = &"<<prefix<<"u"<<mapName<<"()->getValuesVec({"<<terms<<"});\n";
-                if(!isDatalog)
-                    outfile << ind++ << "for(unsigned i=0; i<tuples_"<<index<<"->size()+tuplesU_"<<index<<"->size(); i++){\n";
+                    outfile << ind++ << "for(auto i=tuples_"<<index<<"->begin(); i != tuplesU_"<<index<<"->end(); i++){\n";
                 else
-                    outfile << ind++ << "for(unsigned i=0; i<tuples_"<<index<<"->size(); i++){\n";
+                    outfile << ind++ << "for(auto i=tuples_"<<index<<"->begin(); i != tuples_"<<index<<"->end(); i++){\n";
                 closingPars++;
-                    if(!isDatalog)
-                        outfile << ind << "Tuple* tuple_"<<index<<"= i<tuples_"<<index<<"->size() ? TupleFactory::getInstance().getTupleFromInternalID(tuples_"<<index<<"->at(i)) : TupleFactory::getInstance().getTupleFromInternalID(tuplesU_"<<index<<"->at(i-tuples_"<<index<<"->size()));\n";
+                    if(!isDatalog){
+                        outfile << ind << "if(i==tuples_"<<index<<"->end()) i=tuplesU_"<<index<<"->begin();\n";
+                        outfile << ind << "if(i==tuplesU_"<<index<<"->end()) break;\n";
+                        outfile << ind << "Tuple* tuple_"<<index<<"= TupleFactory::getInstance().getTupleFromInternalID(*i);\n";
+                    }
                     else
-                        outfile << ind << "Tuple* tuple_"<<index<<"= TupleFactory::getInstance().getTupleFromInternalID(tuples_"<<index<<"->at(i));\n";
+                        outfile << ind << "Tuple* tuple_"<<index<<"= TupleFactory::getInstance().getTupleFromInternalID(*i);\n";
 
                     outfile << ind++ << "if(tuple_"<<index<<"!= NULL){\n";
                     closingPars++;

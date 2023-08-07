@@ -5,7 +5,7 @@
 
 class GrounderGenCompiler : public AbstractGeneratorCompiler{
     public:
-        GrounderGenCompiler(std::ofstream& file,int indentation,const aspc::Rule* r,const std::vector<std::string>& predNames,const std::unordered_map<std::string,unsigned>& predIds):AbstractGeneratorCompiler(file,indentation,r,predNames,predIds){}
+        GrounderGenCompiler(std::ofstream& file,int indentation,const aspc::Rule* r,const std::vector<std::string>& predNames,const std::unordered_map<std::string,unsigned>& predIds,const std::unordered_map<std::string,std::string>& predicateToStruct):AbstractGeneratorCompiler(file,indentation,r,predNames,predIds,predicateToStruct){}
             
         std::string concreteClass(){return "BasicGenerator";}
         void printAddClause(std::vector<unsigned>,bool);

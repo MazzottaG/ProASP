@@ -82,6 +82,8 @@ class TupleFactory{
         static std::vector<AbstractPropagator*> EMPTY_WATCHER;
 
         std::vector<unsigned> visibleTuple;
+        std::unordered_map<int,int> actualSum;
+        std::unordered_map<int,int> possibleSum;
 
         //TODO Remove
         std::unordered_map<int,TupleLight*> waspIDToTuple;
@@ -126,6 +128,33 @@ class TupleFactory{
             int elem = empty ? 0 : *trackedForSupport.begin();
             if(!empty) trackedForSupport.erase(elem);
             return std::make_pair(!empty, elem);
+        }
+
+        int& getActualSumForLit(int lit){
+            return actualSum[lit];
+        }
+
+        int& getPossibleSumForLit(int lit){
+            return possibleSum[lit];
+        }
+
+        void incrementActualSumForLit(int lit,int val){
+            if(actualSum.count(lit)) actualSum[lit]+=val;
+        }
+
+        void incrementPossibleSumForLit(int lit,int val){
+            if(possibleSum.count(lit)) possibleSum[lit]+=val;
+        }
+        
+        void decrementActualSumForLit(int lit,int val){
+            if(actualSum.count(lit)) actualSum[lit]-=val;
+        }
+
+        void decrementPossibleSumForLit(int lit,int val){
+            if(possibleSum.count(lit)) possibleSum[lit]-=val;
+        }
+        std::unordered_map<int,int>& possibleSums(){
+            return possibleSum;
         }
         Glucose::vec<Glucose::Lit>& explain(unsigned var){
             assert(var<internalIDToTuple.size());

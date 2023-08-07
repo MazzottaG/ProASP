@@ -428,9 +428,11 @@ int main(int argc, char** argv)
                 lits.clear();
                 lits.push( mkLit(id));
                 solver->addClause_(lits);
+                std::cout << "Addeded "<<var(mkLit(id))<<" at level "<<solver->getLiteralLevel(var(mkLit(id)))<<std::endl;
                 if(!solver->okay())
                     break;
             }
+
             while (!falseAtoms.empty()){
                 int id = falseAtoms.back();
                 falseAtoms.pop_back();
@@ -512,7 +514,8 @@ int main(int argc, char** argv)
         }else{
             std::cout << "no dimacs"<<std::endl;
         }
-
+        std::cout << "Start solving"<<std::endl;
+            
         vec<Lit> dummy;
         lbool ret = S.solveLimited(dummy);
 

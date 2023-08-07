@@ -11,16 +11,21 @@
 
 class PropagatorCompiler{
     public:
-        PropagatorCompiler(const aspc::Program& pg,const std::string& execPath, DataStructureCompiler* mapCompiler):program(pg), executablePath(execPath), auxMapCompiler(mapCompiler),builtSCC(false){}
+        PropagatorCompiler(const aspc::Program& pg,const std::string& execPath, DataStructureCompiler* mapCompiler,const std::unordered_map<std::string,std::string>& predToStruct):program(pg), executablePath(execPath), auxMapCompiler(mapCompiler),builtSCC(false),predicateToStruct(predToStruct){}
         void compile();
         void buildAuxMapHandler();
         void compileRuleLevelZero(unsigned ruleId,std::ofstream&,Indentation&);
         void compileRuleWatcher(unsigned ruleId,std::ofstream&,Indentation&);
         void compileRuleFromStarter(unsigned ruleId, std::ofstream&, Indentation&);
+        void compileEagerRuleWithCount(unsigned, std::ofstream&, Indentation&,bool);
+        void compileEagerRuleWithSum(unsigned, std::ofstream&, Indentation&,bool);
+        void compileEagerRuleWithAggregate(unsigned, std::ofstream&, Indentation&,bool);
+
         void printTuplePropagation(std::ofstream& outfile,Indentation& ind, std::string tuple,bool asFalse,bool level0 ,bool constraint = false);
         void printAddPropagatedToReason(std::ofstream& outfile,Indentation& ind, std::string tuplename,bool asFalse,bool constraint=false);
         void printAddToReason(std::ofstream& outfile,Indentation& ind, std::string var,std::string sign);
-        void printAddToReason(std::ofstream& outfile,Indentation& ind, std::string tuplename,bool asFalse,std::string reasonStorage);
+        void printUpdateSum(std::ofstream& outfile, Indentation& ind,bool);
+        // void printAddToReason(std::ofstream& outfile,Indentation& ind, std::string tuplename,bool asFalse,std::string reasonStorage);
 
         void printConflict(std::ofstream& outfile,Indentation& ind, bool level0);
         
@@ -43,5 +48,7 @@ class PropagatorCompiler{
         std::vector<std::vector<int>> scc;
         std::vector<std::set<std::string>> components;
         bool builtSCC;
+
+        std::unordered_map<std::string,std::string> predicateToStruct;
 };
 #endif

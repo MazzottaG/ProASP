@@ -42,10 +42,10 @@ void ProgramReader::labelHybridRule(aspc::Program& program, std::vector<bool>& c
     for(std::string predicate : toGroundPredicates){
 		if(propagatorPredicates.count(predicate)){
 			int i=0;
-			while(predicateToId.count(predicate+"_"+std::to_string(i))) i++;
-			remapped_predicates.insert({predicate,predicate+"_"+std::to_string(i)});
-			predicateToId[predicate+"_"+std::to_string(i)]=idToPredicate.size();
-			idToPredicate.push_back(predicate+"_"+std::to_string(i));
+			while(predicateToId.count(predicate+"__"+std::to_string(i))) i++;
+			remapped_predicates.insert({predicate,predicate+"__"+std::to_string(i)});
+			predicateToId[predicate+"__"+std::to_string(i)]=idToPredicate.size();
+			idToPredicate.push_back(predicate+"__"+std::to_string(i));
 		}
 	}
 	rewriteGroundingPredicate(program,currenLabel,idToPredicate,predicateToId);

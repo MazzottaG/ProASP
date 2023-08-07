@@ -393,9 +393,18 @@ public:
       exit(180);
     }
     unsigned size = terminals.size();
+
     aspc::ArithmeticExpression right = terminals.back() == "" ? buildingExpression.back() : aspc::ArithmeticExpression(terminals.back());
-    aspc::ArithmeticExpression left = terminals[terminals.size()-3] == "" ? buildingExpression[buildingExpression.size()-2] : aspc::ArithmeticExpression(terminals[terminals.size()-3]);
-    buildingRels.push_back(aspc::ArithmeticRelation(left,right,aspc::ArithmeticRelation::string2ComparisonType[terminals[terminals.size()-2]]));
+    if(terminals.back() == ""){
+      buildingExpression.pop_back();
+    }
+
+    aspc::ArithmeticExpression left = terminals[size-3] == "" ? buildingExpression.back() : aspc::ArithmeticExpression(terminals[size-3]);
+    if(terminals[size-3] == ""){
+      buildingExpression.pop_back();
+    }
+
+    buildingRels.push_back(aspc::ArithmeticRelation(left,right,aspc::ArithmeticRelation::string2ComparisonType[terminals[size-2]]));
     terminals.pop_back();
     terminals.pop_back();
     terminals.pop_back();
@@ -512,12 +521,18 @@ public:
   }
   void endGuard(){
     aggrComparison = aspc::ArithmeticRelation::string2ComparisonType[terminals[guardStartIndex]];
-    for(int i=guardStartIndex;i<terminals.size();i++)
-      std::cout << terminals[i]<< " ";
     if(isGuardExpression) {
       aspc::ArithmeticExpression* exp = &buildingExpression.back();
+      std::cout << "Found expression guard ";
       guard.copy(exp);
       buildingExpression.pop_back();
+      std::cout << guard.getStringRep();
+    }else{
+      // terminals should be of the form ...... operator guard
+      assert(terminals.size()-guardStartIndex == 2);
+      aspc::ArithmeticExpression exp(terminals.back());
+      std::cout << "Found term guard ";
+      guard.copy(&exp);
       std::cout << guard.getStringRep();
     }
     while(terminals.size()>guardStartIndex) terminals.pop_back();
@@ -746,7 +761,7 @@ public:
       for(std::string t : terminals) std::cout << " " << t;
       std::cout << std::endl;
   }
-  virtual void visitErrorNode(antlr4::tree::ErrorNode * /*node*/) override { }
+  virtual void visitErrorNode(antlr4::tree::ErrorNode * /*node*/) override { std::cout << "Parsing tree error node"<<std::endl; exit(180);}
 
 };
 

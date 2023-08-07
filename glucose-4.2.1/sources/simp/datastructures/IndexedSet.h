@@ -30,6 +30,7 @@ class IndexedSet{
     private:
         set<Index,Comp> storage;
         list<int> iterable;
+        list<int>::iterator currentIter;
     public:
         friend ostream& operator<< (ostream& out,const IndexedSet& s){
             for(int v : s.iterable){
@@ -81,6 +82,16 @@ class IndexedSet{
 
         list<int>::iterator end(){
             return iterable.end();
+        }
+
+        int at(unsigned pos){
+            int val = *currentIter;
+            currentIter++;
+            return val;
+        }
+
+        void reset(){
+            currentIter = begin();
         }
 };
 #endif
