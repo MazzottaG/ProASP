@@ -1,5 +1,14 @@
 #include "AbstractGeneratorCompiler.h"
 
+void AbstractGeneratorCompiler::printHeadDerivation(std::string tuplename){
+    outfile << ind << "const auto& insertResult = "<<tuplename<<"->setStatus(Undef);\n";
+    outfile << ind++ << "if(insertResult.second){\n";
+        outfile << ind << "TupleFactory::getInstance().removeFromCollisionsList("<<tuplename<<"->getId());\n";
+        outfile << ind << "AuxMapHandler::getInstance().insertUndef(insertResult);\n";
+        outfile << ind << "while ("<<tuplename<<"->getId() >= solver->nVars()) {solver->setFrozen(solver->newVar(),true);}\n";
+    outfile << --ind << "}\n";                        
+}
+
 void AbstractGeneratorCompiler::compileSingleStarter(bool recursive,std::vector<unsigned> order,unsigned starter){
     // if(order.empty() && starter >= rule->getFormulas().size()) return;
     std::unordered_set<std::string> boundVars;
@@ -23,8 +32,15 @@ void AbstractGeneratorCompiler::compileSingleStarter(bool recursive,std::vector<
     }else{
         outfile << ind++ << "{\n";
     }
+    if(!rule->isConstraint() && rule->getHead()[0].getPredicateName() == "sharedVar0"){
+        std::cout << "Start debugger"<<std::endl;
+    }
+    std::cout << "   Compiling ";
+    rule->print();
+    std::cout << "      Starter: " << starter<<std::endl;
     for(unsigned index : order){
         const aspc::Formula* f = rule->getFormulas()[index];
+        std::cout << "      Considering formula: "; f->print(); std::cout<<std::endl;
         if(f->isLiteral()){
             const aspc::Literal* lit = (const aspc::Literal*)f;
             if(lit->getPredicateName() == "") continue;
@@ -60,6 +76,7 @@ void AbstractGeneratorCompiler::compileSingleStarter(bool recursive,std::vector<
                         boundIndices.insert(k);
                     }
                 }
+
                 outfile << ind << structType<<" tuplesU_"<<index<<" = &"<<prefix<<"u"<<mapName<<"()->getValues"<<predStruct<<"({"<<terms<<"});\n";
                 outfile << ind << structType<<" tuples_"<<index<<" = &"<<prefix<<"p"<<mapName<<"()->getValues"<<predStruct<<"({"<<terms<<"});\n";
                 
@@ -84,7 +101,7 @@ void AbstractGeneratorCompiler::compileSingleStarter(bool recursive,std::vector<
                 if(!rule->isConstraint())
                     closingPars += printTrackedCheck("tuple_"+std::to_string(index));
             }
-        }else{
+        }else if(!f->containsAggregate()){
             const aspc::ArithmeticRelation* ineq = (const aspc::ArithmeticRelation*) f;
             if(f->isBoundedValueAssignment(boundVars)){
                 outfile << ind << "int "<<ineq->getAssignmentStringRep(boundVars)<<";"<<std::endl;
@@ -93,8 +110,12 @@ void AbstractGeneratorCompiler::compileSingleStarter(bool recursive,std::vector<
                 outfile << ind++ << "if("<<ineq->getStringRep()<<"){"<<std::endl;
                 closingPars++;
             }
+        }else{
+            printAggregateInitialization(boundVars);
         }
+
     }
+
     if(!rule->isConstraint()){
         printAddClause(order,starter < rule->getFormulas().size());
         std::vector<aspc::Atom> head = rule->getHead();
@@ -105,7 +126,13 @@ void AbstractGeneratorCompiler::compileSingleStarter(bool recursive,std::vector<
                 if(k>0) outfile << ",";
                 outfile << (atom->isVariableTermAt(k) || isInteger(atom->getTermAt(k)) ? atom->getTermAt(k) : "ConstantsManager::getInstance().mapConstant(\""+atom->getTermAt(k)+"\")");
             }
-            outfile << "}, AuxMapHandler::getInstance().get_"<<atom->getPredicateName()<<"(),"<<(predicateIds.count(atom->getPredicateName()) ? "false" : "true")<<");\n";
+            // std::cout << "Debug original predicates AbstractGeneratorCompiler";
+            // for(std::string pred : originalPredicates){
+            //     std::cout << pred << " ";
+            // }
+            // std::cout << std::endl;
+            
+            outfile << "}, AuxMapHandler::getInstance().get_"<<atom->getPredicateName()<<"(),"<<(originalPredicates.count(atom->getPredicateName()) ? "false" : "true")<<");\n";
             
             outfile << ind++ << "if(!TupleFactory::getInstance().isFact(head_"<<index<<"->getId())){\n";
                 printUntrackLiteral("head_"+std::to_string(index));
@@ -116,19 +143,14 @@ void AbstractGeneratorCompiler::compileSingleStarter(bool recursive,std::vector<
                 if(recursive){
                     outfile << ind << "stack.push_back(head_"<<index<<"->getId());\n";
                 }else{
-                    outfile << ind << "const auto& insertResult = head_"<<index<<"->setStatus(Undef);\n";
-                    outfile << ind++ << "if(insertResult.second){\n";
-                        outfile << ind << "TupleFactory::getInstance().removeFromCollisionsList(head_"<<index<<"->getId());\n";
-                        outfile << ind << "AuxMapHandler::getInstance().insertUndef(insertResult);\n";
-                        outfile << ind << "while (head_"<<index<<"->getId() >= solver->nVars()) {solver->setFrozen(solver->newVar(),true);}\n";
-                    outfile << --ind << "}\n";                        
+                    printHeadDerivation("head_"+std::to_string(index));
                 }  
             outfile << --ind << "}//close if fact\n";                              
         }
     }else{
         printAddConstraintClause(order,starter < rule->getFormulas().size());
     }
-    
+    std::cout << "   Compiled rule"<<std::endl;
     while (closingPars > 0){
         outfile << --ind << "}// closing"<<std::endl;
         closingPars--;
@@ -150,7 +172,7 @@ void AbstractGeneratorCompiler::compileNoStarter(bool recursive){
     compileSingleStarter(recursive,orders[bodysize],bodysize);
 }
 std::vector<std::vector<unsigned>> AbstractGeneratorCompiler::reorderRule(){
-    std::cout << "Reordering rule: ";rule->print();
+    std::cout << "   Reordering rule: ";rule->print();
     // general order + ordering starting from positive literal in the same component
     auto body = rule->getFormulas();
     std::vector<std::vector<unsigned>> orderByStarters;
@@ -173,7 +195,7 @@ std::vector<std::vector<unsigned>> AbstractGeneratorCompiler::reorderRule(){
             selectedFormula = body.size();
             bool notVisited = false;
             for(unsigned i=0; i<body.size(); i++){
-                if(!visitedFormulas[i]){
+                if(!visitedFormulas[i] && !body[i]->containsAggregate()){
                     notVisited=true;
                     if(body[i]->isBoundedLiteral(boundVars) || body[i]->isBoundedRelation(boundVars) || body[i]->isBoundedValueAssignment(boundVars)){
                         selectedFormula=i;
@@ -207,6 +229,14 @@ std::vector<std::vector<unsigned>> AbstractGeneratorCompiler::reorderRule(){
                 exit(180);
             }
         }
+        for(unsigned i=0; i<body.size(); i++){
+            if(!visitedFormulas[i] && body[i]->containsAggregate()){
+                std::cout << "   Adding aggregate to current ordering"<<std::endl;
+                currentOrdering->push_back(i);
+                visitedFormulas[i]=true;
+            }
+        }
     }    
+    std::cout << "   Reordered"<<std::endl;
     return orderByStarters;
 }

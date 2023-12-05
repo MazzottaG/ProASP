@@ -106,39 +106,16 @@ void GeneratorCompiler::buildComponentGenerator(int componentId){
             outfile << ind << "std::cout << \"Generator "<<className<<"\"<<std::endl;\n";
             #endif
         outfile << --ind << "}\n";
+        outfile << ind++ << "void printName()const {\n";
+            outfile << ind << "std::cout << \"Generator "<<className<<"\"<<std::endl;\n";
+        outfile << --ind << "}\n";
     ind--;
     outfile << --ind << "};\n";
     
     outfile << ind << "#endif\n";
     outfile.close();
 }
-void GeneratorCompiler::compileComponentRules(std::ofstream& outfile,Indentation& ind,unsigned starter,unsigned componentId,bool isRecursive,int ruleIndex){
-    std::string className=compPrefix+"_"+std::to_string(componentId)+"_Gen";
-    aspc::Rule r = program.getRule(ruleIndex);
-    const std::vector<const aspc::Formula*>& body = r.getFormulas();
-    std::unordered_set<std::string> boundVars;
-    int closingPars=0;
-    
-    if(starter != body.size()){
-        const aspc::Literal* startingLit = (const aspc::Literal*) body[starter];
-        outfile << ind++ << "if(starter->getPredicateName() == AuxMapHandler::getInstance().get_"<<startingLit->getPredicateName()<<"()){\n";
-        closingPars++;
-        for(unsigned k=0; k<startingLit->getAriety(); k++){
-            if(!startingLit->isVariableTermAt(k) || boundVars.count(startingLit->getTermAt(k))){
-                std::string term = isInteger(startingLit->getTermAt(k)) || startingLit->isVariableTermAt(k) ? startingLit->getTermAt(k) : "ConstantsManager::getInstance().mapConstant(\""+startingLit->getTermAt(k)+"\")";
-                outfile << ind++ << "if(starter->at("<<k<<") == " << term << "){\n";
-                closingPars++;
-            }else{
-                outfile << ind << "int "<<startingLit->getTermAt(k) << " = starter->at(" <<k<< ");\n"; 
-                boundVars.insert(startingLit->getTermAt(k));
-            }
-        }
-    }else{
-        outfile << ind++ << "{\n";
-        closingPars++;
-    }
-    
-    std::vector<unsigned>& order = ruleOrdering[ruleIndex][starter];
+void GeneratorCompiler::compileOrderedBody(std::ofstream& outfile,Indentation& ind,unsigned starter,unsigned componentId,bool isRecursive,int ruleIndex,std::vector<unsigned> order, const std::vector<const aspc::Formula*>& body,std::unordered_set<std::string>& boundVars,int& closingPars){
     for(unsigned index : order){
         const aspc::Formula* f = body[index];
         if(f->isLiteral()){
@@ -212,7 +189,7 @@ void GeneratorCompiler::compileComponentRules(std::ofstream& outfile,Indentation
                     }
                 }
             }
-        }else{
+        }else if (!f->containsAggregate()){
             const aspc::ArithmeticRelation* ineq = (const aspc::ArithmeticRelation*) f;
             if(f->isBoundedValueAssignment(boundVars)){
                 outfile << ind << "int "<<ineq->getAssignmentStringRep(boundVars)<<";"<<std::endl;
@@ -223,10 +200,71 @@ void GeneratorCompiler::compileComponentRules(std::ofstream& outfile,Indentation
             }
         }
     }
+}
+void GeneratorCompiler::compileComponentRules(std::ofstream& outfile,Indentation& ind,unsigned starter,unsigned componentId,bool isRecursive,int ruleIndex){
+    std::string className=compPrefix+"_"+std::to_string(componentId)+"_Gen";
+    aspc::Rule r = program.getRule(ruleIndex);
+    const std::vector<const aspc::Formula*>& body = r.getFormulas();
+    std::unordered_set<std::string> boundVars;
+    int closingPars=0;
+    
+    if(starter != body.size()){
+        const aspc::Literal* startingLit = (const aspc::Literal*) body[starter];
+        outfile << ind++ << "if(starter->getPredicateName() == AuxMapHandler::getInstance().get_"<<startingLit->getPredicateName()<<"()){\n";
+        closingPars++;
+        for(unsigned k=0; k<startingLit->getAriety(); k++){
+            if(!startingLit->isVariableTermAt(k) || boundVars.count(startingLit->getTermAt(k))){
+                std::string term = isInteger(startingLit->getTermAt(k)) || startingLit->isVariableTermAt(k) ? startingLit->getTermAt(k) : "ConstantsManager::getInstance().mapConstant(\""+startingLit->getTermAt(k)+"\")";
+                outfile << ind++ << "if(starter->at("<<k<<") == " << term << "){\n";
+                closingPars++;
+            }else{
+                outfile << ind << "int "<<startingLit->getTermAt(k) << " = starter->at(" <<k<< ");\n"; 
+                boundVars.insert(startingLit->getTermAt(k));
+            }
+        }
+    }else{
+        outfile << ind++ << "{\n";
+        closingPars++;
+    }
+    
+    std::vector<unsigned>& order = ruleOrdering[ruleIndex][starter];
+    compileOrderedBody(outfile,ind,starter,componentId,isRecursive,ruleIndex,order,body,boundVars,closingPars);
+    for(unsigned i=0;i<order.size();i++){
+        if(body[order[i]]->containsAggregate()){
+            const aspc::ArithmeticRelationWithAggregate* aggr = (const aspc::ArithmeticRelationWithAggregate*) body[order[i]];
+            std::vector<const aspc::Formula*> aggrBody;
+            outfile << ind << "std::set<std::vector<int>> aggrVars;\n";
+            std::string aggrVarTerms;
+            for(std::string var : aggr->getAggregate().getAggregateVariables()){
+                if(aggrVarTerms != "") aggrVarTerms+=",";
+                aggrVarTerms+=var;
+            }
+            if(aggr->getAggregate().isSum()){
+                outfile << ind << "int sum = 0;\n";
+            }
+            int tempClosingPars = closingPars;
+            for(const aspc::Literal& l: aggr->getAggregate().getAggregateLiterals()) aggrBody.push_back(&l);
+            for(const aspc::ArithmeticRelation& l: aggr->getAggregate().getAggregateInequalities()) aggrBody.push_back(&l);
+            compileOrderedBody(outfile,ind,starter,componentId,isRecursive,ruleIndex,aggregateOrderingForRule[ruleIndex][starter][order[i]],aggrBody,boundVars,closingPars);
+            outfile << ind << "auto insertAggr = aggrVars.emplace(std::vector<int>({"<<aggrVarTerms<<"}));\n";
+            outfile << ind << "if(insertAggr.second) sum+= "<<(aggr->getAggregate().isSum() ? aggr->getAggregate().getAggregateVariables()[0] : "1")<<";\n";
+            while (closingPars>tempClosingPars){
+                closingPars--;
+                outfile << --ind << "}\n"; 
+            }
+            outfile << ind++ << "if("<<(aggr->isNegated() ? "! ": "")<<"sum "<<aggr->getCompareTypeAsString() << aggr->getGuard().getStringRep() << (aggr->isPlusOne() ? "+1" : "")<<"){\n";
+            closingPars++; 
+        }
+    }
     //storing possible heads
     std::vector<aspc::Atom> head = r.getHead();
     for(int index=0;index<head.size();index++){
         aspc::Atom* atom = &head[index];
+        // std::cout << "Debug original predicates GeneratorCompiler";
+        // for(std::string pred : originalPredicates){
+        //     std::cout << pred << " ";
+        // }
+        // std::cout << std::endl; 
         outfile << ind << "Tuple* head_"<<index<<"=TupleFactory::getInstance().addNewInternalTuple({";
         for(unsigned k=0; k<atom->getAriety(); k++){
             if(k>0) outfile << ",";
@@ -300,12 +338,50 @@ void GeneratorCompiler::buildAuxMapHandler(){
             for(unsigned ruleIndex : program.getRulesForPredicate(predicate)){
                 if(ruleIndex >= ruleOrdering.size()){
                     ruleOrdering.resize(ruleIndex+1);
+                    aggregateOrderingForRule.resize(ruleIndex+1);
                 }
-                ruleOrdering[ruleIndex] = auxMapCompiler->declareGeneratorDataStructure(program.getRule(ruleIndex),components[componentId]);
+                auto ordering = auxMapCompiler->declareGeneratorDataStructure(program.getRule(ruleIndex),components[componentId]);
+                ruleOrdering[ruleIndex] = ordering.first;
+                aggregateOrderingForRule[ruleIndex] = ordering.second;
             }
         }
     }
 	
+}
+void GeneratorCompiler::buildDG(){
+    for(const aspc::Rule& r : program.getRules()){
+        for(const aspc::Atom& a : r.getHead()){
+            auto it =local_predicates.emplace(a.getPredicateName(),localPredicatesName.size());
+            if(it.second){
+                pdg.addNode(localPredicatesName.size());
+                localPredicatesName.push_back(a.getPredicateName());
+            }
+        }
+        for(const aspc::Literal& l : r.getBodyLiterals()){
+            auto it =local_predicates.emplace(l.getPredicateName(),localPredicatesName.size());
+            if(it.second){
+                pdg.addNode(localPredicatesName.size());
+                localPredicatesName.push_back(l.getPredicateName());
+            }
+            for(const aspc::Atom& a : r.getHead()){
+                unsigned headPred =local_predicates[a.getPredicateName()];
+                pdg.addEdge(it.first->second,headPred);
+            }
+        }
+        for(const aspc::ArithmeticRelationWithAggregate& aggrRelation: r.getArithmeticRelationsWithAggregate()){
+            for(const aspc::Literal& l : aggrRelation.getAggregate().getAggregateLiterals()){
+                auto it =local_predicates.emplace(l.getPredicateName(),localPredicatesName.size());
+                if(it.second){
+                    pdg.addNode(localPredicatesName.size());
+                    localPredicatesName.push_back(l.getPredicateName());
+                }
+                for(const aspc::Atom& a : r.getHead()){
+                    unsigned headPred =local_predicates[a.getPredicateName()];
+                    pdg.addEdge(it.first->second,headPred);
+                }
+            }
+        }
+    }
 }
 void GeneratorCompiler::buildPositiveDG(){
     for(const aspc::Rule& r : program.getRules()){
@@ -329,12 +405,28 @@ void GeneratorCompiler::buildPositiveDG(){
                 }
             }
         }
+        for(const aspc::ArithmeticRelationWithAggregate& aggrRelation: r.getArithmeticRelationsWithAggregate()){
+            for(const aspc::Literal& l : aggrRelation.getAggregate().getAggregateLiterals()){
+                if(l.isPositiveLiteral()){
+                    auto it =local_predicates.emplace(l.getPredicateName(),localPredicatesName.size());
+                    if(it.second){
+                        pdg.addNode(localPredicatesName.size());
+                        localPredicatesName.push_back(l.getPredicateName());
+                    }
+                    for(const aspc::Atom& a : r.getHead()){
+                        unsigned headPred =local_predicates[a.getPredicateName()];
+                        pdg.addEdge(it.first->second,headPred);
+                    }
+                }
+            }
+        }
     }
 }
 void GeneratorCompiler::computeSCC(){
     if(!builtSCC){
         builtSCC=true;
-        buildPositiveDG();
+        // buildPositiveDG();
+        buildDG();
         scc = pdg.SCC();
         for(unsigned componentId=0;componentId<scc.size(); componentId++){
             components.push_back({});

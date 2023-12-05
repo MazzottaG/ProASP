@@ -84,7 +84,6 @@ namespace aspc {
             //TODO shared singleton for compiler and compiled
             //return &predicateName == &(right.predicateName) && terms == right.terms;
         }
-
         
     private:
         const std::string & predicateName;

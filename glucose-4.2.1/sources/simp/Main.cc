@@ -77,7 +77,81 @@ using namespace Glucose;
 //=================================================================================================
 
 static const char* _certified = "CORE -- CERTIFIED UNSAT";
+void test_backward_propagation(std::vector<AggregatePropagator>& propagators){
+    // Glucose::vec<Glucose::Lit> empty;
+    // {
+    //     for(int j = 1; j<=3; j++){
+    //         TupleLight* agg_set_1_j_1 = TupleFactory::getInstance().find({1,j,1}, AuxMapHandler::getInstance().get_aggr_set0());
+    //         agg_set_1_j_1->setStatus(True);
+    //         propagators[0].propagate(NULL,empty,agg_set_1_j_1->getId());
+    //     }
+    //     int count = 9;
+    //     for(int i = 1; i<=3; i++){
+    //         for(int j = 1; j<=3; j++){
+    //             TupleLight* agg_set_i_j_1 = TupleFactory::getInstance().find({i,j,2}, AuxMapHandler::getInstance().get_aggr_set0());
+    //             agg_set_i_j_1->setStatus(False);
+    //             propagators[1].propagate(NULL,empty,-agg_set_i_j_1->getId());
+    //             count--;
+    //             if(count < 5){
+    //                 break;
+    //             }
+    //         }
+    //         if(count < 5){
+    //             break;
+    //         }
+    //     }
+    // }
+}
+void test_support_propagation(std::vector<AggregatePropagator>& propagators){
+    // Glucose::vec<Glucose::Lit> empty;
 
+    // TupleLight* aggId_1_2 = TupleFactory::getInstance().find({1,2}, AuxMapHandler::getInstance().get_aggr_id0());
+    // aggId_1_2->setStatus(True);
+    // propagators[0].propagate(NULL,empty,aggId_1_2->getId());
+    // int count = 9;
+    // for(int i = 1; i<=3; i++){
+    //     for(int j = 1; j<=3; j++){
+    //         TupleLight* agg_set_i_j_1 = TupleFactory::getInstance().find({i,j,1}, AuxMapHandler::getInstance().get_aggr_set0());
+    //         agg_set_i_j_1->setStatus(False);
+    //         propagators[0].propagate(NULL,empty,-agg_set_i_j_1->getId());
+    //         count--;
+    //         if(count < 4){
+    //             break;
+    //         }
+    //     }
+    //     if(count < 4){
+    //         break;
+    //     }
+    // }
+    // TupleLight* aggId_2_4 = TupleFactory::getInstance().find({2,4}, AuxMapHandler::getInstance().get_aggr_id0());
+    // aggId_2_4->setStatus(False);
+    // propagators[1].propagate(NULL,empty,-aggId_2_4->getId());
+    // count = 0;
+    // for(int i = 1; i<=3; i++){
+    //     for(int j = 1; j<=3; j++){
+    //         TupleLight* agg_set_1_j_1 = TupleFactory::getInstance().find({i,j,2}, AuxMapHandler::getInstance().get_aggr_set0());
+    //         agg_set_1_j_1->setStatus(True);
+    //         propagators[1].propagate(NULL,empty,agg_set_1_j_1->getId());
+    //         count++;
+    //         if(count > 3){
+    //             break;
+    //         }
+    //     }
+    //     if(count > 3){
+    //         break;
+    //     }
+    // }
+    
+}
+void test_propagators(std::vector<AggregatePropagator>& propagators){
+    Glucose::vec<Glucose::Lit> empty;
+    for(unsigned i = 0; i<propagators.size(); i++){
+        std::cout << "Propagator "<<i<<std::endl;
+        propagators[i].printCurrentStatus();
+    }
+    // test_backward_propagation(propagators);
+    test_support_propagation(propagators);
+}
 void printStats(Solver& solver)
 {
     double cpu_time = cpuTime();
@@ -277,6 +351,203 @@ void read_asp(Solver* solver,std::string filename,std::vector<unsigned>& facts){
     }
 
 }
+void printAuxMapMem(){
+    unsigned long usedBytes = 0, mapCount=0;
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_utime_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_umax_value_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_upen_value_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_udevice_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_uinstance_of_0_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_uinstances_0_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_ujob_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_unstart_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_ustart_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_ustart_0_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_ujob_device_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_ujob_device_0_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_ujob_device_1_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_unon_instance_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_uon_instance_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_uon_instance_0_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_ujob_len_0_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_uprecedes_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_udeadline_0_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_utd_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_utd_0_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_uimportance_0_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_upenalty_unfold_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_upenalty_unfold_0_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_upenalty_unfold_0_2_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_upenalty_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_ulte_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_ugte_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_utot_penalty_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_uhas_tot_penalty_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_unhas_tot_penalty_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_umax_total_penalty_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_uoffline_instance_0_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_ucurr_job_start_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_ucurr_time_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_ualready_started_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_ucurr_on_instance_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_ucurr_on_instance_0_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_ujoin10_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_ujoin6_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_ujoin15_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_ujoin15_0_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_ujoin16_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_ujoin16_0_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_ujoin17_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_ujoin18_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_ujoin18_0_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_ujoin11_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_ujoin13_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_ujoin13_0_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_ujoin13_1_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_ujoin14_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_ujoin14_0_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_ujoin14_1_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_ujoin27_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_ujoin28_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_ujoin28_0_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_ujoin28_1_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_ujoin29_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_ujoin35_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_ujoin36_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_ujoin36_0_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_ujoin37_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_ujoin37_0_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_usup_0_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_usup_1_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_usup_2_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_usup_2_0_2_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_usup_2_2_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_usup_3_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_uaux_0_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_uaux_0_0_1_2_3_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_uaux_0_0_4_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_uaux_0_0_5_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_uaux_1_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_uaux_1_0_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_uaux_1_0_1_2_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_uaux_1_0_3_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_uaux_2_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_uaux_2_0_1_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_uaux_2_0_2_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_uaux_2_0_3_4_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_uaux_2_0_5_6_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_uaux_3_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_uaux_3_0_1_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_uaux_3_0_2_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_uaggr_id5_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_uaggr_id5_0_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_uaggr_id4_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_uaggr_id4_0_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_uaggr_id2_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_uaggr_id2_0_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_uaggr_id3_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_uaggr_id3_0_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_uaggr_id1_()->getUsedBytes();
+    mapCount++;
+    usedBytes += AuxMapHandler::getInstance().get_uaggr_id0_()->getUsedBytes();
+
+    std::cout << "Total map count: "<<mapCount<<" Used bytes: "<<usedBytes<<std::endl;
+}
 int main(int argc, char** argv)
 {
     try {
@@ -391,32 +662,40 @@ int main(int argc, char** argv)
             int lastFact = TupleFactory::getInstance().size();
             InstanceExpansion::getInstance().generate(&S);
             int lastExpandedFact = TupleFactory::getInstance().size();
-            std::cout << "%%%%%%%%%%%%%%%%%%% Instance Expansion %%%%%%%%%%%%%%%%%%%"<<std::endl;
+            // std::cout << "%%%%%%%%%%%%%%%%%%% Instance Expansion %%%%%%%%%%%%%%%%%%%"<<std::endl;
             for(int id = lastFact; id < lastExpandedFact; id++){
-                AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(id));
-                std::cout << std::endl;
+                // AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(id));
+                // std::cout << std::endl;
                 facts.push_back(id);
             }
-            std::cout << "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%"<<std::endl;
+            // std::cout << "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%"<<std::endl;
             TupleFactory::getInstance().storeFactSize();
             TupleFactory::getInstance().initClauseGen();
             TupleFactory::getInstance().initConstraintGen();
             std::vector<int> falseAtoms;
             Generator::getInstance().generate(&S,falseAtoms);
-            SatProgramBuilder::getInstance().computeCompletion(&S);
-            std::cout << "p cnf "<<TupleFactory::getInstance().size()-1<<" " << S.nClauses()+facts.size()<<std::endl;
-            for(int i=1;i<TupleFactory::getInstance().size(); i++){
-                std::cout << "c "<<i<<" ";
-                AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(i));
-                std::cout << std::endl;
+            for(AggregatePropagator* prop : Generator::getInstance().collectAggregatePropagators()){
+                // prop->printCurrentStatus();
+                Propagator::getInstance().addPropagator(prop);
             }
-            S.printGeneratedClauses();
-            for(unsigned id : facts){
-                std::cout << id << " 0"<<std::endl;
-            } 
-            for(int id : falseAtoms)
-                std::cout << -id << " 0"<<std::endl;
-            std::cout << "End cnf"<<std::endl;
+            // std::vector<AggregatePropagator> propagators;
+            // test_propagators(propagators);
+            // std::cout << "Exiting ..."<<std::endl;
+            // exit(180);
+            SatProgramBuilder::getInstance().computeCompletion(&S);
+            // std::cout << "p cnf "<<TupleFactory::getInstance().size()-1<<" " << S.nClauses()+facts.size()<<std::endl;
+            // for(int i=1;i<TupleFactory::getInstance().size(); i++){
+            //     std::cout << "c "<<i<<" ";
+            //     AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(i));
+            //     std::cout << std::endl;
+            // }
+            // S.printGeneratedClauses();
+            // for(unsigned id : facts){
+            //     std::cout << id << " 0"<<std::endl;
+            // } 
+            // for(int id : falseAtoms)
+            //     std::cout << -id << " 0"<<std::endl;
+            // std::cout << "End cnf"<<std::endl;
             TupleFactory::getInstance().destroyClauses();
             TupleFactory::getInstance().destroyConstraints();
             Propagator::getInstance().attachWatchers();
@@ -428,7 +707,8 @@ int main(int argc, char** argv)
                 lits.clear();
                 lits.push( mkLit(id));
                 solver->addClause_(lits);
-                std::cout << "Addeded "<<var(mkLit(id))<<" at level "<<solver->getLiteralLevel(var(mkLit(id)))<<std::endl;
+                Propagator::getInstance().updateSumForTrueLitGroundAggregate(id);
+                // std::cout << "Addeded "<<var(mkLit(id))<<" at level "<<solver->getLiteralLevel(var(mkLit(id)))<<std::endl;
                 if(!solver->okay())
                     break;
             }
@@ -439,6 +719,7 @@ int main(int argc, char** argv)
                 #ifdef DEBUG_PROP
                 std::cout << "Adding false atoms in glucose -"<<id<<std::endl;
                 #endif
+                Propagator::getInstance().updateSumForTrueLitGroundAggregate(-id);
                 lits.clear();
                 lits.push( mkLit(id,true));
                 solver->addClause_(lits);
@@ -514,6 +795,10 @@ int main(int argc, char** argv)
         }else{
             std::cout << "no dimacs"<<std::endl;
         }
+        Generator::getInstance().destroyRemapping();
+        TupleFactory::getInstance().printUsedMemory();
+        printAuxMapMem();
+        exit(180);
         std::cout << "Start solving"<<std::endl;
             
         vec<Lit> dummy;

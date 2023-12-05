@@ -300,15 +300,79 @@ std::pair<std::vector<std::vector<unsigned>>,std::vector<std::vector<unsigned>>>
     }    
     return std::make_pair(orderByStarters,orderByStartersHead);
 }
-std::vector<std::vector<unsigned>> DataStructureCompiler::declareGeneratorDataStructure(const aspc::Rule& rule,const std::set<std::string>& component){
+std::vector<unsigned> DataStructureCompiler::reorderSimpleBody(const std::vector<const aspc::Formula*>& body, std::unordered_set<std::string>& boundVars, int starter){
+    // std::cout << "Computing order"<<std::endl;
+    std::vector<bool> visitedFormulas(body.size(),false);
+    if(starter >= 0) visitedFormulas[starter]=true;
+    for(unsigned i=0; i<body.size(); i++){
+        if(body[i]->containsAggregate())
+            visitedFormulas[i]=true;
+    }
+    // std::cout << "Ignoring formulas ";
+    // for(unsigned i=0; i<body.size(); i++){
+    //     if(visitedFormulas[i])
+    //         body[i]->print();
+    // }
+    // std::cout << std::endl;
+    std::vector<unsigned> orderedFormulas;
+    
+    unsigned selectedFormula=0;
+    while (selectedFormula < body.size()){
+        selectedFormula = body.size();
+        bool notVisited = false;
+        for(unsigned i=0; i<body.size(); i++){
+            if(!visitedFormulas[i]){
+                notVisited=true;
+                if(body[i]->isBoundedLiteral(boundVars) || body[i]->isBoundedRelation(boundVars) || body[i]->isBoundedValueAssignment(boundVars)){
+                    selectedFormula=i;
+                    break;
+                }
+                if(body[i]->isPositiveLiteral() && selectedFormula == body.size()) {
+                    selectedFormula=i;
+                }
+            }
+        }
+        if(selectedFormula != body.size()){
+            std::cout << selectedFormula<<" ";
+            visitedFormulas[selectedFormula]=true;
+            const aspc::Formula* currentFormula = body[selectedFormula];
+            orderedFormulas.push_back(selectedFormula);
+
+            if(currentFormula->isLiteral() && !currentFormula->isBoundedLiteral(boundVars)){
+                const aspc::Literal* literal = (const aspc::Literal*) currentFormula;
+                std::vector<unsigned> boundIndices;
+                for(unsigned k = 0; k<literal->getAriety(); k++){
+                    if(!literal->isVariableTermAt(k) || boundVars.count(literal->getTermAt(k))){
+                        boundIndices.push_back(k);
+                    }
+                }
+                auxMapNameForPredicate[literal->getPredicateName()].insert(boundIndices);
+                literal->addVariablesToSet(boundVars);
+            }else{
+                if(currentFormula->isBoundedValueAssignment(boundVars)){
+                    const aspc::ArithmeticRelation* ineq = (const aspc::ArithmeticRelation*) currentFormula;
+                    boundVars.insert(ineq->getAssignedVariable(boundVars));
+                }
+            }
+        }else if(notVisited){
+            std::cout << "Error ordering rule: loop in formula selection"<<std::endl;
+            exit(180);
+        }
+    }
+    return orderedFormulas;
+}
+std::pair<std::vector<std::vector<unsigned>>,std::vector<std::unordered_map<unsigned,std::vector<unsigned>>>> DataStructureCompiler::declareGeneratorDataStructure(const aspc::Rule& rule,const std::set<std::string>& component){
     std::cout << "Declaring structure for ";rule.print();
     // general order + ordering starting from positive literal in the same component
     auto body = rule.getFormulas();
     std::vector<std::vector<unsigned>> orderByStarters;
+    std::vector<std::unordered_map<unsigned,std::vector<unsigned>>> aggregateOrderingByStarter;
+
     for(unsigned starter = 0; starter <= body.size(); starter++){
-        orderByStarters.push_back({});
         std::vector<bool> visitedFormulas(body.size(),false);
         std::unordered_set<std::string> boundVars;
+        orderByStarters.push_back({});
+        aggregateOrderingByStarter.push_back({});
         if(starter < body.size()){
             //component empty means declare structure for rule propagators            
             const aspc::Formula* startingFormula = body[starter];
@@ -323,47 +387,26 @@ std::vector<std::vector<unsigned>> DataStructureCompiler::declareGeneratorDataSt
             visitedFormulas[starter]=true;
             startingFormula->addVariablesToSet(boundVars);
         }
-        unsigned selectedFormula=0;
-        std::vector<unsigned>* currentOrdering=&orderByStarters.back();
-        while (selectedFormula < body.size()){
-            selectedFormula = body.size();
-            bool notVisited = false;
-            for(unsigned i=0; i<body.size(); i++){
-                if(!visitedFormulas[i]){
-                    notVisited=true;
-                    if(body[i]->isBoundedLiteral(boundVars) || body[i]->isBoundedRelation(boundVars) || body[i]->isBoundedValueAssignment(boundVars)){
-                        selectedFormula=i;
-                        break;
-                    }
-                    if(body[i]->isPositiveLiteral() && selectedFormula == body.size()) selectedFormula=i;
+        auto orderedFormulas = reorderSimpleBody(rule.getFormulas(),boundVars,starter<body.size() ? starter: -1);
+        for(unsigned i=0; i<body.size(); i++){
+            if(body[i]->containsAggregate()){
+                const aspc::ArithmeticRelationWithAggregate* aggrRelation = (const aspc::ArithmeticRelationWithAggregate*) body[i];
+                std::vector<const aspc::Formula*> aggrBody;
+                for(const aspc::Literal& l : aggrRelation->getAggregate().getAggregateLiterals()){
+                    aggrBody.push_back(&l);
+                    if(!component.empty() && component.count(l.getPredicateName())!=0) {std::cout << "ERROR: Recursive aggregate found in non ground program"<<std::endl; exit(180);}
                 }
-            }
-            if(selectedFormula != body.size()){
-                visitedFormulas[selectedFormula]=true;
-                const aspc::Formula* currentFormula = body[selectedFormula];
-                currentOrdering->push_back(selectedFormula);
-                if(currentFormula->isLiteral() && !currentFormula->isBoundedLiteral(boundVars)){
-                    const aspc::Literal* literal = (const aspc::Literal*) currentFormula;
-                    std::vector<unsigned> boundIndices;
-                    for(unsigned k = 0; k<literal->getAriety(); k++){
-                        if(!literal->isVariableTermAt(k) || boundVars.count(literal->getTermAt(k))){
-                            boundIndices.push_back(k);
-                        }
-                    }
-                    auxMapNameForPredicate[literal->getPredicateName()].insert(boundIndices);
-                    literal->addVariablesToSet(boundVars);
-                }else{
-                    if(currentFormula->isBoundedValueAssignment(boundVars)){
-                        const aspc::ArithmeticRelation* ineq = (const aspc::ArithmeticRelation*) currentFormula;
-                        boundVars.insert(ineq->getAssignedVariable(boundVars));
-                    }
+                for(const aspc::ArithmeticRelation& rel : aggrRelation->getAggregate().getAggregateInequalities()){
+                    aggrBody.push_back(&rel);
                 }
-            }else if(notVisited){
-                std::cout << "Error ordering rule ";rule.print();
-                exit(180);
+                auto orderedAggregate = reorderSimpleBody(aggrBody,boundVars);
+                // TODO: Add ordering strategy for aggregates
+                aggregateOrderingByStarter.back()[i]=orderedAggregate;
+                orderedFormulas.push_back(i);
             }
         }
-    }    
-    return orderByStarters;
+        orderByStarters[starter]=orderedFormulas;
+    }   
+    return std::make_pair(orderByStarters,aggregateOrderingByStarter);
 }
 

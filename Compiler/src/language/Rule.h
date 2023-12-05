@@ -44,6 +44,7 @@
 #include "Literal.h"
 #include "ArithmeticRelation.h"
 #include "ArithmeticRelationWithAggregate.h"
+#include "../utils/SharedFunctions.h"
 
 enum RuleType {
     GENERATIVE_RULE, CONSTRAINT
@@ -71,6 +72,8 @@ namespace aspc {
         const std::vector<aspc::Literal> & getBodyLiterals() const;
         const std::vector<ArithmeticRelation> & getArithmeticRelations() const;
         const std::vector<ArithmeticRelationWithAggregate> & getArithmeticRelationsWithAggregate() const;
+        void addBodyVars(std::unordered_set<std::string>&) const;
+        void addSharedVars(std::unordered_set<std::string>&,std::vector<std::string>&,std::unordered_set<std::string>&,const aspc::ArithmeticRelationWithAggregate*,bool=true) const;
         void addArithmeticRelationsWithAggregate(ArithmeticRelationWithAggregate r);
         RuleType getType() const;
         unsigned getRuleId() const;
@@ -119,7 +122,7 @@ namespace aspc {
         void updateJoinTupleName(unsigned int formulaIndex,std::string joinTupleName);
         int getSupportAtom()const {return supportAtom;}
         void setSupportAtom(int id){supportAtom=id;}
-        bool extractLabeledFormula(std::unordered_map<std::string,int>& predToComponent,const std::vector<int>& sccLabel,int label,std::vector<bool>& extraction,std::unordered_set<std::string>& positiveEDBVar)const;
+        bool extractLabeledFormula(const std::vector<int>& formulaLabeling,std::unordered_map<std::string,int>& predToComponent,const std::vector<int>& sccLabel,int label,std::vector<bool>& extraction,std::unordered_set<std::string>& positiveEDBVar)const;
         int rewriteHead(const std::unordered_map<std::string,std::string>& remapped_predicates){
             std::string headPredicate(head[0].getPredicateName());
             std::vector<std::string> headTerms(head[0].getTerms());

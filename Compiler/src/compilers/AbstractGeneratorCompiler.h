@@ -8,7 +8,14 @@
 class AbstractGeneratorCompiler{
 
     public:
-        AbstractGeneratorCompiler(std::ofstream& file,int indentation,const aspc::Rule* r,const std::vector<std::string>& predNames,const std::unordered_map<std::string,unsigned>& predIds,const std::unordered_map<std::string,std::string>& predToStruct):outfile(file),ind(indentation),rule(r),predicateNames(predNames),predicateIds(predIds),auxliteral("aux_body"),predicateToStruct(predToStruct){}
+        AbstractGeneratorCompiler(std::ofstream& file,int indentation,const aspc::Rule* r,const std::vector<std::string>& predNames,const std::unordered_map<std::string,unsigned>& predIds,const std::unordered_map<std::string,std::string>& predToStruct,std::unordered_set<std::string>& origPreds):outfile(file),ind(indentation),rule(r),predicateNames(predNames),predicateIds(predIds),auxliteral("aux_body"),predicateToStruct(predToStruct),originalPredicates(origPreds){
+            // std::cout << "AbstractGeneratorCompiler::constructor Revised";
+            // std::cout << "Debug original predicates ";
+            // for(std::string pred : originalPredicates){
+            //     std::cout << pred << " ";
+            // }
+            // std::cout << std::endl; 
+        }
         
         void compileFromStarter(bool recursive);
         void compileNoStarter(bool recursive);
@@ -16,9 +23,11 @@ class AbstractGeneratorCompiler{
         virtual void printAddClause(std::vector<unsigned>,bool){}
         virtual void printAddConstraintClause(std::vector<unsigned>,bool){}
         virtual void printAddSP(int index){}
+        virtual void printAggregateInitialization(std::unordered_set<std::string>&){}
         virtual void printUntrackLiteral(std::string tuplename){
             outfile << ind << "TupleFactory::getInstance().untrackLiteral("<<tuplename<<"->getId());\n";
         }
+        virtual void printHeadDerivation(std::string);
         virtual int printTrackedCheck(std::string tuplename){ return 0;}
         void compileSingleStarter(bool recursive,std::vector<unsigned> order,unsigned starter);
         std::unordered_map<std::string,std::set<std::vector<unsigned>>> getUsedAuxMaps()const{return usedAuxMap;}
@@ -34,5 +43,6 @@ class AbstractGeneratorCompiler{
         std::unordered_map<std::string,std::set<std::vector<unsigned>>> usedAuxMap;
         const std::string auxliteral; 
         std::unordered_map<std::string,std::string> predicateToStruct;
+        std::unordered_set<std::string> originalPredicates;
 };
 #endif

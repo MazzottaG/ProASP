@@ -55,6 +55,62 @@ aspc::Rule::Rule(const vector<aspc::Atom> & head, const vector<aspc::Literal> & 
     rulesCounter++;
 }
 
+void aspc::Rule::addSharedVars(std::unordered_set<std::string>& bodyVariables,std::vector<std::string>& terms,std::unordered_set<std::string>&distinctTerms,const aspc::ArithmeticRelationWithAggregate* aggr,bool checkGuard) const{
+    for(const aspc::Literal& l:aggr->getAggregate().getAggregateLiterals()){
+        for(unsigned i=0; i<l.getAriety(); i++){
+            std::string v = l.getTermAt(i);
+            if(l.isVariableTermAt(i) && bodyVariables.count(v)!=0 && distinctTerms.count(v)==0){
+                distinctTerms.insert(v);
+                terms.push_back(v);
+            }
+        }
+    }
+    for(const aspc::ArithmeticRelation& l:aggr->getAggregate().getAggregateInequalities()){
+        
+        for(std::string v : l.getLeft().getAllTerms()){
+            if(isVariable(v) && bodyVariables.count(v)!=0 && distinctTerms.count(v)==0){
+                distinctTerms.insert(v);
+                terms.push_back(v);
+            }
+        }
+        
+        for(std::string v : l.getRight().getAllTerms()){
+            if(isVariable(v) && bodyVariables.count(v)!=0 && distinctTerms.count(v)==0){
+                distinctTerms.insert(v);
+                terms.push_back(v);
+            }
+        }
+    }
+    if(checkGuard){
+        for(std::string v : aggr->getGuard().getAllTerms()){
+            if(isVariable(v) && bodyVariables.count(v)!=0 && distinctTerms.count(v)==0){
+                distinctTerms.insert(v);
+                terms.push_back(v);
+            }
+        }
+    }
+    
+}
+
+void aspc::Rule::addBodyVars(std::unordered_set<std::string>& bodyVars)const{
+    for(const aspc::Literal& lit : getBodyLiterals()){
+        lit.addVariablesToSet(bodyVars);
+    }
+    bool added = true;
+    while(added){
+        added=false;
+        for(const aspc::Formula* f : getFormulas()){
+            if(!f->isLiteral() && !f->containsAggregate()){
+                const aspc::ArithmeticRelation* ineq = (const aspc::ArithmeticRelation*)f;
+                if(ineq->isBoundedValueAssignment(bodyVars)){
+                    bodyVars.insert(ineq->getAssignedVariable(bodyVars));
+                    added=true;
+                }
+            }
+        }
+    }
+    return;
+}
 aspc::Rule::Rule(const vector<Atom>& head, const vector<Literal> & body, const vector<aspc::ArithmeticRelation>& arithmeticRelations, bool) : Rule(head, body, arithmeticRelations,std::vector<aspc::ArithmeticRelationWithAggregate>()) {
     //    if(true) {
     //        std::random_shuffle(bodyLiterals.begin(), bodyLiterals.end());
@@ -337,9 +393,10 @@ void aspc::Rule::orderBodyFormulasFromStarter(unsigned starter, std::vector<unsi
     
 }
 
-bool aspc::Rule::extractLabeledFormula(std::unordered_map<std::string,int>& predToComponent, const std::vector<int>& sccLabel,int label,std::vector<bool>& extraction,std::unordered_set<std::string>& positiveEDBVar)const{
+bool aspc::Rule::extractLabeledFormula(const std::vector<int>& formulaLabeling, std::unordered_map<std::string,int>& predToComponent, const std::vector<int>& sccLabel,int label,std::vector<bool>& extraction,std::unordered_set<std::string>& positiveEDBVar)const{
     int countExtractedLiteral = 0;
     std::unordered_set<std::string> negativeEDBVar;
+    std::unordered_set<std::string> originalBodyVars;
     for(unsigned fIndex = 0; fIndex < formulas.size(); fIndex++){
         const aspc::Formula* f = formulas[fIndex];
         if(f->isLiteral()){
@@ -350,17 +407,17 @@ bool aspc::Rule::extractLabeledFormula(std::unordered_map<std::string,int>& pred
                 countExtractedLiteral++;
                 literal->addVariablesToSet(literal->isPositiveLiteral() ? positiveEDBVar: negativeEDBVar);
             }
+            literal->addVariablesToSet(originalBodyVars);
         }
     }
     std::cout << "Found "<<countExtractedLiteral<<" for rule ";print();
-    if(countExtractedLiteral<2) return false;
 
     bool newVar=true;
     while(newVar){
         newVar=false;
         for(unsigned fIndex = 0; fIndex < formulas.size(); fIndex++){
             const aspc::Formula* f = formulas[fIndex];
-            if(!f->isLiteral()){
+            if(!f->isLiteral() && !f->containsAggregate()){
                 const aspc::ArithmeticRelation* ineq = (const aspc::ArithmeticRelation*) f;
                 if(ineq->isBoundedValueAssignment(positiveEDBVar)){
                     std::string var = ineq->getAssignedVariable(positiveEDBVar);
@@ -375,6 +432,45 @@ bool aspc::Rule::extractLabeledFormula(std::unordered_map<std::string,int>& pred
     }
     for(unsigned fIndex = 0; fIndex < formulas.size(); fIndex++){
         const aspc::Formula* f = formulas[fIndex];
+        if(f->containsAggregate()){
+            const aspc::ArithmeticRelationWithAggregate* ineq = (const aspc::ArithmeticRelationWithAggregate*) f;
+            if(formulaLabeling[fIndex] == label){
+                bool extractAggr=true;
+                for(const aspc::Literal& lit : ineq->getAggregate().getAggregateLiterals()){
+                    for(unsigned k=0;k<lit.getAriety(); k++){
+                        if(lit.isVariableTermAt(k) && originalBodyVars.count(lit.getTermAt(k)) != 0 && positiveEDBVar.count(lit.getTermAt(k)) == 0){
+                            extractAggr=false;
+                        }
+                    }
+                }    
+                if(extractAggr){
+                    for(const aspc::ArithmeticRelation& rel : ineq->getAggregate().getAggregateInequalities()){
+                        for(const aspc::ArithmeticExpression& exp: {rel.getLeft(),rel.getRight()} ){
+                            for(std::string term : exp.getAllTerms()){
+                                if(originalBodyVars.count(term)!=0 && positiveEDBVar.count(term)==0)
+                                    extractAggr=false;
+                            }
+                        }
+                    }
+                    if(extractAggr){
+                        for(std::string term : ineq->getGuard().getAllTerms()){
+                            if(originalBodyVars.count(term)!=0 && positiveEDBVar.count(term)==0)
+                                extractAggr=false;
+                        }
+                    }
+                }
+                if(extractAggr){
+                    extraction[fIndex]=true; 
+                    countExtractedLiteral++;  
+                    std::cout << "Extracting aggregate"<<std::endl;
+                }
+            }else{
+                extraction[fIndex]=false;
+            }
+        }
+    }
+    for(unsigned fIndex = 0; fIndex < formulas.size(); fIndex++){
+        const aspc::Formula* f = formulas[fIndex];
         if(!f->isLiteral()){
             const aspc::ArithmeticRelation* ineq = (const aspc::ArithmeticRelation*) f;
             if(ineq->isBoundedRelation(positiveEDBVar)){
@@ -383,7 +479,7 @@ bool aspc::Rule::extractLabeledFormula(std::unordered_map<std::string,int>& pred
         }else if(!f->isPositiveLiteral() && !f->isBoundedLiteral(positiveEDBVar))
             return false;
     }
-    return true;
+    return countExtractedLiteral>=2;
 }
 void aspc::Rule::orderBodyFormulas(std::vector<unsigned>& orderedBodyFormulas)const{
     std::unordered_set<std::string> boundVariables;

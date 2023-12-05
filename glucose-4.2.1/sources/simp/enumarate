@@ -1,0 +1,25 @@
+#!/bin/bash
+
+rm constraints.lp && touch constraints.lp
+loop=0
+modelCount=0
+while [[ $loop -ge 0 ]];do
+    ~/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/glucose -no-pre $1 > output
+    ~/Desktop/Research/ProASP/glucose-4.2.1/sources/simp/parse_model.py
+    exit_code=$?
+
+    if [[ $exit_code -eq 20 ]];then
+        models=$(cat constraints.lp | wc -l)
+        echo "Models: ${modelCount}"
+        #./printModels.py
+        break
+    elif [[ $exit_code -eq 10 ]];then
+        modelCount=$(( modelCount + 1 ))
+        echo -n "Answer ${modelCount}: "
+        tail -n 1 constraints.lp 
+        echo ""
+    else 
+        echo "Unexpected exit code ${exit_code}"
+        break
+    fi
+done

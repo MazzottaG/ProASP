@@ -1,13 +1,16 @@
 #ifndef HYBRIDGENERATOR_H
 #define HYBRIDGENERATOR_H
 #include "../language/Program.h"
+#include "../rewriting/Rewriter.h"
 #include "DataStructureCompiler.h"
 #include "DependenciesHandler.h"
+#include "GrounderGenCompiler.h"
+#include "DomainRuleCompiler.h"
 
 class HybridGenerator{
     
     public:
-        HybridGenerator(const aspc::Program& pg, std::vector<bool> labels, const std::string& execPath, const std::vector<std::string>& names, const std::unordered_map<std::string,unsigned>& id, DataStructureCompiler* mapCompiler,std::unordered_set<std::string>& preds,const std::unordered_map<std::string,std::string>& predToStruct,const std::unordered_map<std::string,unsigned>& predToAggrIndex,const std::unordered_map<std::string,std::string>& aggrIdToAggrSet):
+        HybridGenerator(Rewriter* rewriter, const aspc::Program& pg, std::vector<int> labels, const std::string& execPath, const std::vector<std::string>& names, const std::unordered_map<std::string,unsigned>& id, DataStructureCompiler* mapCompiler,std::unordered_set<std::string>& preds,const std::unordered_map<std::string,std::string>& predToStruct,const std::unordered_map<std::string,unsigned>& predToAggrIndex,const std::unordered_map<std::string,std::string>& aggrIdToAggrSet):
             program(pg),
             ruleLabel(labels), 
             auxMapCompiler(mapCompiler),
@@ -19,15 +22,23 @@ class HybridGenerator{
             negDep(true),
             predicateToStruct(predToStruct),
             predicateToAggrIndex(predToAggrIndex),
-            sumAggregateIdData(aggrIdToAggrSet){}
+            sumAggregateIdData(aggrIdToAggrSet),
+            prgRewriter(rewriter){
+                // std::cout << "HybridGenerator::constructor Debug original predicates ";
+                // for(std::string pred : originalPredicates){
+                //     std::cout << pred << " ";
+                // }
+                // std::cout << std::endl;
+            }
 
         void compile();
         void compileComponentRules(std::ofstream& outfile,Indentation& ind,unsigned starter,unsigned componentId,bool isRecursive,int ruleIndex);
         void buildComponentGenerator(int componentId,std::string className,std::ofstream& outfile,Indentation& ind);
         void buildConstraintGrounder(int ruleId,std::string className,std::ofstream& outfile,Indentation& ind);
     private:
+        Rewriter* prgRewriter;
         aspc::Program program;
-        std::vector<bool> ruleLabel;
+        std::vector<int> ruleLabel;
 
         DataStructureCompiler* auxMapCompiler;
         std::unordered_map<std::string,unsigned> predIds;

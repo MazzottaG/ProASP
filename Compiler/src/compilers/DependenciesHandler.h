@@ -34,6 +34,20 @@ class DependenciesHandler{
                         }
                     }
                 }
+                for(const aspc::ArithmeticRelationWithAggregate& agg: r.getArithmeticRelationsWithAggregate())
+                    for(const aspc::Literal& l : agg.getAggregate().getAggregateLiterals()){
+                        if(l.isPositiveLiteral() || (full && l.isLiteral())){
+                            auto it =local_predicates.emplace(l.getPredicateName(),localPredicatesName.size());
+                            if(it.second){
+                                dg->addNode(localPredicatesName.size());
+                                localPredicatesName.push_back(l.getPredicateName());
+                            }
+                            for(const aspc::Atom& a : r.getHead()){
+                                unsigned headPred =local_predicates[a.getPredicateName()];
+                                dg->addEdge(it.first->second,headPred);
+                            }
+                        }
+                    }
             }
         }
         const std::vector<std::vector<int>>& computeSCC(bool full=false){

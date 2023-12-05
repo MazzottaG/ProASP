@@ -33,6 +33,7 @@
 #include "Formula.h"
 #include "Literal.h"
 #include "ArithmeticRelation.h"
+#include "../utils/SharedVars.h"
 #include <map>
 #include <vector>
 #include <set>
@@ -50,6 +51,16 @@ namespace aspc {
         Aggregate();
         Aggregate(const std::vector<aspc::Literal> & literals,const std::vector<aspc::ArithmeticRelation>& inequalities, const std::vector<std::string> & variables, std::string function);
         aspc::Aggregate& operator=(const aspc::Aggregate&);
+        bool operator==(const aspc::Aggregate& other){
+            if(aggregateLiterals.size() != other.aggregateLiterals.size()) return false;
+            for(unsigned i = 0; i < aggregateLiterals.size(); i++) if(!(aggregateLiterals[i] == other.aggregateLiterals[i])) return false;
+            if(inequalities.size() != other.inequalities.size()) return false;
+            for(unsigned i = 0; i < inequalities.size(); i++) if(!(inequalities[i] == other.inequalities[i])) return false;
+            if(aggregateVariables.size() != other.aggregateVariables.size()) return false;
+            for(unsigned i = 0; i < aggregateVariables.size(); i++) if(!(aggregateVariables[i] == other.aggregateVariables[i])) return false;
+            if(aggregateFunction != other.aggregateFunction) return false;
+            return true;
+        }
         virtual bool isBoundedRelation(const std::unordered_set<std::string> &) const override;
         virtual bool isBoundedLiteral(const std::unordered_set<std::string> &) const override;
         virtual bool isBoundedValueAssignment(const std::unordered_set<std::string> &) const override;
@@ -85,7 +96,11 @@ namespace aspc {
         void getOrderedAggregateBody(std::vector<aspc::Formula*>& orderedBody,std::unordered_set<std::string>)const;
         virtual ~Aggregate();
         unsigned getFirstVarIndex()const;
-        
+        bool isAggregateBodySafe(std::unordered_set<std::string> boundVars){
+            for(const aspc::Literal& l : aggregateLiterals){
+            }
+        }
+        SharedVars getSharedBody(const std::unordered_set<std::string>&, const std::vector<aspc::Literal>&, const std::vector<aspc::ArithmeticRelation>&)const;
     private:
         std::vector<aspc::Literal> aggregateLiterals;
         std::vector<aspc::ArithmeticRelation> inequalities;

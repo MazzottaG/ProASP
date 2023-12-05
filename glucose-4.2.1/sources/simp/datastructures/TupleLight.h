@@ -40,17 +40,17 @@ class TupleLight {
 public:
     static Glucose::vec<Glucose::Lit> EMPTY_REASON_LITS;
 
-    TupleLight() : predicateName(-1),waspID(0),id(0),size_(0),content(NULL),status(UNKNOWN),collisionsListsSize(0) {
+    TupleLight() : predicateName(-1),id(0),size_(0),content(NULL),status(UNKNOWN),collisionsListsSize(0) {
     }
 
-    TupleLight(int predicateName, bool negated = false, int waspID = 0) : predicateName(predicateName), waspID(waspID),id(0),size_(0),content(NULL),status(UNKNOWN),collisionsListsSize(0) {
+    TupleLight(int predicateName, bool negated = false, int waspID = 0) : predicateName(predicateName),id(0),size_(0),content(NULL),status(UNKNOWN),collisionsListsSize(0) {
     }
-    TupleLight(int predicateName,std::vector<int> v, bool negated = false, int waspID = 0) : predicateName(predicateName),/*std::vector<int>(v),*/ waspID(waspID),id(0),size_(v.size()),status(UNKNOWN),collisionsListsSize(0) {
+    TupleLight(int predicateName,std::vector<int> v, bool negated = false, int waspID = 0) : predicateName(predicateName),/*std::vector<int>(v),*/ id(0),size_(v.size()),status(UNKNOWN),collisionsListsSize(0) {
         content = new int[v.size()];
         std::copy(v.begin(), v.end(), content);
     }
     
-    TupleLight(const TupleLight& orig) : size_(orig.size()), /*std::vector<int>(orig),*/ predicateName(orig.predicateName), id(orig.id), waspID(orig.waspID),status(orig.status),collisionsListsSize(orig.collisionsListsSize) {
+    TupleLight(const TupleLight& orig) : size_(orig.size()), /*std::vector<int>(orig),*/ predicateName(orig.predicateName), id(orig.id), status(orig.status),collisionsListsSize(orig.collisionsListsSize) {
         content = new int[orig.size_];
         std::memcpy(content,orig.content,orig.size_*sizeof(int));
     }
@@ -62,30 +62,30 @@ public:
     }
 
     TupleLight(const std::initializer_list<int> & l, bool negated = false, int waspID = 0) :
-    /*std::vector<int>(l),*/ size_(l.size()), predicateName(-1), waspID(waspID),id(0),status(UNKNOWN),collisionsListsSize(0) {
+    /*std::vector<int>(l),*/ size_(l.size()), predicateName(-1), id(0),status(UNKNOWN),collisionsListsSize(0) {
         content = new int[l.size()];
         std::copy(l.begin(), l.end(), content);
     }
 
     TupleLight(const std::initializer_list<int> & l, int predicateName, bool negated = false, int waspID = 0) :
-    /*vector<int>(l),*/ size_(l.size()), predicateName(predicateName), waspID(waspID),id(0),status(UNKNOWN),collisionsListsSize(0) {
+    /*vector<int>(l),*/ size_(l.size()), predicateName(predicateName), id(0),status(UNKNOWN),collisionsListsSize(0) {
         content = new int[l.size()];
         std::copy(l.begin(), l.end(), content);
     }
     
     TupleLight(const std::vector<int> & l, int predicateName, bool negated = false, int waspID = 0) :
-    /*vector<int>(l),*/ size_(l.size()), predicateName(predicateName), waspID(waspID),id(0),status(UNKNOWN),collisionsListsSize(0) {
+    /*vector<int>(l),*/ size_(l.size()), predicateName(predicateName), id(0),status(UNKNOWN),collisionsListsSize(0) {
         content = new int[l.size()];
         std::copy(l.begin(), l.end(), content);
     }
 
     //WARNING: require l to be created on the fly new int[]{...}
     TupleLight(int* l, int size, int predicateName, bool negated = false, int waspID = 0) :
-    /*vector<int>(l),*/ size_(size), predicateName(predicateName), waspID(waspID),id(0),status(UNKNOWN),collisionsListsSize(0){
+    /*vector<int>(l),*/ size_(size), predicateName(predicateName), id(0),status(UNKNOWN),collisionsListsSize(0){
         content = l;
     }
     TupleLight(const std::vector<int> & l, bool negated = false, int waspID = 0) :
-    /*vector<int>(l),*/ size_(l.size()), waspID(waspID),id(0),status(UNKNOWN),collisionsListsSize(0) {
+    /*vector<int>(l),*/ size_(l.size()), id(0),status(UNKNOWN),collisionsListsSize(0) {
         content = new int[l.size()];
         std::copy(l.begin(), l.end(), content);
     }
@@ -168,7 +168,38 @@ public:
         }
         return true;
     }
-
+    unsigned long getBytesCount(){
+        // unsigned long totalSize = sizeof(predicateName);
+        // totalSize += sizeof(status);
+        // totalSize += sizeof(id);
+        // totalSize += sizeof(waspID);
+        // totalSize += sizeof(size_);
+        // totalSize += sizeof(content);
+        // for(int i=0;i<size_;i++) totalSize+=sizeof(content[i]);
+        // totalSize += sizeof(collisionsListsSize);
+        // totalSize += sizeof(collisionsLists);
+        // for(const auto& pair : collisionsLists){
+        //     totalSize += sizeof(pair.first);
+        //     totalSize += sizeof(pair.second);
+        // }
+        unsigned long totalSize = 4; //sizeof(predicateName);
+        totalSize += 4; //sizeof(status);
+        totalSize += 4; //sizeof(id);
+        totalSize += 4; //sizeof(waspID);
+        totalSize += 4; //sizeof(size_);
+        totalSize += 8; //sizeof(content);
+        for(int i=0;i<size_;i++) totalSize+=4; //sizeof(content[i]);
+        totalSize += 4; //sizeof(collisionsListsSize);
+        totalSize += 24; //sizeof(collisionsLists);
+        for(const auto& pair : collisionsLists){
+            totalSize += 8;
+            totalSize += 4;
+        }
+        #ifdef PURE_PROP
+        Glucose::vec<Glucose::Lit> reason;
+        #endif
+        return totalSize;
+    }
     TupleLight& operator=(const TupleLight& right) {
         if (this == &right)
             return *this;
@@ -237,14 +268,13 @@ public:
         // std::cout << ",&_"<<Executor::predicateIds[predicateName]<<");" <<std::endl;
     }
     bool isInternalLiteral()const{
-        return waspID==0;
+        // return waspID==0;
+        return true;
     }
     int getWaspID()const{
-        return waspID;
+        return id;
     }
-    void setWaspID(int waspID){
-        this->waspID=waspID;
-    }
+    void setWaspID(int waspID){}
     bool isTrue()const{
         return status == True;
     }
@@ -254,6 +284,7 @@ public:
     bool isUndef()const{
         return status == Undef;
     }
+    TruthStatus getTruthValue()const {return status;}
     std::pair<const TupleLight *, bool>  setStatus(TruthStatus t){
         if(status==t){
             return std::make_pair(this, false);
@@ -294,8 +325,6 @@ private:
     TruthStatus status;
     mutable int id;
 
-    // TODO remove
-    int waspID;
     int* content;
     int size_;
     mutable unsigned collisionsListsSize;

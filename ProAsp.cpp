@@ -24,6 +24,7 @@ class Exec{
         virtual void build(const std::string& src,const std::string& file,std::string ground="")=0;
         void lauch(){
             for(std::string command : commands){
+                // std::cout << "CMD: "<< command<<std::endl;
                 int returncode = system(command.c_str());
                 if(returncode != 0){
                     std::cout << "Warning: Command "<<command<<" exited with code "<<returncode<<std::endl;
@@ -34,7 +35,8 @@ class Exec{
 class Run: public Exec{
     virtual void build(const std::string& src,const std::string& file,std::string ground=""){
         commands=std::vector<std::string>({
-            src+"/glucose-4.2.1/sources/simp/glucose -no-pre "+file
+            // src+"/glucose-4.2.1/sources/simp/glucose -no-pre "+file
+            src+"/glucose-4.2.1/sources/simp/enumarate "+file
         });
     }
 };
@@ -58,6 +60,7 @@ void exitError(Exec* m,int returncode,std::string message){
 }
 int main (int argc, char **argv)
 {
+  std::cout << "ProASP Solver"<<std::endl;
   int mode_flag = UNKNOWN;
   Exec* mode = nullptr;
 
@@ -130,6 +133,7 @@ int main (int argc, char **argv)
           abort ();
         }
     }
+    std::cout << "Launching "<< std::endl;
     mode->build(src,file,grounding);
     mode->lauch();
     exit (0);

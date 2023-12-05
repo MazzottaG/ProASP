@@ -1,4 +1,10 @@
 #include "Rewriter.h"
+#include "Analyzer.h"
+
+const int Rewriter::DOMAIN_RULE=1;
+const int Rewriter::GROUND_RULE=2;
+const int Rewriter::TO_GENERATE=3;
+
 void Rewriter::addOriginalConstraint(){
     for(unsigned i=0; i<program.getRulesSize();i++){
         auto rule = program.getRule(i);
@@ -7,8 +13,198 @@ void Rewriter::addOriginalConstraint(){
         }
     }
 }
-void Rewriter::addToGroundRule(const aspc::Rule& r){
+void Rewriter::rewriteGroundedAggregate(const aspc::Rule& r, Analyzer& analyzer, GroundedAggrData& data){
+    std::unordered_set<std::string> bodyVariables;
+    r.addBodyVars(bodyVariables);
+    std::vector<std::string> aggSetTerms;
+    std::string aggSetPred = "";
+    bool aggSetNegated = false;
+
+    for(const aspc::Formula* f : r.getFormulas()){
+        // TODO: Add support for multiple aggregates in the same rule
+        if(f->containsAggregate()){
+            const aspc::ArithmeticRelationWithAggregate* aggrRelation = (const aspc::ArithmeticRelationWithAggregate*) f;
+            std::vector<aspc::Literal> aggregateLiterals(aggrRelation->getAggregate().getAggregateLiterals());
+            std::vector<aspc::ArithmeticRelation> aggregateInequalities(aggrRelation->getAggregate().getAggregateInequalities());
+            std::vector<std::string> aggregateVariables(aggrRelation->getAggregate().getAggregateVariables());
+
+            std::vector<std::string> aggIdTerms;
+            std::unordered_set<std::string> distinctAggIdTerms;
+            std::string aggrId = "aggr_id"+std::to_string(aggrIdPredicates.size());
+            aggrIdPredicates.insert(aggrId);
+            r.addSharedVars(bodyVariables,aggIdTerms,distinctAggIdTerms,aggrRelation);
+
+            unsigned countIDB = 0;
+            bool boundIDB = true;
+            for(unsigned i=0; i<aggregateLiterals.size(); i++){
+                if(!analyzer.isEDB(aggregateLiterals[i].getPredicateName())){
+                    countIDB++;
+                    if(countIDB==1) {
+                        aggSetTerms=aggregateLiterals[i].getTerms();
+                        aggSetPred=aggregateLiterals[i].getPredicateName();
+                        aggSetNegated= aggregateLiterals[i].isNegated();
+                    }
+                }
+            }
+            if(countIDB == 1){
+                std::unordered_set<std::string> idbBounds(bodyVariables);
+                for(std::string var : aggrRelation->getAggregate().getAggregateVariables()){
+                    if(isVariable(var)) idbBounds.insert(var);
+                }
+                boundIDB = aspc::Literal(aggSetNegated,aspc::Atom(aggSetPred,aggSetTerms)).isBoundedLiteral(idbBounds);
+            }
+            std::string aggregateSetPredicate="aggr_set"+std::to_string(aggrSetPredicates.size());
+            AggrSetPredicate aggrSet;
+            if(countIDB > 1 || !boundIDB){
+                clearData();
+                std::unordered_set<std::string> aggrSetDistinctTerms;
+                for(std::string v :aggrRelation->getAggregate().getAggregateVariables()){
+                    if(aggrSetDistinctTerms.count(v)==0){
+                        aggrSetDistinctTerms.insert(v);
+                        aggrSet.addTerm(v);
+                    }
+                }
+                for(const aspc::Literal& l:aggregateLiterals){
+                    for(unsigned i=0; i<l.getAriety(); i++){
+                        std::string v = l.getTermAt(i);
+                        if((!l.isVariableTermAt(i) || bodyVariables.count(v)!=0) && aggrSetDistinctTerms.count(v)==0){
+                            aggrSetDistinctTerms.insert(v);
+                            aggrSet.addTerm(v);
+                        }
+                    }
+                    aggrSet.addLiteral(l);
+                    buildingBody.push_back(aspc::Literal(l));
+                }
+                for(const aspc::ArithmeticRelation& l:aggregateInequalities){
+
+                    for(std::string v : l.getLeft().getAllTerms()){
+                        if(isVariable(v) && bodyVariables.count(v)!=0 && aggrSetDistinctTerms.count(v)==0){
+                            aggrSetDistinctTerms.insert(v);
+                            aggrSet.addTerm(v);
+                        }
+                    }
+
+                    for(std::string v : l.getRight().getAllTerms()){
+                        if(isVariable(v) && bodyVariables.count(v)!=0 && aggrSetDistinctTerms.count(v)==0){
+                            aggrSetDistinctTerms.insert(v);
+                            aggrSet.addTerm(v);
+                        }
+                    }
+                    inequalities.push_back(aspc::ArithmeticRelation(l));
+                    aggrSet.addInequality(l);
+                }
+                bool sharedAggrSet=false;
+                SharedVars sharedVarData = aggrRelation->getAggregate().getSharedBody(bodyVariables,r.getBodyLiterals(),r.getArithmeticRelations());
+                for(const auto& previous:aggrSetPredicates){
+                    if(aggrSet == previous.second){
+                        auto it = aggSetToSharedVars.find(previous.first);
+                        if(( it == aggSetToSharedVars.end() && sharedVarData.empty()) || (it != aggSetToSharedVars.end() && sharedVarData == aggrSharedVarsPredicate[it->second])){
+                            aggregateSetPredicate=previous.first;
+                            sharedAggrSet=true;
+                            break;
+                        }
+                    }
+                }
+                
+                if(!sharedAggrSet){
+                    if(!sharedVarData.empty()){
+                        std::string sharedVarsPredicate = "sharedVar"+std::to_string(sharedVarsPredicates.size());
+                        bool defined = false;
+                        for(auto pair : aggrSharedVarsPredicate){
+                            if(pair.second == sharedVarData){
+                                sharedVarsPredicate=pair.first;
+                                defined = true;
+                                break;
+                            }
+                        }
+                        if(!defined){
+                            //declaring new predicated sharedVars
+                            aggrSharedVarsPredicate[sharedVarsPredicate]=sharedVarData;
+                            sharedVarsPredicateId[sharedVarsPredicate]=sharedVarsPredicates.size();
+                            sharedVarsPredicates.push_back(sharedVarsPredicate);
+
+                            //mapping sharedVars to currentAggSet
+                            aggSetToSharedVars[aggregateSetPredicate]=sharedVarsPredicate;
+
+                            //adding domain rule
+                            domainRules.push_back(aspc::Rule({aspc::Atom(sharedVarsPredicate,sharedVarData.getTerms())},r.getBodyLiterals(),r.getArithmeticRelations(),false));
+                        }
+                        buildingBody.push_back(aspc::Literal(false,aspc::Atom(sharedVarsPredicate,sharedVarData.getTerms())));
+                    }
+                    aggrSetPredicates[aggregateSetPredicate]=aggrSet;
+                    buildingHead.push_back(aspc::Atom(aggregateSetPredicate,aggrSet.getTerms()));
+                    data.rules.push_back(aspc::Rule(buildingHead,buildingBody,inequalities,inequalitiesWithAggregate,false,false));
+
+                }
+                clearData();
+                for(const aspc::Literal& l : r.getBodyLiterals())
+                    buildingBody.push_back(l);
+                for(const aspc::ArithmeticRelation& rel : r.getArithmeticRelations())
+                    inequalities.push_back(rel);
+                inequalitiesWithAggregate.push_back(
+                    aspc::ArithmeticRelationWithAggregate(
+                        false,
+                        aggrRelation->getGuard(),
+                        aspc::Aggregate(
+                            {aspc::Literal(false,aspc::Atom(aggregateSetPredicate,aggrSet.getTerms()))},
+                            {},
+                            aggrRelation->getAggregate().getAggregateVariables(),
+                            aggrRelation->getAggregate().getAggregateFunction()
+                        ),
+                        aggrRelation->getComparisonType(),
+                        aggrRelation->isNegated())
+                );
+                inequalitiesWithAggregate.back().setPlusOne(aggrRelation->isPlusOne());
+                for(const aspc::Atom& h : r.getHead()) buildingHead.push_back(h);
+
+                data.rules.push_back(aspc::Rule(buildingHead,buildingBody,inequalities,inequalitiesWithAggregate,false,false));
+                data.setAggId(aspc::Atom(aggrId,aggIdTerms));
+                data.setAggSet(aspc::Literal(false,aspc::Atom(aggregateSetPredicate,aggrSet.getTerms())));
+                return;
+
+            }else if(countIDB == 1){
+
+                data.rules.push_back(r);
+                data.setAggId(aspc::Atom(aggrId,aggIdTerms));
+                data.setAggSet(aspc::Literal(aggSetNegated,aspc::Atom(aggSetPred,aggSetTerms)));
+                return;
+
+            }else{
+                std::cout << "Error: unable to find idb literal for aggregate body"<<std::endl;
+                exit(180);
+            }
+        }
+    }
+    assert(false);
+}
+void Rewriter::addDomainRule(std::vector<int>& generatorRuleLabel){
+    for(unsigned ruleId=0; ruleId < domainRules.size(); ruleId++){
+        generatorProgram.addRule(domainRules[ruleId]);
+        generatorRuleLabel.push_back(DOMAIN_RULE);
+    }
+}
+void Rewriter::addToGroundRule(const aspc::Rule& r,std::vector<int>& generatorRuleLabel, Analyzer& analyzer){
+    if(r.containsAggregate()){
+        GroundedAggrData data;
+
+        rewriteGroundedAggregate(r,analyzer,data);
+        std::cout << "Added rule for grounding aggregate {\n";
+        for(const aspc::Rule& rule : data.rules){
+            std::cout << "   ";
+            rule.print();
+            if(rule.containsAggregate()){
+                aggregateGroundingMapping[generatorRuleLabel.size()]=aggregateGrounding.size();
+                aggregateGrounding.push_back(data);
+            }
+            generatorProgram.addRule(rule);
+            generatorRuleLabel.push_back(GROUND_RULE);
+        }
+        std::cout << "}\n";
+        return;
+    }
     generatorProgram.addRule(r);
+    generatorRuleLabel.push_back(GROUND_RULE);
+
 }
 std::pair<bool,std::pair<std::string,AggrSetPredicate>> Rewriter::buildBody(std::unordered_set<std::string> aggregateBodyVariables,const aspc::Rule& r,std::string auxValPred,std::vector<std::string> auxValTerm){
     // unsigned bodySize = auxValPred!="" ? r.getBodyLiterals().size()+1 : r.getBodyLiterals().size();
@@ -25,7 +221,7 @@ std::pair<bool,std::pair<std::string,AggrSetPredicate>> Rewriter::buildBody(std:
         // body with at most one literal
         if(!ruleBody.empty()){
             const aspc::Literal* l = &ruleBody[0];
-            
+
             for(unsigned i=0; i<l->getAriety(); i++){
                 std::string v = l->getTermAt(i);
                 if(l->isVariableTermAt(i) && aggregateBodyVariables.count(v)==0 && headVars.count(v)==0){
@@ -37,7 +233,7 @@ std::pair<bool,std::pair<std::string,AggrSetPredicate>> Rewriter::buildBody(std:
     }
 
     std::string bodyPredicate = "body"+std::to_string(bodyPredicates.size());
-    AggrSetPredicate body; 
+    AggrSetPredicate body;
     if(writeRule){
         clearData();
         std::unordered_set<std::string> distictBodyTerms;
@@ -102,7 +298,7 @@ std::pair<bool,std::pair<std::string,AggrSetPredicate>> Rewriter::buildBody(std:
     }
     return std::pair<bool,std::pair<std::string,AggrSetPredicate>>(writeRule,std::pair<std::string,AggrSetPredicate>(bodyPredicate,body));
 }
-std::pair<bool,std::pair<std::string,AggrSetPredicate>> Rewriter::buildAggregateSet(std::unordered_set<std::string> bodyVariables,const aspc::ArithmeticRelationWithAggregate& aggregareRelation){
+std::pair<bool,std::pair<std::string,AggrSetPredicate>> Rewriter::buildAggregateSet(std::unordered_set<std::string> bodyVariables,const aspc::ArithmeticRelationWithAggregate& aggregareRelation,const std::vector<aspc::Literal>& bodyLits,const std::vector<aspc::ArithmeticRelation>& bodyIneqs){
     bool writeRule = aggregareRelation.getAggregate().getAggregateLiterals().size()>1 || aggregareRelation.getAggregate().getAggregateInequalities().size()>0;
     std::vector<aspc::Literal> aggregateLiterals(aggregareRelation.getAggregate().getAggregateLiterals());
     std::vector<aspc::ArithmeticRelation> aggregateInequalities(aggregareRelation.getAggregate().getAggregateInequalities());
@@ -116,12 +312,13 @@ std::pair<bool,std::pair<std::string,AggrSetPredicate>> Rewriter::buildAggregate
                     if(v == l->getTermAt(i)){
                         found=true;
                         break;
-                    } 
+                    }
                 }
                 if(!found){
                     if(bodyVariables.count(l->getTermAt(i))!=0)
                         found=true;
                     else{
+                        std::cout << "   Variables "<<l->getTermAt(i)<<"Not found neither in body vars not in aggregate vars"<<std::endl;
                         writeRule=true;
                         break;
                     }
@@ -132,6 +329,7 @@ std::pair<bool,std::pair<std::string,AggrSetPredicate>> Rewriter::buildAggregate
             for(unsigned i=0;i<l->getAriety() && !writeRule;i++){
                 for(unsigned j=i+1;j<l->getAriety() && !writeRule;j++){
                     if(l->isVariableTermAt(i) && l->isVariableTermAt(j) && l->getTermAt(i)==l->getTermAt(j)){
+                        std::cout << "   Found duplicated Variable "<<l->getTermAt(i)<<std::endl;
                         writeRule=true;
                     }
                 }
@@ -141,6 +339,7 @@ std::pair<bool,std::pair<std::string,AggrSetPredicate>> Rewriter::buildAggregate
     std::string aggregateSetPredicate="aggr_set"+std::to_string(aggrSetPredicates.size());
     AggrSetPredicate aggrSet;
     if(writeRule){
+        std::cout << "   Writing agg_set rule "<<std::endl;
         clearData();
         std::unordered_set<std::string> aggrSetDistinctTerms;
         for(std::string v :aggregareRelation.getAggregate().getAggregateVariables()){
@@ -161,14 +360,14 @@ std::pair<bool,std::pair<std::string,AggrSetPredicate>> Rewriter::buildAggregate
             buildingBody.push_back(aspc::Literal(l));
         }
         for(const aspc::ArithmeticRelation& l:aggregateInequalities){
-            
+
             for(std::string v : l.getLeft().getAllTerms()){
                 if(isVariable(v) && bodyVariables.count(v)!=0 && aggrSetDistinctTerms.count(v)==0){
                     aggrSetDistinctTerms.insert(v);
                     aggrSet.addTerm(v);
                 }
             }
-            
+
             for(std::string v : l.getRight().getAllTerms()){
                 if(isVariable(v) && bodyVariables.count(v)!=0 && aggrSetDistinctTerms.count(v)==0){
                     aggrSetDistinctTerms.insert(v);
@@ -178,22 +377,53 @@ std::pair<bool,std::pair<std::string,AggrSetPredicate>> Rewriter::buildAggregate
             inequalities.push_back(aspc::ArithmeticRelation(l));
             aggrSet.addInequality(l);
         }
+        SharedVars sharedVarData = aggregareRelation.getAggregate().getSharedBody(bodyVariables,bodyLits,bodyIneqs);
         bool sharedAggrSet=false;
         for(const auto& previous:aggrSetPredicates){
             if(aggrSet == previous.second){
-                aggregateSetPredicate=previous.first;
-                sharedAggrSet=true;
-                break;
+                auto it = aggSetToSharedVars.find(previous.first);
+                if(( it == aggSetToSharedVars.end() && sharedVarData.empty()) || (it != aggSetToSharedVars.end() && sharedVarData == aggrSharedVarsPredicate[it->second])){
+                    aggregateSetPredicate=previous.first;
+                    sharedAggrSet=true;
+                    break;
+                }
             }
         }
         if(!sharedAggrSet){
+            if(!sharedVarData.empty()){
+                std::string sharedVarsPredicate = "sharedVar"+std::to_string(sharedVarsPredicates.size());
+                bool defined = false;
+                for(auto pair : aggrSharedVarsPredicate){
+                    if(pair.second == sharedVarData){
+                        sharedVarsPredicate=pair.first;
+                        defined = true;
+                        break;
+                    }
+                }
+                if(!defined){
+                    //declaring new predicated sharedVars
+                    aggrSharedVarsPredicate[sharedVarsPredicate]=sharedVarData;
+                    sharedVarsPredicateId[sharedVarsPredicate]=sharedVarsPredicates.size();
+                    sharedVarsPredicates.push_back(sharedVarsPredicate);
+
+                    //mapping sharedVars to currentAggSet
+                    aggSetToSharedVars[aggregateSetPredicate]=sharedVarsPredicate;
+
+                    //adding domain rule
+                    domainRules.push_back(aspc::Rule({aspc::Atom(sharedVarsPredicate,sharedVarData.getTerms())},bodyLits,bodyIneqs,false));
+                }
+                buildingBody.push_back(aspc::Literal(false,aspc::Atom(sharedVarsPredicate,sharedVarData.getTerms())));
+            }
             aggrSetPredicates[aggregateSetPredicate]=aggrSet;
             buildingHead.push_back(aspc::Atom(aggregateSetPredicate,aggrSet.getTerms()));
             addRuleAfterAggregate();
         }
-        
+
     }else{
         //Aggregate contains only one bound literal considering body variables and aggregation variables
+        std::cout << "   Not Writing agg_set rule "<<std::endl;
+
+        // TODO: search for previous aggregate_set predicate
         const aspc::Literal* literal = &aggregateLiterals[0];
         int prevAggrVarIndex = prgPredicatAsAggSet.count(literal->getPredicateName()) != 0 ? prgPredicatAsAggSet[literal->getPredicateName()] : -1;
         int aggrVarIndex = -1;
@@ -213,10 +443,11 @@ std::pair<bool,std::pair<std::string,AggrSetPredicate>> Rewriter::buildAggregate
             prgPredicatAsAggSet[aggregateSetPredicate]=aggrVarIndex;
             for(unsigned i=0; i<literal->getAriety(); i++){
                 aggrSet.addTerm(literal->getTermAt(i));
-            }        
+            }
         }else{
+            std::cout << "   Writing agg_set rule "<<std::endl;
+
             clearData();
-            buildingHead.push_back(aspc::Atom(aggregateSetPredicate,literal->getTerms()));
             buildingBody.push_back(*literal);
             std::unordered_set<std::string> aggrSetDistinctTerms;
             for(std::string v :aggregareRelation.getAggregate().getAggregateVariables()){
@@ -234,7 +465,8 @@ std::pair<bool,std::pair<std::string,AggrSetPredicate>> Rewriter::buildAggregate
                     }
                 }
                 aggrSet.addLiteral(l);
-            }      
+            }
+            buildingHead.push_back(aspc::Atom(aggregateSetPredicate,aggrSet.getTerms()));
             aggrSetPredicates[aggregateSetPredicate]=aggrSet;
             addRuleAfterAggregate();
             writeRule=true;
@@ -261,14 +493,15 @@ std::vector<std::string> Rewriter::writeAggrIdRule(std::pair<bool,std::pair<std:
                 aggregate->getAggregate().getAggregateFunction()),
             aggregate->getComparisonType(),
             false)
-        );    
+        );
         inequalitiesWithAggregate[0].setPlusOne(aggregate->isPlusOne());
         aggrId0 = "aggr_id"+std::to_string(aggrIdPredicates.size());
-        buildingHead.push_back(aspc::Atom(aggrId0,body.second.second.getTerms()));
         aggrIdPredicates.insert(aggrId0);
+        buildingHead.push_back(aspc::Atom(aggrId0,body.second.second.getTerms()));
         addRuleAfterAggregate();
     }else{
         std::cout << "Error: Equal operator not supported yet. Coming soon ..."<<std::endl;
+        exit(180);
         // aspc::ComparisonType cmp = aggregate->isNegated()  ? aspc::GT : aspc::GTE;
         // clearData();
         // if(body.second.first != "")
@@ -283,7 +516,7 @@ std::vector<std::string> Rewriter::writeAggrIdRule(std::pair<bool,std::pair<std:
         //         aggregate->getAggregate().getAggregateFunction()),
         //     cmp,
         //     false)
-        // );    
+        // );
         // aggrId0 = "aggr_id"+std::to_string(aggrIdPredicates.size());
         // buildingHead.push_back(aspc::Atom(aggrId0,body.second.second.getTerms()));
         // aggrIdPredicates.insert(aggrId0);
@@ -301,7 +534,7 @@ std::vector<std::string> Rewriter::writeAggrIdRule(std::pair<bool,std::pair<std:
         //         aggregate->getAggregate().getAggregateFunction()),
         //     cmp2,
         //     false)
-        // );    
+        // );
         // aggrId1 = "aggr_id"+std::to_string(aggrIdPredicates.size());
         // buildingHead.push_back(aspc::Atom(aggrId1,body.second.second.getTerms()));
         // aggrIdPredicates.insert(aggrId1);
@@ -345,7 +578,7 @@ void Rewriter::rewriteAggregates(){
         }
 
 
-        auto aggrSet = buildAggregateSet(bodyVariables,r.getArithmeticRelationsWithAggregate()[0]);
+        auto aggrSet = buildAggregateSet(bodyVariables,r.getArithmeticRelationsWithAggregate()[0],r.getBodyLiterals(),r.getArithmeticRelations());
         // std::string auxValPredicate="";
         // std::vector<std::string> auxValTerm;
         if(!r.getArithmeticRelationsWithAggregate()[0].isBoundedRelation(bodyVariables) && r.getArithmeticRelationsWithAggregate()[0].getComparisonType() == aspc::EQ){
@@ -428,7 +661,7 @@ void Rewriter::reduceToSigleHeadForPredicate(){
                 std::string supportPredicate = "sup_"+std::to_string(supportPredicates.size());
                 supportPredicateId[supportPredicate]=supportPredicates.size();
                 supportPredicates.push_back(supportPredicate);
-                
+
                 if(ariety == 0)
                     ariety=rule->getHead()[0].getTerms().size();
                 else if(ariety != rule->getHead()[0].getTerms().size()){
@@ -509,7 +742,16 @@ void Rewriter::computeGlobalPredicates(){
         predicateId[predicate]=predicateNames.size();
         predicateNames.push_back(predicate);
     }
-    
+    for(std::string predicate : sharedVarsPredicates){
+        predicateId[predicate]=predicateNames.size();
+        predicateNames.push_back(predicate);
+    }
+
+}
+void Rewriter::printSharedVars(){
+    for(auto pair : aggrSharedVarsPredicate){
+        pair.second.print(pair.first);
+    }
 }
 void Rewriter::computeCompletion(){
     for(unsigned i=0; i<afterAggregate.getRulesSize(); i++){
@@ -523,8 +765,8 @@ void Rewriter::computeCompletion(){
             assert(rule.getBodyLiterals().size() <= 1);
             const aspc::Atom* head = &rule.getHead()[0];
             const aspc::Literal* body = rule.getBodyLiterals().size() == 0 ? NULL : &rule.getBodyLiterals()[0];
-            
-            aspc::Rule genAggId ({aspc::Atom(head->getPredicateName(),head->getTerms())},{(body == NULL ? (aspc::Literal(false,aspc::Atom("",{}))) : aspc::Literal(*body))},{},false);
+
+            aspc::Rule genAggId ({aspc::Atom(head->getPredicateName(),head->getTerms())},(body == NULL ? std::vector<aspc::Literal>({}) : std::vector<aspc::Literal>({*body})),{},false);
             generatorProgram.addRule(genAggId);
             continue;
         }
@@ -544,9 +786,9 @@ void Rewriter::computeCompletion(){
                     if(literal->isVariableTermAt(k) && literal->isVariableTermAt(k1) && literal->getTermAt(k) == literal->getTermAt(k1)){
                         analyze_body=true;
                     }
-                }   
+                }
             }
-        } 
+        }
         if(analyze_body){
             std::unordered_set<std::string> positiveBodyVars;
             std::vector<std::string> auxTerms;
@@ -560,7 +802,7 @@ void Rewriter::computeCompletion(){
                                 auxTerms.push_back(lit->getTermAt(t));
                             }
                         }
-                    } 
+                    }
 
                 }
             }
@@ -589,7 +831,7 @@ void Rewriter::computeCompletion(){
             }else{
                 buildingAux = true;
                 predicate = "aux_"+std::to_string(auxPredicates.size());
-                auxPredicateId[predicate]=auxPredicates.size(); 
+                auxPredicateId[predicate]=auxPredicates.size();
                 auxPredicates.push_back(predicate);
                 terms = auxTerms;
             }
@@ -613,10 +855,10 @@ void Rewriter::computeCompletion(){
                 originalRule.setSupportAtom(originalRule.getBodySize());
                 propagatorsProgram.addRule(originalRule);
                 //labeledPropgatorRules.push_back(false);
-                generatorProgram.addRule(originalRule);                
+                generatorProgram.addRule(originalRule);
             }else{
-                // Adding head :- body in generator only 
-                // head works as aux atom 
+                // Adding head :- body in generator only
+                // head works as aux atom
                 generatorProgram.addRule(rule);
             }
             int supAtom = buildingAux ? -1 :0;
@@ -646,7 +888,7 @@ void Rewriter::computeCompletion(){
             //labeledPropgatorRules.push_back(true);
 
         }else{
-            // Body of length at most one 
+            // Body of length at most one
             // Adding orginal rule to both generator and propagator program
             generatorProgram.addRule(rule);
             rule.setSupportAtom(rule.getBodySize());

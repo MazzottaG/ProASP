@@ -1,6 +1,6 @@
 #ifndef EXTERNALPROPAGATOR_H
 #define EXTERNALPROPAGATOR_H
-#include "AbstractPropagator.h"
+#include "AggregatePropagator.h"
 #include <iostream>
 #include <vector>
 #include "AuxMapHandler.h"
@@ -25,10 +25,17 @@ class Propagator{
                 prop->attachWatched();
             }
         }
+        void printStoredLiterals(){
+            for(AbstractPropagator* prop : propagators){
+                // std::cout << "Propagator ";
+                prop->printName();
+                prop->printStoredLiterals();
+                // std::cout << "--------------------------";
+            }
+        }
         void propagateAtLevel0(Glucose::Solver* s,Glucose::vec<Glucose::Lit>& lits){
             for(AbstractPropagator* prop : propagators){
-                std::cout << "Calling extenral progragator ";
-                prop->printName();
+                // std::cout << "Calling ";prop->printName();
                 prop->propagateLevelZero(s,lits);
             }
         }
@@ -36,9 +43,23 @@ class Propagator{
             ModelExpansion::getInstance().generate(NULL);
         }
         void updateSumForTrueLit(Tuple*);
-        void updateSumForUndefLit(Tuple*);
+        void updateSumForTrueLitGroundAggregate(int literal){
+            for(AbstractPropagator* prop : TupleFactory::getInstance().getWatcher(literal<0 ? -literal : literal,literal<0)){
+                prop->notifyTrue(literal);
+            }
+        }
+        void updateSumForUndefLit(Tuple*,TruthStatus);
+        void updateSumForUndefLitGroundAggregate(int literal){
+            for(AbstractPropagator* prop : TupleFactory::getInstance().getWatcher(literal<0 ? -literal : literal,literal<0)){
+                prop->notifyUndef(literal);
+            }
+        }
 
         Glucose::CRef propagateLiteral(Glucose::Solver* s,Glucose::vec<Glucose::Lit>& lits,int literal){
+            // nested_calls++;
+            // assert(nested_calls>0);
+            // for(int i = 0 ; i< nested_calls;i++) std::cout << "   ";
+            // std::cout << "------------"<<std::endl;
             Tuple* starter = TupleFactory::getInstance().getTupleFromInternalID( literal > 0 ? literal : -literal);;
             if(starter == NULL){
                 if(literal != 0){
@@ -52,22 +73,39 @@ class Propagator{
                     TupleFactory::getInstance().removeFromCollisionsList(starter->getId());
                     if(literal > 0) AuxMapHandler::getInstance().insertTrue(insertResult);
                     else AuxMapHandler::getInstance().insertFalse(insertResult);
+                    updateSumForTrueLit(starter);
+                    updateSumForTrueLitGroundAggregate(literal);
                 }
-                updateSumForTrueLit(starter);
             }
             else{
                 if((literal > 0 && starter->isFalse()) || (literal < 0 && starter->isTrue())) {
-                    std::cout << "Error: literal already assigned with different value" <<std::endl; 
+                    std::cout << "Error: literal already assigned with different value" <<std::endl;
                     exit(180);
                 }
             }     
-            if(!active) return Glucose::CRef_Undef;
+            if(!active) {
+
+                // for(int i = 0 ; i< nested_calls;i++) std::cout << "   ";
+                // std::cout << "------------"<<std::endl;
+                // nested_calls--;
+                return Glucose::CRef_Undef;
+            }
             for(AbstractPropagator* prop : TupleFactory::getInstance().getWatcher(literal<0 ? -literal : literal,literal<0)){
+                // std::cout << "Calling ";prop->printName();
                 Glucose::CRef clause = prop->propagate(s,lits,literal);
                 if(clause != Glucose::CRef_Undef){
+                    // std::cout << "Found Conflict in propagator"<<std::endl;
+
+                    // for(int i = 0 ; i< nested_calls;i++) std::cout << "   ";
+                    // std::cout << "------------"<<std::endl;
+                    // nested_calls--;
                     return clause;
                 }
             }
+
+            // for(int i = 0 ; i< nested_calls;i++) std::cout << "   ";
+            // std::cout << "------------"<<std::endl;
+            // nested_calls--;
             return Glucose::CRef_Undef;
         }
         void init(){
@@ -81,9 +119,12 @@ class Propagator{
             TupleLight* starter = TupleFactory::getInstance().getTupleFromInternalID( x );
             if(starter == NULL){if(x != 0){std::cout << "Error: unable to find unrolling literal" <<std::endl; exit(180);}}
             if(!starter->isUndef()){
-                updateSumForUndefLit(starter);
+                int sign = starter->isFalse() ? -1 : 1;
+                TruthStatus val = starter->getTruthValue();
                 const auto& insertResult = starter->setStatus(Undef);
                 if(insertResult.second){
+                    updateSumForUndefLit(starter,val);
+                    updateSumForUndefLitGroundAggregate(sign*x);
                     #ifdef DEBUG_PROP
                     std::cout << "Unrolling ";AuxMapHandler::getInstance().printTuple(starter);
                     #endif
@@ -98,7 +139,9 @@ class Propagator{
             }
         }
         void activate(){active=true;}
-    private:    
+        void addPropagator(AbstractPropagator* prop){ propagators.push_back(prop); }
+    private:
+        int nested_calls = 0;
         Propagator();
         bool active;
         std::vector<AbstractPropagator*> propagators;

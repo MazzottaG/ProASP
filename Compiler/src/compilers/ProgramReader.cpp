@@ -3,10 +3,11 @@
 ProgramReader::ProgramReader(int argc, char *argv[]){
     // True -> toGroundRule
 	// False -> toCompileRule
-	
+	// std::vector<std::string> files({"encoding.compile","encoding.ground"});
 	label = false;
 	unsigned programSize=0;
-	for(int fileIndex = 1; fileIndex<3; fileIndex++){
+    for(int fileIndex = 1; fileIndex<3; fileIndex++){
+    // for(int fileIndex = 0; fileIndex<2; fileIndex++){
 		std::string filename(argv[fileIndex]);
 		antlr4::ANTLRFileStream input;
 		input.loadFromFile(filename);
@@ -17,17 +18,14 @@ ProgramReader::ProgramReader(int argc, char *argv[]){
 		parser.program();
 		for(int i=programSize; i<listener.getProgram().getRulesSize(); i++){
 			ruleLabel.push_back(label);
+			
 			if(listener.getProgram().getRule(i).isConstraint()) continue;
-
 			for(aspc::Atom h : listener.getProgram().getRule(i).getHead()){
 				if(label)
 					toGroundPredicates.insert(h.getPredicateName());
 				else propagatorPredicates.insert(h.getPredicateName());
 			}
-			if(label && listener.getProgram().getRule(i).containsAggregate()){
-				std::cout << "Rules with aggregates cannot be grounded yet. Coming soon ..."<<std::endl;
-				exit(180);
-			}
+			
 		}
 		programSize=listener.getProgram().getRulesSize();
 		label=!label;

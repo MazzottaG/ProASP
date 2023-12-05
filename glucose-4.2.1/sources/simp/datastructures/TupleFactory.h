@@ -123,13 +123,54 @@ class TupleFactory{
         bool isTracked(int lit){
             return trackedForSupport.count(lit) > 0;
         }
+        void printUsedMemory(){
+            unsigned total = 0;
+            unsigned totalBytes = 0;
+            for(unsigned i=0;i<tupleToInternalVarSets.size(); i++){
+                std::cout << "Predicate "<<i<<std::endl;
+                std::cout << "   Number of tuple: "<<tupleToInternalVarSets[i].size()<<std::endl;
+                total += tupleToInternalVarSets[i].size();
+                unsigned long usedBytes = 0;
+                for(const auto& tuple : tupleToInternalVarSets[i]){
+                    usedBytes+=tuple->getBytesCount();
+                }
+                totalBytes+=usedBytes;
+                std::cout << "   Used Bytes: "<<usedBytes<<std::endl;
+            }
+            std::cout << "Total number: "<<total<<std::endl;
+            std::cout << " Total bytes: "<<totalBytes<<std::endl;
+
+            std::cout << "auxAtomsForLiteral size: "<<auxAtomsForLiteral.size()<<std::endl;
+            std::cout << "   atomsForLiteral size: "<<atomsForLiteral.size()<<std::endl;
+            std::cout << " trackedForSupport size: "<<trackedForSupport.size()<<std::endl;
+            std::cout << "   negativeWatcher size: "<<negativeWatcher.size()<<std::endl;
+            std::cout << "   positiveWatcher size: "<<positiveWatcher.size()<<std::endl;
+
+            total = 0;
+            for(auto pair : auxAtomsForLiteral) total+=pair.second.size();
+            std::cout << "auxAtomsForLiteral sets size: "<<total<<std::endl;
+
+            total = 0;
+            for(auto pair : atomsForLiteral) total+=pair.second.size();
+            std::cout << "   atomsForLiteral sets size: "<<total<<std::endl;
+
+            total = 0;
+            for(auto elem : negativeWatcher) total+=elem.size();
+            std::cout << "   negativeWatcher vec size: "<<total<<std::endl;
+            total = 0;
+            for(auto elem : positiveWatcher) total+=elem.size();
+            std::cout << "   positiveWatcher vec size: "<<total<<std::endl;
+
+        }
         std::pair<bool,int> popTracked(){
             bool empty = trackedForSupport.empty();
             int elem = empty ? 0 : *trackedForSupport.begin();
             if(!empty) trackedForSupport.erase(elem);
             return std::make_pair(!empty, elem);
         }
-
+        bool hasName(int id)const{
+            return internalIDToTuple[id]->getPredicateName() != -1;
+        }
         int& getActualSumForLit(int lit){
             return actualSum[lit];
         }
@@ -462,6 +503,12 @@ class TupleFactory{
         }
         void setIndexForAggregateSet(unsigned index,int pred){
             aggregateSetToIndex.emplace(pred,index);
+        }
+
+        int predicateSize(int pred){
+            if(pred >= tupleToInternalVarSets.size())
+                return 0;
+            return tupleToInternalVarSets[pred].size();
         }
         const std::vector<TupleLight*>& getTuples()const {return internalIDToTuple;}
         float loadFactor()const{

@@ -99,7 +99,27 @@ public:
         // auto& vsets = std::get<std::variant< std::set<int,AggregateSetCmp>, std::set<int> >(it->second)
         // return std::get<set<int, AggregateSetCmp>>(vsets);
     }
-
+    unsigned long getUsedBytes(){
+        unsigned long usedBytes = sizeof(tuples);
+        for(const auto& pair : tuples){
+            usedBytes+=sizeof(pair.first);
+            if(std::holds_alternative<std::vector< int >>(pair.second)){
+                for(int v : std::get<std::vector<int>>(pair.second)){
+                    usedBytes+=sizeof(v);
+                }
+            }else{
+                for(int v : std::get<IndexedSet>(pair.second)){
+                    usedBytes+=sizeof(v);
+                }
+            }
+        }
+        usedBytes+=sizeof(keySize);
+        usedBytes+=sizeof(keyIndices);
+        for(int v : keyIndices){
+            usedBytes+=sizeof(v);
+        }
+        return usedBytes;
+    }
     inline void insert2Vec(const TupleLight & value) {
 
         std::bitset<S> keyCode;

@@ -5,6 +5,7 @@ void PropagatorCompiler::compileRuleFromStarter(unsigned ruleId, std::ofstream& 
     outfile << ind++ << "Glucose::CRef propagate(Glucose::Solver* solver,Glucose::vec<Glucose::Lit>& lits,int literal) override {\n";
     outfile << ind << "Tuple* starter = TupleFactory::getInstance().getTupleFromInternalID( literal > 0 ? literal : -literal);\n";
     outfile << ind << "std::vector<Glucose::Lit> propagations;\n";
+    outfile << ind << "std::vector<bool> polarity;\n";
 
     aspc::Rule rule = program.getRule(ruleId);
     if(rule.containsAggregate()){
@@ -300,9 +301,15 @@ void PropagatorCompiler::compileRuleFromStarter(unsigned ruleId, std::ofstream& 
                         closingPars--;
                     }
                     outfile << ind++ << "for(unsigned i = 0; i< propagations.size(); i++){\n";
-                        outfile << ind << "lits.clear();\n";
-                        outfile << ind << "lits.push( propagations[i] );\n";
-                        outfile << ind << "if(!solver->addClause_(lits)) return Glucose::CRef_PropConf;\n";
+                        outfile << ind << "bool foundConflict = solver->isConflictPropagation(var(propagations[i]), polarity[i]);\n";
+                        outfile << ind << "bool assigned = solver->isAssigned(var(propagations[i]));\n";
+                        outfile << ind++ << "if(!assigned)\n";
+                            outfile << ind-- << "solver->assignFromPropagators(propagations[i]);\n";
+                        outfile << ind++ << "else if(foundConflict){\n";
+                            outfile << ind << "lits.clear();\n";
+                            outfile << ind << "solver->addClause_(lits);\n";
+                            outfile << ind << "return Glucose::CRef_PropConf;\n";
+                        outfile << --ind << "}\n";
                     outfile << --ind << "}\n";
                 outfile << --ind << "}\n";
             }
@@ -387,16 +394,17 @@ void PropagatorCompiler::compileRuleFromStarter(unsigned ruleId, std::ofstream& 
                                 outfile << ind << "assert(!(head == NULL || head->isFalse()) || solver->currentLevel() == 0);\n";
                                 outfile << ind++ << "if(head != NULL && head->isUndef()){\n";
                                     printAddPropagatedToReason(outfile,ind,"head",false);
-                                        printAddPropagatedToReason(outfile,ind,"-literal","false");
+                                        printAddToReason(outfile,ind,"-literal","false");
                                         printTuplePropagation(outfile,ind,"head",false,false);
                                     outfile << --ind << "}\n";
                                 outfile << --ind << "}\n";
+                                outfile << ind++ << "else if((head == NULL || head->isFalse()) && solver->currentLevel() == 0){\n";
+                                    outfile << ind << "lits.clear();\n";
+                                    outfile << ind << "solver->addClause_(lits);\n";
+                                    outfile << ind << "return Glucose::CRef_PropConf;\n";
+                                outfile << --ind << "}\n";
                             outfile << --ind << "}\n";
-                            outfile << ind++ << "else if((head == NULL || head->isFalse()) && solver->currentLevel() == 0){\n";
-                                outfile << ind << "lits.clear();\n";
-                                outfile << ind << "solver->addClause_(lits);\n";
-                                outfile << ind << "return Glucose::CRef_PropConf;\n";
-                            outfile << --ind << "}\n";
+                            
                         }else if(lit->isBoundedLiteral(headVars)){
                             //unique body for head
                             outfile << ind++ << "if(literal > 0){\n";
@@ -596,9 +604,15 @@ void PropagatorCompiler::compileRuleFromStarter(unsigned ruleId, std::ofstream& 
                             closingPars--;
                         }
                         outfile << ind++ << "for(unsigned i = 0; i< propagations.size(); i++){\n";
-                            outfile << ind << "lits.clear();\n";
-                            outfile << ind << "lits.push( propagations[i] );\n";
-                            outfile << ind << "if(!solver->addClause_(lits)) return Glucose::CRef_PropConf;\n";
+                            outfile << ind << "bool foundConflict = solver->isConflictPropagation(var(propagations[i]), polarity[i]);\n";
+                            outfile << ind << "bool assigned = solver->isAssigned(var(propagations[i]));\n";
+                            outfile << ind++ << "if(!assigned)\n";
+                                outfile << ind-- << "solver->assignFromPropagators(propagations[i]);\n";
+                            outfile << ind++ << "else if(foundConflict){\n";
+                                outfile << ind << "lits.clear();\n";
+                                outfile << ind << "solver->addClause_(lits);\n";
+                                outfile << ind << "return Glucose::CRef_PropConf;\n";
+                            outfile << --ind << "}\n";
                         outfile << --ind << "}\n";
                     outfile << --ind << "}\n";
                 }
@@ -798,9 +812,15 @@ void PropagatorCompiler::compileRuleFromStarter(unsigned ruleId, std::ofstream& 
                         closingPars--;
                     }
                     outfile << ind++ << "for(unsigned i = 0; i< propagations.size(); i++){\n";
-                        outfile << ind << "lits.clear();\n";
-                        outfile << ind << "lits.push( propagations[i] );\n";
-                        outfile << ind << "if(!solver->addClause_(lits)) return Glucose::CRef_PropConf;\n";
+                        outfile << ind << "bool foundConflict = solver->isConflictPropagation(var(propagations[i]), polarity[i]);\n";
+                        outfile << ind << "bool assigned = solver->isAssigned(var(propagations[i]));\n";
+                        outfile << ind++ << "if(!assigned)\n";
+                            outfile << ind-- << "solver->assignFromPropagators(propagations[i]);\n";
+                        outfile << ind++ << "else if(foundConflict){\n";
+                            outfile << ind << "lits.clear();\n";
+                            outfile << ind << "solver->addClause_(lits);\n";
+                            outfile << ind << "return Glucose::CRef_PropConf;\n";
+                        outfile << --ind << "}\n";
                     outfile << --ind << "}\n";
                 outfile << --ind << "}\n";
                 
@@ -833,13 +853,17 @@ void PropagatorCompiler::printTuplePropagation(std::ofstream& outfile,Indentatio
         else
             outfile << ind << "var = "<<(asFalse ? "-var" : "var")<< ";\n";    
         outfile << ind << "propagations.push_back((var >= 0) ? Glucose::mkLit(var) : Glucose::mkLit(-var,true));\n";
+        outfile << ind << "polarity.push_back(var < 0);\n";
     }else{
         //  foundConflict -> violated clause is in solver
         outfile << ind++ << "if(solver->currentLevel() > 0){\n";
             outfile << ind << "Glucose::CRef clause = solver->externalPropagation("<<tuplename<<"->getId(),var < 0,this);\n";
             outfile << ind++ << "if(clause != Glucose::CRef_Undef)\n";
                 outfile << ind-- << "return clause;\n";
-        outfile << --ind << "}else propagations.push_back((var >= 0) ? Glucose::mkLit(var) : Glucose::mkLit(-var,true));\n";
+        outfile << --ind << "}else{\n";
+            outfile << ++ind << "propagations.push_back((var >= 0) ? Glucose::mkLit(var) : Glucose::mkLit(-var,true));\n";
+            outfile << ind << "polarity.push_back(var < 0);\n";
+        outfile << --ind << "}\n";
     }  
 }
 
@@ -1212,6 +1236,7 @@ void PropagatorCompiler::compileRuleLevelZero(unsigned ruleId,std::ofstream& out
     outfile << ind << "std::cout <<\"PropagateAtLevel0 "<<ruleId<<"\"<<std::endl;\n";
     #endif
     outfile << ind << "std::vector<Glucose::Lit> propagations;\n";
+    outfile << ind << "std::vector<bool> polarity;\n";
     aspc::Rule rule = program.getRule(ruleId);
     const std::vector<const aspc::Formula*>& body = rule.getFormulas();
     if(rule.containsAggregate()){
@@ -1620,9 +1645,15 @@ void PropagatorCompiler::compileRuleLevelZero(unsigned ruleId,std::ofstream& out
         }
     }
         outfile << ind++ << "for(unsigned i = 0; i< propagations.size(); i++){\n";
-            outfile << ind << "lits.clear();\n";
-            outfile << ind << "lits.push( propagations[i] );\n";
-            outfile << ind << "solver->addClause_(lits);\n";
+            outfile << ind << "bool foundConflict = solver->isConflictPropagation(var(propagations[i]), polarity[i]);\n";
+            outfile << ind << "bool assigned = solver->isAssigned(var(propagations[i]));\n";
+            outfile << ind++ << "if(!assigned)\n";
+                outfile << ind-- << "solver->assignFromPropagators(propagations[i]);\n";
+            outfile << ind++ << "else if(foundConflict){\n";
+                outfile << ind << "lits.clear();\n";
+                outfile << ind << "solver->addClause_(lits);\n";
+                outfile << ind << "return;\n";
+            outfile << --ind << "}\n";
         outfile << --ind << "}\n";
     outfile << --ind << "} //function\n";
 }
@@ -1702,7 +1733,7 @@ void PropagatorCompiler::compile(){
     
 }
 void PropagatorCompiler::printUpdateSum(std::ofstream& outfile, Indentation& ind, bool undef){
-    outfile << ind++ << "void Propagator::updateSumFor"<<(undef ? "Undef" : "True")<<"Lit(Tuple* starter){\n";
+    outfile << ind++ << "void Propagator::updateSumFor"<<(undef ? "Undef" : "True")<<"Lit(Tuple* starter"<<(undef ? ", TruthStatus prevVal" : "")<<"){\n";
     for(unsigned ruleId=0; ruleId<program.getRulesSize(); ruleId++){
         const aspc::Rule* rule = & program.getRule(ruleId);
         if(rule->containsAggregate()){
@@ -1790,7 +1821,7 @@ void PropagatorCompiler::printUpdateSum(std::ofstream& outfile, Indentation& ind
                         outfile << ind << "if(starter->isTrue()) TupleFactory::getInstance().incrementActualSumForLit(aggregate->getId(),"<<firstAggrVar<<");\n";
                         outfile << ind << "TupleFactory::getInstance().decrementPossibleSumForLit(aggregate->getId(),"<<firstAggrVar<<");\n";
                     }else{
-                        outfile << ind << "if(starter->isTrue()) TupleFactory::getInstance().decrementActualSumForLit(aggregate->getId(),"<<firstAggrVar<<");\n";
+                        outfile << ind << "if(prevVal == True) TupleFactory::getInstance().decrementActualSumForLit(aggregate->getId(),"<<firstAggrVar<<");\n";
                         outfile << ind << "TupleFactory::getInstance().incrementPossibleSumForLit(aggregate->getId(),"<<firstAggrVar<<");\n";
                     }
                     
@@ -1946,7 +1977,7 @@ void PropagatorCompiler::compileEagerRuleWithCount(unsigned ruleId, std::ofstrea
                                     outfile << ind++ << "if(clause != Glucose::CRef_Undef)\n";
                                         outfile << ind-- << "return clause;\n";
                                 outfile << --ind << "}\n";
-                            outfile << --ind << "}else propagations.push_back(Glucose::mkLit(itProp,true));\n";
+                            outfile << --ind << "}else {polarity.push_back(true);propagations.push_back(Glucose::mkLit(itProp,true));}\n";
 
                             // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
                         outfile << --ind << "}\n";
@@ -2007,7 +2038,7 @@ void PropagatorCompiler::compileEagerRuleWithCount(unsigned ruleId, std::ofstrea
                                     outfile << ind++ << "if(clause != Glucose::CRef_Undef)\n";
                                         outfile << ind-- << "return clause;\n";
                                 outfile << --ind << "}\n";
-                            outfile << --ind << "}else propagations.push_back(Glucose::mkLit(itProp));\n";
+                            outfile << --ind << "}else {polarity.push_back(false);propagations.push_back(Glucose::mkLit(itProp));}\n";
 
                         outfile << --ind << "}\n";
                     
@@ -2138,13 +2169,13 @@ void PropagatorCompiler::compileEagerRuleWithCount(unsigned ruleId, std::ofstrea
                                     outfile << ind++ << "if(clause != Glucose::CRef_Undef)\n";
                                         outfile << ind-- << "return clause;\n";
                                 outfile << --ind << "}\n";
-                            outfile << --ind << "}else propagations.push_back(Glucose::mkLit(itProp));\n";
+                            outfile << --ind << "}else {polarity.push_back(false);propagations.push_back(Glucose::mkLit(itProp));}\n";
 
                         }else{
                             // tupleU       -> TupleFactory::getInstance().getTupleFromInternalID(joinTuplesU->at(index))
                             // isNegated    -> false
                             // asNegative   -> false
-                            outfile << ind << "propagations.push_back(Glucose::mkLit(itProp));\n";
+                            outfile << ind << "{polarity.push_back(false);propagations.push_back(Glucose::mkLit(itProp));}\n";
                         }
                         
                     outfile << --ind << "} //close for joinTuplesU\n";
@@ -2243,13 +2274,13 @@ void PropagatorCompiler::compileEagerRuleWithCount(unsigned ruleId, std::ofstrea
                                     outfile << ind++ << "if(clause != Glucose::CRef_Undef)\n";
                                         outfile << ind-- << "return clause;\n";
                                 outfile << --ind << "}\n";
-                            outfile << --ind << "}else propagations.push_back(Glucose::mkLit(itProp,true));\n";
+                            outfile << --ind << "}else {polarity.push_back(true);propagations.push_back(Glucose::mkLit(itProp,true));}\n";
 
                         }else{
                             // tupleU       -> currentJoinTuple
                             // isNegated    -> false
                             // asNegative   -> true
-                            outfile << ind << "propagations.push_back(Glucose::mkLit(itProp,true));\n";
+                            outfile << ind << "{polarity.push_back(true);propagations.push_back(Glucose::mkLit(itProp,true));}\n";
                         }
                     outfile << --ind << "} // closing for joinTuplesU\n";
                 outfile << --ind << "} // close else if\n";
@@ -2331,13 +2362,13 @@ void PropagatorCompiler::compileEagerRuleWithCount(unsigned ruleId, std::ofstrea
                                 outfile << ind++ << "if(clause != Glucose::CRef_Undef)\n";
                                     outfile << ind-- << "return clause;\n";
                             outfile << --ind << "}\n";
-                        outfile << --ind << "}else propagations.push_back(Glucose::mkLit(aggrIdIt));\n";
+                        outfile << --ind << "}else {polarity.push_back(false);propagations.push_back(Glucose::mkLit(aggrIdIt));}\n";
 
                     }else{
                         // tupleU       -> currentTuple
                         // isNegated    -> false
                         // asNegative   -> false
-                        outfile << ind << "propagations.push_back(Glucose::mkLit(aggrIdIt));\n";
+                        outfile << ind << "{polarity.push_back(false);propagations.push_back(Glucose::mkLit(aggrIdIt));}\n";
                     }
                     
                 outfile << --ind << "}else if(joinTuples->size() + joinTuplesU->size() < "<<guard<<"){\n";
@@ -2377,13 +2408,14 @@ void PropagatorCompiler::compileEagerRuleWithCount(unsigned ruleId, std::ofstrea
                                 outfile << ind++ << "if(clause != Glucose::CRef_Undef)\n";
                                     outfile << ind-- << "return clause;\n";
                             outfile << --ind << "}\n";
-                        outfile << --ind << "}else propagations.push_back(Glucose::mkLit(aggrIdIt,true));\n";
+                        outfile << --ind << "}else {polarity.push_back(true);propagations.push_back(Glucose::mkLit(aggrIdIt,true));}\n";
 
                     }else{
                         // tupleU       -> currentTuple
                         // isNegated    -> false
                         // asNegative   -> true
                         outfile << ind << "propagations.push_back(Glucose::mkLit(aggrIdIt,true));\n";
+                        outfile << ind << "polarity.push_back(true);\n";
                     }
                     
                 outfile << --ind << "} // close else if\n";
@@ -2397,9 +2429,15 @@ void PropagatorCompiler::compileEagerRuleWithCount(unsigned ruleId, std::ofstrea
     }
     if(fromStarter){
         outfile << ind++ << "for(unsigned i = 0; i< propagations.size(); i++){\n";
-            outfile << ind << "lits.clear();\n";
-            outfile << ind << "lits.push( propagations[i] );\n";
-            outfile << ind << "if(!solver->addClause_(lits)) return Glucose::CRef_PropConf;\n";
+            outfile << ind << "bool foundConflict = solver->isConflictPropagation(var(propagations[i]), polarity[i]);\n";
+            outfile << ind << "bool assigned = solver->isAssigned(var(propagations[i]));\n";
+            outfile << ind++ << "if(!assigned)\n";
+                outfile << ind-- << "solver->assignFromPropagators(propagations[i]);\n";
+            outfile << ind++ << "else if(foundConflict){\n";
+                outfile << ind << "lits.clear();\n";
+                outfile << ind << "solver->addClause_(lits);\n";
+                outfile << ind << "return Glucose::CRef_PropConf;\n";
+            outfile << --ind << "}\n";
         outfile << --ind << "}\n";
     }
 }
@@ -2538,7 +2576,7 @@ void PropagatorCompiler::compileEagerRuleWithSum(unsigned ruleId, std::ofstream&
                                         outfile << ind++ << "if(clause != Glucose::CRef_Undef)\n";
                                             outfile << ind-- << "return clause;\n";
                                     outfile << --ind << "}\n";
-                                outfile << --ind << "}else propagations.push_back(Glucose::mkLit(itProp,true));\n";
+                                outfile << --ind << "}else {polarity.push_back(true);propagations.push_back(Glucose::mkLit(itProp,true));}\n";
 
                                 // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
                                 
@@ -2606,7 +2644,7 @@ void PropagatorCompiler::compileEagerRuleWithSum(unsigned ruleId, std::ofstream&
                                         outfile << ind++ << "if(clause != Glucose::CRef_Undef)\n";
                                             outfile << ind-- << "return clause;\n";
                                     outfile << --ind << "}\n";
-                                outfile << --ind << "}else propagations.push_back(Glucose::mkLit(itProp));\n";
+                                outfile << --ind << "}else {polarity.push_back(false);propagations.push_back(Glucose::mkLit(itProp));}\n";
 
                                 // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -2741,10 +2779,11 @@ void PropagatorCompiler::compileEagerRuleWithSum(unsigned ruleId, std::ofstream&
                                     outfile << ind++ << "if(clause != Glucose::CRef_Undef)\n";
                                         outfile << ind-- << "return clause;\n";
                                 outfile << --ind << "}\n";
-                            outfile << --ind << "}else propagations.push_back(Glucose::mkLit(itProp));\n";
+                            outfile << --ind << "}else {polarity.push_back(false);propagations.push_back(Glucose::mkLit(itProp));}\n";
 
                         }else{
                             outfile << ind << "propagations.push_back(Glucose::mkLit(itProp));\n";
+                            outfile << ind << "polarity.push_back(false);\n";
                         }
                     outfile << --ind << "} //close for joinTuplesU\n";
                 outfile << --ind << "} //close else\n";
@@ -2852,13 +2891,14 @@ void PropagatorCompiler::compileEagerRuleWithSum(unsigned ruleId, std::ofstream&
                                     outfile << ind++ << "if(clause != Glucose::CRef_Undef)\n";
                                         outfile << ind-- << "return clause;\n";
                                 outfile << --ind << "}\n";
-                            outfile << --ind << "}else propagations.push_back(Glucose::mkLit(itProp,true));\n";
+                            outfile << --ind << "}else {polarity.push_back(true);propagations.push_back(Glucose::mkLit(itProp,true));}\n";
 
                         }else{
                             // tupleU       -> currentJoinTuple
                             // isNegated    -> false
                             // asNegative   -> true
                             outfile << ind << "propagations.push_back(Glucose::mkLit(itProp,true));\n";
+                            outfile << ind << "polarity.push_back(true);\n";
                         }
                     outfile << --ind << "} // closing for joinTuplesU\n";
                 outfile << --ind << "} // close else if\n";
@@ -2944,13 +2984,14 @@ void PropagatorCompiler::compileEagerRuleWithSum(unsigned ruleId, std::ofstream&
                             outfile << ind++ << "if(clause != Glucose::CRef_Undef)\n";
                                 outfile << ind-- << "return clause;\n";
                         outfile << --ind << "}\n";
-                    outfile << --ind << "}else propagations.push_back(Glucose::mkLit(aggrIdIt));\n";
+                    outfile << --ind << "}else {polarity.push_back(false);propagations.push_back(Glucose::mkLit(aggrIdIt));}\n";
 
                 }else{
                     // tupleU       -> currentTuple
                     // isNegated    -> false
                     // asNegative   -> false
                     outfile << ind << "propagations.push_back(Glucose::mkLit(aggrIdIt));\n";
+                    outfile << ind << "polarity.push_back(false);\n";
                 }
                 outfile << --ind << "}else if(actSum < "<<guard<<" - posSum){\n";
                 ind++;
@@ -2994,13 +3035,14 @@ void PropagatorCompiler::compileEagerRuleWithSum(unsigned ruleId, std::ofstream&
                                 outfile << ind++ << "if(clause != Glucose::CRef_Undef)\n";
                                     outfile << ind-- << "return clause;\n";
                             outfile << --ind << "}\n";
-                        outfile << --ind << "}else propagations.push_back(Glucose::mkLit(aggrIdIt,true));\n";
+                        outfile << --ind << "}else {polarity.push_back(true);propagations.push_back(Glucose::mkLit(aggrIdIt,true));}\n";
 
                     }else{
                         // tupleU       -> currentTuple
                         // isNegated    -> false
                         // asNegative   -> true
                         outfile << ind << "propagations.push_back(Glucose::mkLit(aggrIdIt,true));\n";
+                        outfile << ind << "polarity.push_back(true);\n";
                     }
                     
                 outfile << --ind << "} // close else if\n";
@@ -3015,9 +3057,15 @@ void PropagatorCompiler::compileEagerRuleWithSum(unsigned ruleId, std::ofstream&
 
     if(fromStarter){
         outfile << ind++ << "for(unsigned i = 0; i< propagations.size(); i++){\n";
-            outfile << ind << "lits.clear();\n";
-            outfile << ind << "lits.push( propagations[i] );\n";
-            outfile << ind << "if(!solver->addClause_(lits)) return Glucose::CRef_PropConf;\n";
+            outfile << ind << "bool foundConflict = solver->isConflictPropagation(var(propagations[i]), polarity[i]);\n";
+            outfile << ind << "bool assigned = solver->isAssigned(var(propagations[i]));\n";
+            outfile << ind++ << "if(!assigned)\n";
+                outfile << ind-- << "solver->assignFromPropagators(propagations[i]);\n";
+            outfile << ind++ << "else if(foundConflict){\n";
+                outfile << ind << "lits.clear();\n";
+                outfile << ind << "solver->addClause_(lits);\n";
+                outfile << ind << "return Glucose::CRef_PropConf;\n";
+            outfile << --ind << "}\n";
         outfile << --ind << "}\n";
     }
 }

@@ -407,9 +407,15 @@ Var Solver::newVar(bool sign, bool dvar) {
 
 
 bool Solver::addClause_(vec <Lit> &ps) {
+    // std::cout << "Glucose::Solver::addClause_ (clause length: "<<ps.size()<<")"<<std::endl;
+    // if(ps.size() == 1){
+    //     if(sign(ps[0])) {std::cout << "-" ;}
+    //     AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(var(ps[0])));
+    //     std::cout <<std::endl;
+    // }
     assert(decisionLevel() == 0);
     if(!ok) {
-        std::cout << "   Solver::addClause_ return false because not ok"<<std::endl;
+        // std::cout << "   Solver::addClause_ return false because not ok"<<std::endl;
         return false;
     }
     // Check if clause is satisfied and remove false/duplicate literals:
@@ -429,8 +435,9 @@ bool Solver::addClause_(vec <Lit> &ps) {
     }
 
     for(i = j = 0, p = lit_Undef; i < ps.size(); i++)
-        if(value(ps[i]) == l_True || ps[i] == ~p)
+        if(value(ps[i]) == l_True || ps[i] == ~p) {
             return true;
+        }
         else if(value(ps[i]) != l_False && ps[i] != p)
             ps[j++] = p = ps[i];
     ps.shrink(i - j);
@@ -442,6 +449,7 @@ bool Solver::addClause_(vec <Lit> &ps) {
 
 
     if(ps.size() == 0){
+        // std::cout << "Glucose::Solver::addClause_ zero size"<<std::endl;
         return ok = false;
     }
     else if(ps.size() == 1) {
@@ -462,9 +470,9 @@ bool Solver::addClause_(vec <Lit> &ps) {
         CRef cr = ca.alloc(ps, false);
         clauses.push(cr);
         attachClause(cr);
-        std::cout << "Adding clause into glucose ";
-        printClause(cr);
-        std::cout << std::endl;
+        // std::cout << "Adding clause into glucose ";
+        // printClause(cr);
+        // std::cout << std::endl;
     }
 
     return true;
@@ -1086,8 +1094,6 @@ void Solver::uncheckedEnqueue(Lit p, CRef from) {
     std::cout << "   Assigning " << var(p) << " at level "<<decisionLevel()<< (!sign(p) ? " true " : " false "); AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(var(p))); std::cout << std::endl;
     std::cout << "      Considered clause "; if(from != CRef_Undef) printClause(from); std::cout << std::endl;
     #endif
-    //  AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(var(p))); std::cout << std::endl;
-    // std::cout << "      Considered clause "; if(from != CRef_Undef) printClause(from); std::cout << std::endl;
     assert(value(p) == l_Undef);
     assigns[var(p)] = lbool(!sign(p));
     vardata[var(p)] = mkVarData(from, decisionLevel());
@@ -1628,8 +1634,10 @@ lbool Solver::search(int nof_conflicts) {
         #ifdef DEBUG_PROP
         std::cout << "PropagateFromSearch"<<std::endl;
         #endif
+        //std::cout << "Solver::search() -> propagate()" <<std::endl;
         CRef confl = propagate();
-        
+        //std::cout << "propagate() -> Solver::search()" <<std::endl;
+
         if(confl != CRef_Undef) {
 
             #if defined(DEBUG_PROP) || defined(TRACE_SOLVER)
@@ -1846,6 +1854,14 @@ void Solver::printClause(CRef cr)
             // ----------------------------- Print by sign with id -----------------------------
             if(sign(c[i])) {std::cout << "-" <<var(c[i])<<" ";}
             else {std::cout << var(c[i]) << " ";}
+
+            // ----------------------------- Print by sign with name -----------------------------
+            // if(sign(c[i])) 
+            //     std::cout << "not ";
+            // if(TupleFactory::getInstance().hasName(var(c[i])))
+            //     AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(var(c[i])));
+            // else std::cout << var(c[i]);
+            // std::cout <<" ";
         }
     }
     std::cout << "0";
@@ -2009,16 +2025,19 @@ lbool Solver::solve_(bool do_simp, bool turn_off_simp) // Parameters are useless
             Propagator::getInstance().expandModel();
             //std::cout << "Answer: ";
             std::cout << "START MODEL"<<std::endl;
-            std::vector<unsigned>& visible=TupleFactory::getInstance().getVisibleAtoms();         
+            std::vector<unsigned>& visible=TupleFactory::getInstance().getVisibleAtoms();
+            bool error = false;
             for(unsigned id: visible){
                 TupleLight* t = TupleFactory::getInstance().getTupleFromInternalID(id);
                 if(t != NULL && t->isTrue()) {AuxMapHandler::getInstance().printTuple(t);}
                 if(t != NULL && t->isFalse()) {std::cout<<"-";AuxMapHandler::getInstance().printTuple(t);}
+                if(t != NULL && t->isUndef()) {std::cout<<"undefined";AuxMapHandler::getInstance().printTuple(t); error = true;}
                 std::cout << std::endl;
                 // if(t != NULL && t->isFalse()) {std::cout << ":-";AuxMapHandler::getInstance().printTuple(t);}
             }
+            assert(!error);
             std::cout << "END MODEL"<<std::endl;
-            std::cout << std::endl;
+            // std::cout << std::endl;
         }
     } else if(status == l_False && conflict.size() == 0)
         ok = false;
@@ -2237,6 +2256,11 @@ CRef Solver::externalPropagation(Var var, bool negated,AbstractPropagator* prop)
     int literal = negated ? -var : var;
     CRef propagationClause = CRef_Undef;
     unsigned currentDecisionLevel = decisionLevel();
+
+    // if((value(var) == l_True && negated ) || (value(var) == l_False && !negated)){
+    //     std::cout << "Received conflictual literal"<<std::endl;
+    // }
+
     if(value(var) == l_Undef || toInt(value(var)) != negated){
         assert(currentDecisionLevel > 0);
         propagationClause = storePropagatorReason(literal);
@@ -2327,7 +2351,7 @@ bool Solver::isConsistent(Var var, bool negated){
     return value(var) != l_Undef && ((value(var) == l_True && !negated) || (value(var) == l_False && negated));
 }
 bool Solver::isConflictPropagation(Var var, bool negated){
-    return value(var) != l_Undef && toInt(value(var)) != negated;
+    return value(var) != l_Undef && ((negated && value(var)==l_True) || (!negated && value(var)==l_False));
 }
 bool Solver::isAssigned(Var var){
     return value(var) != l_Undef;

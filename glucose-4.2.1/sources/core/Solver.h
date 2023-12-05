@@ -143,6 +143,7 @@ class Solver : public Clone {
 
     // External Propagators
     CRef externalPropagation(Var var, bool negated,AbstractPropagator* prop);
+    CRef assignFromPropagators(Lit l){uncheckedEnqueue(l);}
     CRef storePropagatorReason(int literal);
     void addLiteralToReason(Var var, bool negated);
     void clearReasonClause(){reasonClause.clear();}

@@ -33,3 +33,6 @@ compile:
 	cp $(REQUIRED_LIB) $(LIB)/$(ANTLR)
 	
 	$(CXX) $(CXXFLAGS) $(SRC)/ProAsp.cpp -o $(OUTPUT)/proasp
+
+clean:
+		rm $(OUTPUT)/proasp

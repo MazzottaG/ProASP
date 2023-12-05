@@ -1,5 +1,4 @@
 #include "HybridGenerator.h"
-#include "GrounderGenCompiler.h"
 
 void HybridGenerator::compileComponentRules(std::ofstream& outfile,Indentation& ind,unsigned starter,unsigned componentId,bool isRecursive,int ruleIndex){
 }
@@ -17,14 +16,20 @@ void HybridGenerator::buildConstraintGrounder(int ruleId,std::string className,s
     outfile << ind << "template<size_t S>\n";
     outfile << ind << "using AuxMap = AuxiliaryMapSmart<S> ;\n";
     outfile << ind << "typedef std::vector<const Tuple* > Tuples;\n";
-
+    std::cout << "Compiling constraint ";
+    program.getRule(ruleId).print();
     outfile << ind << "class "<<className<<": public AbstractGenerator{\n";
     outfile << ++ind << "public:\n";
     ind++;
         outfile << ind++ << "void generate(Glucose::SimpSolver* solver)override {\n";
             outfile << ind << "std::vector<int> clause;\n";
             AbstractGeneratorCompiler* compiler = NULL;
-            compiler = new GrounderGenCompiler(outfile,ind.getDepth(),&program.getRule(ruleId),predNames,predIds,predicateToStruct);
+            // std::cout << "Debug original predicates HybridGenerator_1";
+            // for(std::string pred : originalPredicates){
+            //     std::cout << pred << " ";
+            // }
+            // std::cout << std::endl;
+            compiler = new GrounderGenCompiler(outfile,ind.getDepth(),&program.getRule(ruleId),predNames,predIds,predicateToStruct,prgRewriter->getAggregateGrounding(ruleId),originalPredicates);
             compiler->compileNoStarter(false);
             auto usedMaps = compiler->getUsedAuxMaps();
             for(auto maps : usedMaps){
@@ -35,8 +40,12 @@ void HybridGenerator::buildConstraintGrounder(int ruleId,std::string className,s
             outfile << ind << "std::cout << \"Generator "<<className<<"\"<<std::endl;\n";
         #endif
         outfile << --ind << "}\n";
+        outfile << ind++ << "void printName()const {\n";
+            outfile << ind << "std::cout << \"Generator "<<className<<"\"<<std::endl;\n";
+        outfile << --ind << "}\n";
     ind--;
     outfile << --ind << "};\n";
+    std::cout << "Compiled constraint"<<std::endl;
     
     outfile << ind << "#endif\n";
 }
@@ -59,17 +68,20 @@ void HybridGenerator::buildComponentGenerator(int componentId,std::string classN
     outfile << ++ind << "public:\n";
     ind++;
         outfile << ind++ << "void generate(Glucose::SimpSolver* solver)override {\n";
+            outfile << ind << "std::vector<Glucose::Lit> domainAtoms;\n";
     const auto& components = depHandler.getComponents(negDep);
-    bool isRecursive = components[componentId].size() > 1;
-    if(!isRecursive){
-        std::string predicate = *components[componentId].begin();
+    bool isRecursive = false; // components[componentId].size() > 1;
+    // if(!isRecursive){
+    for(std::string predicate : components[componentId]){
+        // std::string predicate = *components[componentId].begin();
         for(unsigned ruleIndex : program.getRulesForPredicate(predicate)){
             aspc::Rule r = program.getRule(ruleIndex);
             const std::vector<const aspc::Formula*>& body = r.getFormulas();
             for(unsigned i = 0; i<body.size(); i++){
                 if(body[i]->isLiteral() && body[i]->isPositiveLiteral()){
                     const aspc::Literal* lit = (const aspc::Literal*) body[i];
-                    if(predicate == lit->getPredicateName()){
+                    // if(predicate == lit->getPredicateName()){
+                    if(components[componentId].count(lit->getPredicateName())){
                         isRecursive=true;
                         break;
                     }
@@ -78,15 +90,32 @@ void HybridGenerator::buildComponentGenerator(int componentId,std::string classN
             if(isRecursive) break;
         }                 
     }
+    std::cout << "Compiling "<< (isRecursive ? "recursive ": "") << "component: {";
+    for(const std::string& predicate: components[componentId])
+        std::cout << predicate << " ";
+    std::cout << "}"<<std::endl;
+    
     if(isRecursive)
         outfile << ind << "std::vector<int> stack;\n";
     for(const std::string& predicate: components[componentId]){
         for(unsigned ruleIndex : program.getRulesForPredicate(predicate)){
             AbstractGeneratorCompiler* compiler = NULL;
-            if(ruleLabel[ruleIndex])
-                compiler = new GrounderGenCompiler(outfile,ind.getDepth(),&program.getRule(ruleIndex),predNames,predIds,predicateToStruct);
-            else
-                compiler = new AbstractGeneratorCompiler(outfile,ind.getDepth(),&program.getRule(ruleIndex),predNames,predIds,predicateToStruct);
+            
+            if(ruleLabel[ruleIndex] == Rewriter::GROUND_RULE){
+                // std::cout << "Debug original predicates HybridGenerator_2";
+                // for(std::string pred : originalPredicates){
+                //     std::cout << pred << " ";
+                // }
+                // std::cout << std::endl;
+                compiler = new GrounderGenCompiler(outfile,ind.getDepth(),&program.getRule(ruleIndex),predNames,predIds,predicateToStruct,prgRewriter->getAggregateGrounding(ruleIndex),originalPredicates);
+            }
+            else if(ruleLabel[ruleIndex] == Rewriter::TO_GENERATE){
+                
+                compiler = new AbstractGeneratorCompiler(outfile,ind.getDepth(),&program.getRule(ruleIndex),predNames,predIds,predicateToStruct,originalPredicates);
+            }
+            else{
+                compiler = new DomainRuleCompiler(outfile,ind.getDepth(),&program.getRule(ruleIndex),predNames,predIds,predicateToStruct,originalPredicates);
+            }
             compiler->compileNoStarter(isRecursive);
             auto usedMaps = compiler->getUsedAuxMaps();
             for(auto maps : usedMaps){
@@ -101,45 +130,84 @@ void HybridGenerator::buildComponentGenerator(int componentId,std::string classN
             outfile << ind << "Tuple* starter = TupleFactory::getInstance().getTupleFromInternalID(stack.back());\n";
             outfile << ind << "stack.pop_back();\n";
             outfile << ind++ << "if(starter != NULL){\n";
-            outfile << ind << "const auto& insertResult = starter->setStatus("<<sign<<");\n";
+            outfile << ind << "TruthStatus value = "<<sign<<";\n";
+            std::string ifBody = "";
+            for(const std::string& predicate: components[componentId]){
+                for(unsigned ruleIndex : program.getRulesForPredicate(predicate)){
+                    if(ruleLabel[ruleIndex] == Rewriter::DOMAIN_RULE){
+                        std::string sharedPredicate = program.getRule(ruleIndex).getHead()[0].getPredicateName();
+                        if(ifBody != "") ifBody += " || ";
+                        ifBody+="starter->getPredicateName() == AuxMapHandler::getInstance().get_"+sharedPredicate+"()";
+                    }
+                }
+            }
+            if(ifBody != ""){
+                outfile << ind++ << "if("<<ifBody<<"){\n";
+                    outfile << ind << "value = True;\n";
+                outfile << --ind << "}\n";
+            }
+            outfile << ind << "const auto& insertResult = starter->setStatus(value);\n";
             outfile << ind++ << "if(insertResult.second){\n";
                 #ifdef DEBUG_GEN
                 outfile << ind << "std::cout << \"Added tuple \";AuxMapHandler::getInstance().printTuple(starter);\n";
                 #endif
                 outfile << ind << "TupleFactory::getInstance().removeFromCollisionsList(starter->getId());\n";
-                outfile << ind << "AuxMapHandler::getInstance().insert"<<sign<<"(insertResult);\n";
+                if(ifBody == ""){
+                    outfile << ind << "AuxMapHandler::getInstance().insert"<<sign<<"(insertResult);\n";
+                }else{
+                    outfile << ind++ << "if("<<ifBody<<"){\n";
+                        outfile << ind << "AuxMapHandler::getInstance().insertTrue(insertResult);\n";
+                        outfile << ind << "domainAtoms.push_back(Glucose::mkLit(starter->getId(),false));\n";
+                    outfile << --ind << "}else{\n";
+                        outfile << ind << "AuxMapHandler::getInstance().insert"<<sign<<"(insertResult);\n";
+                    outfile << --ind << "}\n";
+                }
                 outfile << ind << "while (starter->getId() >= solver->nVars()) {solver->setFrozen(solver->newVar(),true);}\n";
                 // else outfile << ind << "extendedModel.push_back(starter->getId());\n";
             outfile << --ind << "}else continue;\n";
             for(const std::string& predicate: components[componentId]){
-                std::cout << "Compiling generator for "<<predicate<<std::endl;
                 for(unsigned ruleIndex : program.getRulesForPredicate(predicate)){
                     const aspc::Rule* rule = &program.getRule(ruleIndex);
                     AbstractGeneratorCompiler* compiler = NULL;
-                    if(ruleLabel[ruleIndex])
-                        compiler = new GrounderGenCompiler(outfile,ind.getDepth(),rule,predNames,predIds,predicateToStruct);
-                    else
-                        compiler = new AbstractGeneratorCompiler(outfile,ind.getDepth(),rule,predNames,predIds,predicateToStruct);
+                    if(ruleLabel[ruleIndex] == Rewriter::GROUND_RULE)
+                        compiler = new GrounderGenCompiler(outfile,ind.getDepth(),rule,predNames,predIds,predicateToStruct,prgRewriter->getAggregateGrounding(ruleIndex),originalPredicates);
+                    else if(ruleLabel[ruleIndex] == Rewriter::TO_GENERATE)
+                        compiler = new AbstractGeneratorCompiler(outfile,ind.getDepth(),rule,predNames,predIds,predicateToStruct,originalPredicates);
+                    else{
+                        compiler = new DomainRuleCompiler(outfile,ind.getDepth(),rule,predNames,predIds,predicateToStruct,originalPredicates);
+                    }
                     compiler->compileFromStarter(isRecursive);
+
                     auto usedMaps = compiler->getUsedAuxMaps();
                     for(auto maps : usedMaps){
                         for(auto indices : maps.second)
                             auxMapCompiler->addAuxMap(maps.first,indices);
                     }
-                }
+                }                
             }           
             outfile << --ind << "} else std::cout << \"Warning null tuple in generation stack\"<<std::endl;\n";
         outfile << --ind << "}\n";
     }
+
         #ifdef DEBUG_GEN
             outfile << ind << "std::cout << \"Generator "<<className<<"\"<<std::endl;\n";
         #endif
+            outfile << ind << "Glucose::vec<Glucose::Lit> unitClause;\n";
+            outfile << ind++ << "for(unsigned i = 0; i<domainAtoms.size(); i++){\n";
+                outfile << ind << "unitClause.clear();\n";
+                outfile << ind << "unitClause.push(domainAtoms[i]);\n";
+                outfile << ind << "solver->addClause_(unitClause);\n";
+            outfile << --ind << "}\n";
+        outfile << --ind << "}\n";
+        outfile << ind++ << "void printName()const {\n";
+            outfile << ind << "std::cout << \"Generator "<<className<<"\"<<std::endl;\n";
         outfile << --ind << "}\n";
     ind--;
     outfile << --ind << "};\n";
     
     outfile << ind << "#endif\n";
-            
+    std::cout << "Compiled Component"<<std::endl;
+    return;
 }
 void HybridGenerator::compile(){
     const auto& scc = depHandler.computeSCC(negDep);
@@ -169,7 +237,7 @@ void HybridGenerator::compile(){
         outfile << ind << "#include \"../generators/"<<className<<".h\"\n\n";
     }
     outfile << ind++ << name << "::" << name << "(){\n";
-    
+        outfile << ind << "remappedId = NULL;\n";
     for(int componentId = components.size()-1; componentId >= 0; componentId--){
             Indentation ind_gen(0);
             std::string className_gen="Comp_"+std::to_string(componentId)+"_Gen";
@@ -281,6 +349,8 @@ void HybridGenerator::compile(){
             if(pair.second != "Vec"){
                 if(!foundAggrSet){
                     foundAggrSet=true;
+                    outfile << ind++ << "if(remappedId != NULL) delete remappedId;\n";
+                        outfile << ind-- << "remappedId = new std::unordered_map<int,int>();\n";
                     outfile << ind << "std::vector<int> ordered_ids;\n";
                     outfile << ind << "std::vector<int> tuplesIdOrdered;\n";
                     outfile << ind << "std::map<int, TupleLight*> idToTuples;\n";
@@ -305,6 +375,7 @@ void HybridGenerator::compile(){
                     outfile << ind << "std::stable_sort(tuplesIdOrdered.begin(),tuplesIdOrdered.end(),&Generator::compTuple);\n";
                     outfile << ind++ << "for(int id: tuplesIdOrdered){\n";
                         outfile << ind << "TupleLight* t=idToTuples[id];\n";
+                        outfile << ind << "remappedId->insert(std::make_pair(t->getId(),ordered_ids[currentIdIndex]));\n";
                         outfile << ind << "TupleFactory::getInstance().setId(t,ordered_ids[currentIdIndex++]);\n";
                         outfile << ind << "const auto& insertResult = t->setStatus(Undef);\n";
                         outfile << ind++ << "if (insertResult.second) {\n";

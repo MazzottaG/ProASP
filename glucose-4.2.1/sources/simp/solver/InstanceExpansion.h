@@ -13,7 +13,6 @@ class InstanceExpansion{
             for(AbstractGenerator* gen : generators){
                 delete gen;
             }
-
         }
         bool isSolvedByGenerator()const {return solvedByGenerator;}
         void generate(Glucose::SimpSolver* s){

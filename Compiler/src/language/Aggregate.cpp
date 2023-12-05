@@ -404,4 +404,38 @@ aspc::Aggregate::~Aggregate(){
     
 }
 
+SharedVars aspc::Aggregate::getSharedBody(const std::unordered_set<std::string>& bodyVars, const std::vector<aspc::Literal>& bodyLits, const std::vector<aspc::ArithmeticRelation>& bodyIneqs)const {
+    std::unordered_set<std::string> sharedTerms;
+    SharedVars sharedData;
+    for(const aspc::Literal& lit : aggregateLiterals){
+        for(unsigned k = 0; k<lit.getAriety(); k++){
+            std::string term = lit.getTermAt(k);
+            if(lit.isVariableTermAt(k) && bodyVars.count(term)){
+                auto it = sharedTerms.emplace(term);
+                if(it.second){
+                    sharedData.addTerm(term);
+                }
+            }
+        }
+    }
+    for(const aspc::ArithmeticRelation& ineq : inequalities){
+        for(const aspc::ArithmeticExpression& exp : {ineq.getRight(), ineq.getLeft()}){
+            for(std::string term : exp.getAllTerms()){
+                if(isVariable(term) && bodyVars.count(term)){
+                    auto it = sharedTerms.emplace(term);
+                    if(it.second){
+                        sharedData.addTerm(term);
+                    }
+                }
+            }
+        }
+    }
+    for(const auto& lit : bodyLits){
+        sharedData.addLiteral(lit);
+    }
+    for(const auto& ineq : bodyIneqs){
+        sharedData.addInequality(ineq);
+    }
+    return sharedData;
+}
 
