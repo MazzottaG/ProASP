@@ -77,9 +77,13 @@ class TupleFactory{
         std::unordered_map<int,std::unordered_set<int>> atomsForLiteral;
         std::unordered_set<int> trackedForSupport;
 
-        std::vector<std::vector<AbstractPropagator*>> negativeWatcher;
-        std::vector<std::vector<AbstractPropagator*>> positiveWatcher;
-        static std::vector<AbstractPropagator*> EMPTY_WATCHER;
+        // std::vector<std::vector<AbstractPropagator*>> negativeWatcher;
+        // std::vector<std::vector<AbstractPropagator*>> positiveWatcher;
+        // static std::vector<AbstractPropagator*> EMPTY_WATCHER;
+
+        std::vector<std::vector<unsigned>> negativeWatcher;
+        std::vector<std::vector<unsigned>> positiveWatcher;
+        static std::vector<unsigned> EMPTY_WATCHER;
 
         std::vector<unsigned> visibleTuple;
         std::unordered_map<int,int> actualSum;
@@ -227,19 +231,23 @@ class TupleFactory{
             // std::cout << (id >= positiveWatcher.size() ? "No watchers for sup_1(1,g)" : "Watcher count for sup_1(1,g): "+std::to_string(positiveWatcher[id].size()))<<std::endl;
             // std::cout << (id >= negativeWatcher.size() ? "No watchers for not sup_1(1,g)" : "Watcher count for not sup_1(1,g): "+std::to_string(negativeWatcher[id].size()))<<std::endl;
         }
-        void addWatcher(AbstractPropagator* prop,int id,bool negated){
+        // void addWatcher(AbstractPropagator* prop,int id,bool negated){
+        void addWatcher(unsigned prop,int id,bool negated){
             if(negated){
                 if(id >= negativeWatcher.size())
-                    negativeWatcher.resize(id+1,std::vector<AbstractPropagator*>());
+                    negativeWatcher.resize(id+1,std::vector<unsigned>());
+                    // negativeWatcher.resize(id+1,std::vector<AbstractPropagator*>());
                 negativeWatcher[id].push_back(prop);
             }
             else{
                 if(id >= positiveWatcher.size())
-                    positiveWatcher.resize(id+1,std::vector<AbstractPropagator*>());
+                    positiveWatcher.resize(id+1,std::vector<unsigned>());
+                    // positiveWatcher.resize(id+1,std::vector<AbstractPropagator*>());
                 positiveWatcher[id].push_back(prop);
             }
         }
-        std::vector<AbstractPropagator*>& getWatcher(unsigned var,bool negated){
+        // std::vector<AbstractPropagator*>& getWatcher(unsigned var,bool negated){
+        std::vector<unsigned>& getWatcher(unsigned var,bool negated){
             if(negated)
                 return var < negativeWatcher.size() ? negativeWatcher[var] : EMPTY_WATCHER;
             else

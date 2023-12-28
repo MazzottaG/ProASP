@@ -14,6 +14,13 @@ class AbstractPropagator{
         virtual void notifyUndef(int){}
         virtual void printStoredLiterals(){}
         virtual void remapStoredLiteral(){}
+
+        unsigned getId()const {return id;}
+        void setId(unsigned prop){
+            this->id = prop;
+        }
+    private:
+        unsigned id;
     
 };
 #endif

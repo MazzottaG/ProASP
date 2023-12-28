@@ -951,9 +951,9 @@ void PropagatorCompiler::compileRuleWatcher(unsigned ruleId,std::ofstream& outfi
                             outfile << ind++ << "if(watchValue != 2){\n";
                                 outfile << ind << "watchValue = 2;\n";
                                 outfile << ind++ << "if(watchValue != 1)\n";
-                                    outfile << ind-- << "TupleFactory::getInstance().addWatcher(this,id,false);\n";
+                                    outfile << ind-- << "TupleFactory::getInstance().addWatcher(this->getId(),id,false);\n";
                                 outfile << ind++ << "if(watchValue != -1)\n";
-                                    outfile << ind-- << "TupleFactory::getInstance().addWatcher(this,id,true);\n";
+                                    outfile << ind-- << "TupleFactory::getInstance().addWatcher(this->getId(),id,true);\n";
                             outfile << --ind << "}\n";
 
                         while(closingPars>0){
@@ -992,9 +992,9 @@ void PropagatorCompiler::compileRuleWatcher(unsigned ruleId,std::ofstream& outfi
                             outfile << ind++ << "if(watchValue != 2){\n";
                                 outfile << ind << "watchValue = 2;\n";
                                 outfile << ind++ << "if(watchValue != 1)\n";
-                                    outfile << ind-- << "TupleFactory::getInstance().addWatcher(this,id,false);\n";
+                                    outfile << ind-- << "TupleFactory::getInstance().addWatcher(this->getId(),id,false);\n";
                                 outfile << ind++ << "if(watchValue != -1)\n";
-                                    outfile << ind-- << "TupleFactory::getInstance().addWatcher(this,id,true);\n";
+                                    outfile << ind-- << "TupleFactory::getInstance().addWatcher(this->getId(),id,true);\n";
                             outfile << --ind << "}\n";
                             
                         while(closingPars>0){
@@ -1036,7 +1036,7 @@ void PropagatorCompiler::compileRuleWatcher(unsigned ruleId,std::ofstream& outfi
                                     outfile << ind++ << "if(watchValue < 1){\n";
 
                                     outfile << ind << "watchValue = watchValue != 0 ? 2 : "<<(lit->isNegated() ? -1 : 1)<<";\n";
-                                    outfile << ind << "TupleFactory::getInstance().addWatcher(this,id_"<<index<<","<<(lit->isNegated() ? "true" : "false")<<");\n";
+                                    outfile << ind << "TupleFactory::getInstance().addWatcher(this->getId(),id_"<<index<<","<<(lit->isNegated() ? "true" : "false")<<");\n";
                                 outfile << --ind << "}\n";
                             outfile << --ind << "}\n";
                         }else{
@@ -1080,7 +1080,7 @@ void PropagatorCompiler::compileRuleWatcher(unsigned ruleId,std::ofstream& outfi
                             outfile << ind << "int& watchValue=watched[id_"<<index<<"];\n";
                             outfile << ind++ << "if(watchValue < 1){\n";
                                 outfile << ind << "watchValue = watchValue != 0 ? 2 : 1;\n";
-                                outfile << ind << "TupleFactory::getInstance().addWatcher(this,id_"<<index<<",false);\n";
+                                outfile << ind << "TupleFactory::getInstance().addWatcher(this->getId(),id_"<<index<<",false);\n";
                             outfile << --ind << "}\n";
                         }
                     }else{
@@ -1136,10 +1136,10 @@ void PropagatorCompiler::compileRuleWatcher(unsigned ruleId,std::ofstream& outfi
                                 }
                             }
                             if(attachedValue.first->second != 1)
-                                outfile << ind << "TupleFactory::getInstance().addWatcher(this,id,false);\n";
+                                outfile << ind << "TupleFactory::getInstance().addWatcher(this->getId(),id,false);\n";
                             
                             if(attachedValue.first->second != -1)
-                                outfile << ind << "TupleFactory::getInstance().addWatcher(this,id,true);\n";
+                                outfile << ind << "TupleFactory::getInstance().addWatcher(this->getId(),id,true);\n";
                             
                             attached[predicate]=2;
                             while(closingPars>0){
@@ -1202,17 +1202,17 @@ void PropagatorCompiler::compileRuleWatcher(unsigned ruleId,std::ofstream& outfi
                             // }
                             if(!rule.isConstraint()){
                                 if(attachedValue.first->second != 1)
-                                    outfile << ind << "TupleFactory::getInstance().addWatcher(this,id,false);\n";
+                                    outfile << ind << "TupleFactory::getInstance().addWatcher(this->getId(),id,false);\n";
                                 
                                 if(attachedValue.first->second != -1)
-                                    outfile << ind << "TupleFactory::getInstance().addWatcher(this,id,true);\n";
+                                    outfile << ind << "TupleFactory::getInstance().addWatcher(this->getId(),id,true);\n";
                                 
                                 attached[predicate]=2;
                             }else{
                                 if(expected == 1)
-                                    outfile << ind << "TupleFactory::getInstance().addWatcher(this,id,false);\n";
+                                    outfile << ind << "TupleFactory::getInstance().addWatcher(this->getId(),id,false);\n";
                                 else
-                                    outfile << ind << "TupleFactory::getInstance().addWatcher(this,id,true);\n";
+                                    outfile << ind << "TupleFactory::getInstance().addWatcher(this->getId(),id,true);\n";
                                 attached[predicate]= attachedValue.first->second != 0 ? 2 : expected;
                             }
                             
@@ -1720,9 +1720,13 @@ void PropagatorCompiler::compile(){
     }
     outfile << ind++ << "Propagator::Propagator(){\n";
         outfile << ind << "active=false;\n";
+        outfile << ind << "unsigned id = 0;\n";
+        int propagatorId = 0;
         for(unsigned ruleId : propagatorOrder){
             std::string className="Rule_"+std::to_string(ruleId)+"_Propagator";
             outfile << ind << "propagators.push_back(new "<<className<<"());\n";
+            outfile << ind << "propagators.back()->setId("<<propagatorId<<");\n";
+            propagatorId++;
         }
     outfile << --ind << "}\n";
 

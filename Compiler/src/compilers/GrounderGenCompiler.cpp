@@ -34,7 +34,7 @@ void GrounderGenCompiler::printAddClause(std::vector<unsigned> order,bool starte
 
             if(lit->isNegated()){
                 outfile << ind++ << "if(tuple_"<<index<<" == NULL){\n";
-                //found false literal not generated yet
+                    // found false literal not generated yet
                     // std::cout << "Debug original predicates GrounderGenCompiler";
                     // for(std::string pred : originalPredicates){
                     //     std::cout << pred << " ";
@@ -80,8 +80,7 @@ void GrounderGenCompiler::printAddClause(std::vector<unsigned> order,bool starte
         }
     }else{
         int bodysize = rule->getFormulas().size();
-        if(bodysize == 1){
-            assert(rule->getFormulas()[order[0]]->isPositiveLiteral());
+        if(bodysize == 1 && rule->getFormulas()[order[0]]->isPositiveLiteral()){
             outfile << ind << "Tuple* clauseTuple = tuple_"<<order[0]<<";\n";
         }else{
             outfile << ind << "Tuple* clauseTuple = TupleFactory::getInstance().addNewInternalClause({"<<terms<<"});\n";

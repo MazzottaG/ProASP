@@ -19,4 +19,5 @@
 #include "../../core/Solver.h"
 
 TupleLight TupleFactory::bufferTuple;
-std::vector<AbstractPropagator*> TupleFactory::EMPTY_WATCHER;
+std::vector<unsigned> TupleFactory::EMPTY_WATCHER;
+// std::vector<AbstractPropagator*> TupleFactory::EMPTY_WATCHER;

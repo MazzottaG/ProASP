@@ -44,14 +44,19 @@ class Propagator{
         }
         void updateSumForTrueLit(Tuple*);
         void updateSumForTrueLitGroundAggregate(int literal){
-            for(AbstractPropagator* prop : TupleFactory::getInstance().getWatcher(literal<0 ? -literal : literal,literal<0)){
-                prop->notifyTrue(literal);
+            // for(AbstractPropagator* prop : TupleFactory::getInstance().getWatcher(literal<0 ? -literal : literal,literal<0)){
+            for(unsigned prop : TupleFactory::getInstance().getWatcher(literal<0 ? -literal : literal,literal<0)){
+                // prop->notifyTrue(literal);
+                propagators[prop]->notifyTrue(literal);
             }
         }
         void updateSumForUndefLit(Tuple*,TruthStatus);
         void updateSumForUndefLitGroundAggregate(int literal){
-            for(AbstractPropagator* prop : TupleFactory::getInstance().getWatcher(literal<0 ? -literal : literal,literal<0)){
-                prop->notifyUndef(literal);
+            // for(AbstractPropagator* prop : TupleFactory::getInstance().getWatcher(literal<0 ? -literal : literal,literal<0)){
+            //     prop->notifyUndef(literal);
+            // }
+            for(unsigned prop : TupleFactory::getInstance().getWatcher(literal<0 ? -literal : literal,literal<0)){
+                propagators[prop]->notifyUndef(literal);
             }
         }
 
@@ -90,9 +95,11 @@ class Propagator{
                 // nested_calls--;
                 return Glucose::CRef_Undef;
             }
-            for(AbstractPropagator* prop : TupleFactory::getInstance().getWatcher(literal<0 ? -literal : literal,literal<0)){
+            // for(AbstractPropagator* prop : TupleFactory::getInstance().getWatcher(literal<0 ? -literal : literal,literal<0)){
                 // std::cout << "Calling ";prop->printName();
-                Glucose::CRef clause = prop->propagate(s,lits,literal);
+                // Glucose::CRef clause = prop->propagate(s,lits,literal);
+            for(unsigned prop : TupleFactory::getInstance().getWatcher(literal<0 ? -literal : literal,literal<0)){
+                Glucose::CRef clause = propagators[prop]->propagate(s,lits,literal);
                 if(clause != Glucose::CRef_Undef){
                     // std::cout << "Found Conflict in propagator"<<std::endl;
 
@@ -139,7 +146,7 @@ class Propagator{
             }
         }
         void activate(){active=true;}
-        void addPropagator(AbstractPropagator* prop){ propagators.push_back(prop); }
+        void addPropagator(AbstractPropagator* prop){ prop->setId(propagators.size()); propagators.push_back(prop); }
     private:
         int nested_calls = 0;
         Propagator();

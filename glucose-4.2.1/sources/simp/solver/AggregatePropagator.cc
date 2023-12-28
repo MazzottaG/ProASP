@@ -343,12 +343,12 @@ void AggregatePropagator::attachWatched(){
 
     for(auto pair : aggIdMapping){
         int id = pair.first > 0 ? pair.first : -pair.first;
-        TupleFactory::getInstance().addWatcher(this,id,true);
-        TupleFactory::getInstance().addWatcher(this,id,false);
+        TupleFactory::getInstance().addWatcher(this->getId(),id,true);
+        TupleFactory::getInstance().addWatcher(this->getId(),id,false);
     }
     for(auto pair : aggSetMapping){
         int id = pair.first > 0 ? pair.first : -pair.first;
-        TupleFactory::getInstance().addWatcher(this,id,true);
-        TupleFactory::getInstance().addWatcher(this,id,false);
+        TupleFactory::getInstance().addWatcher(this->getId(),id,true);
+        TupleFactory::getInstance().addWatcher(this->getId(),id,false);
     }
 }
