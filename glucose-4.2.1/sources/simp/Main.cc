@@ -345,6 +345,7 @@ void read_asp(Solver* solver,std::string filename,std::vector<unsigned>& facts){
         const auto& insertResult = tuple->setStatus(True);
         if(insertResult.second){
             TupleFactory::getInstance().removeFromCollisionsList(tuple->getId());
+            AuxMapHandler::getInstance().initTuple(tuple);
             AuxMapHandler::getInstance().insertTrue(insertResult);
             facts.push_back(tuple->getId());
         }
@@ -507,6 +508,11 @@ int main(int argc, char** argv)
             // std::cout << "End cnf"<<std::endl;
             TupleFactory::getInstance().destroyClauses();
             TupleFactory::getInstance().destroyConstraints();
+            std::cout << "Found "<<S.nVars()<<" glucose variables"<<std::endl;
+            int lastVar = TupleFactory::getInstance().getLastId();
+            std::cout << "Generated "<<lastVar<<" symbols"<<std::endl;
+            // if(lastVar >= S.nVars()) S.newVars(lastVar);
+            // std::cout << "Allocated "<<S.nVars()<<" glucose variables"<<std::endl;
             Propagator::getInstance().attachWatchers();
             for(unsigned id : facts){
                 #ifdef DEBUG_PROP
@@ -605,10 +611,9 @@ int main(int argc, char** argv)
             std::cout << "no dimacs"<<std::endl;
         }
         Generator::getInstance().destroyRemapping();
-        TupleFactory::getInstance().printUsedMemory();
-        printAuxMapMem();
-        analyzePenalty();
-        exit(180);
+        // TupleFactory::getInstance().printUsedMemory();
+        // printAuxMapMem();
+        // analyzePenalty();
         std::cout << "Start solving"<<std::endl;
         vec<Lit> dummy;
         lbool ret = S.solveLimited(dummy);

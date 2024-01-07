@@ -153,12 +153,15 @@ void HybridGenerator::buildComponentGenerator(int componentId,std::string classN
                 #endif
                 outfile << ind << "TupleFactory::getInstance().removeFromCollisionsList(starter->getId());\n";
                 if(ifBody == ""){
+                    outfile << ind << "AuxMapHandler::getInstance().initTuple(starter);\n";
                     outfile << ind << "AuxMapHandler::getInstance().insert"<<sign<<"(insertResult);\n";
                 }else{
                     outfile << ind++ << "if("<<ifBody<<"){\n";
+                        outfile << ind << "AuxMapHandler::getInstance().initTuple(starter);\n";
                         outfile << ind << "AuxMapHandler::getInstance().insertTrue(insertResult);\n";
                         outfile << ind << "domainAtoms.push_back(Glucose::mkLit(starter->getId(),false));\n";
                     outfile << --ind << "}else{\n";
+                        outfile << ind << "AuxMapHandler::getInstance().initTuple(starter);\n";
                         outfile << ind << "AuxMapHandler::getInstance().insert"<<sign<<"(insertResult);\n";
                     outfile << --ind << "}\n";
                 }

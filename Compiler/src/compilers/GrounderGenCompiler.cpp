@@ -52,6 +52,7 @@ void GrounderGenCompiler::printAddClause(std::vector<unsigned> order,bool starte
                     outfile << ind << "const auto& insertResult = tuple_"<<index<<"->setStatus(Undef);\n";
                     outfile << ind++ << "if(insertResult.second){\n";
                         outfile << ind << "TupleFactory::getInstance().removeFromCollisionsList(tuple_"<<index<<"->getId());\n";
+                        outfile << ind << "AuxMapHandler::getInstance().initTuple(tuple_"<<index<<");\n";
                         outfile << ind << "AuxMapHandler::getInstance().insertUndef(insertResult);\n";
                         outfile << ind << "while (tuple_"<<index<<"->getId() >= solver->nVars()) {solver->setFrozen(solver->newVar(),true);}\n";
                         outfile << ind << "TupleFactory::getInstance().trackLiteral(tuple_"<<index<<"->getId());\n";

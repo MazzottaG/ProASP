@@ -123,6 +123,7 @@ class Solver : public Clone {
     // Problem specification:
     //
     virtual Var     newVar    (bool polarity = true, bool dvar = true); // Add a new variable with parameters specifying variable mode.
+    
     bool    addClause (const vec<Lit>& ps);                     // Add a clause to the solver.
     bool    addEmptyClause();                                   // Add the empty clause, making the solver contradictory.
     bool    addClause (Lit p);                                  // Add a unit clause to the solver.
@@ -143,7 +144,7 @@ class Solver : public Clone {
 
     // External Propagators
     CRef externalPropagation(Var var, bool negated,AbstractPropagator* prop);
-    CRef assignFromPropagators(Lit l){uncheckedEnqueue(l);}
+    void assignFromPropagators(Lit l){uncheckedEnqueue(l);}
     CRef storePropagatorReason(int literal);
     void addLiteralToReason(Var var, bool negated);
     void clearReasonClause(){reasonClause.clear();}

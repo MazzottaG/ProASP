@@ -67,6 +67,7 @@ void GeneratorCompiler::buildComponentGenerator(int componentId){
                             outfile << ind << "std::cout << \"Added tuple \";AuxMapHandler::getInstance().printTuple(starter);\n";
                             #endif
                             outfile << ind << "TupleFactory::getInstance().removeFromCollisionsList(starter->getId());\n";
+                            outfile << ind << "AuxMapHandler::getInstance().initTuple(starter);\n";
                             outfile << ind << "AuxMapHandler::getInstance().insertTrue(insertResult);\n";
                             if(!modelFound)
                                 outfile << ind << "while (starter->getId() >= solver->nVars()) {solver->setFrozen(solver->newVar(),true);}\n";
@@ -78,6 +79,7 @@ void GeneratorCompiler::buildComponentGenerator(int componentId){
                             outfile << ind << "std::cout << \"Added tuple \";AuxMapHandler::getInstance().printTuple(starter);\n";
                             #endif
                             outfile << ind << "TupleFactory::getInstance().removeFromCollisionsList(starter->getId());\n";
+                            outfile << ind << "AuxMapHandler::getInstance().initTuple(starter);\n";
                             outfile << ind << "AuxMapHandler::getInstance().insertUndef(insertResult);\n";
                             outfile << ind << "while (starter->getId() >= solver->nVars()) {solver->setFrozen(solver->newVar(),true);}\n";
                         outfile << --ind << "}else continue;\n";
@@ -282,6 +284,7 @@ void GeneratorCompiler::compileComponentRules(std::ofstream& outfile,Indentation
                     outfile << ind << "const auto& insertResult = head_"<<index<<"->setStatus(True);\n";
                     outfile << ind++ << "if(insertResult.second){\n";
                         outfile << ind << "TupleFactory::getInstance().removeFromCollisionsList(head_"<<index<<"->getId());\n";
+                        outfile << ind << "AuxMapHandler::getInstance().initTuple(head_"<<index<<");\n";
                         outfile << ind << "AuxMapHandler::getInstance().insertTrue(insertResult);\n";
                         if(!modelFound)
                             outfile << ind << "while (head_"<<index<<"->getId() >= solver->nVars()) {solver->setFrozen(solver->newVar(),true);}\n";
@@ -290,6 +293,7 @@ void GeneratorCompiler::compileComponentRules(std::ofstream& outfile,Indentation
                     outfile << ind << "const auto& insertResult = head_"<<index<<"->setStatus(Undef);\n";
                     outfile << ind++ << "if(insertResult.second){\n";
                         outfile << ind << "TupleFactory::getInstance().removeFromCollisionsList(head_"<<index<<"->getId());\n";
+                        outfile << ind << "AuxMapHandler::getInstance().initTuple(head_"<<index<<");\n";
                         outfile << ind << "AuxMapHandler::getInstance().insertUndef(insertResult);\n";
                         outfile << ind << "while (head_"<<index<<"->getId() >= solver->nVars()) {solver->setFrozen(solver->newVar(),true);}\n";
                     outfile << --ind << "}\n";

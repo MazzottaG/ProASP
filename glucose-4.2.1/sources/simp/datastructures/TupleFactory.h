@@ -26,6 +26,7 @@
 #include <variant>
 #include <bitset>
 #include <cmath>
+#include <algorithm>
 
 const int HALF_INT_MAX = INT_MAX/2; 
 
@@ -101,6 +102,9 @@ class TupleFactory{
         unsigned factSize;
         
     public:
+        int getLastId() const{
+            return internalIDToTuple.size()-1;
+        }
         std::unordered_map<int,std::unordered_set<int>>& getAuxsForLiteral(){
             return auxAtomsForLiteral;
         }
@@ -259,19 +263,22 @@ class TupleFactory{
         void removeFromCollisionsList(int id){
             if(id < internalIDToTuple.size()){
                 TupleLight* tupleToRemove = internalIDToTuple[id];
-                std::vector<std::pair<std::variant< std::vector<int>, IndexedSet >*,unsigned>>* collisionsLists = &tupleToRemove->getCollisionsLists();
-                for (unsigned i=0; i<collisionsLists->size(); i++) {
-                    std::variant< std::vector<int>, IndexedSet >* collisionList = collisionsLists->at(i).first;
-                    unsigned index = collisionsLists->at(i).second;
+                std::pair<std::variant< std::vector<int>, IndexedSet >*,unsigned>* collisionsLists = tupleToRemove->getCollisionsLists();
+                if(collisionsLists != nullptr){
+                    int collisionsListSize = tupleToRemove->getCollisionsListsSize();
+                    for (unsigned i=0; i<collisionsListSize; i++) {
+                        std::variant< std::vector<int>, IndexedSet >* collisionList = collisionsLists[i].first;
+                        unsigned index = collisionsLists[i].second;
 
-                    if(std::holds_alternative<std::vector<int>>(*collisionList)){
-                        std::vector<int>& collisionVector = std::get<std::vector<int>>(*collisionList);
-                        collisionVector[index] = collisionVector[collisionVector.size() - 1];
-                        internalIDToTuple[collisionVector[index]]->setCollisionListIndex(collisionList, index,i);
-                        collisionVector.pop_back();
-                    }else{
-                        IndexedSet& collisionSet = std::get<IndexedSet>(*collisionList);
-                        collisionSet.erase(id); 
+                        if(std::holds_alternative<std::vector<int>>(*collisionList)){
+                            std::vector<int>& collisionVector = std::get<std::vector<int>>(*collisionList);
+                            collisionVector[index] = collisionVector[collisionVector.size() - 1];
+                            internalIDToTuple[collisionVector[index]]->setCollisionListIndex(collisionList, index,i);
+                            collisionVector.pop_back();
+                        }else{
+                            IndexedSet& collisionSet = std::get<IndexedSet>(*collisionList);
+                            collisionSet.erase(id); 
+                        }
                     }
                 }
                 tupleToRemove->clearCollisionsList();

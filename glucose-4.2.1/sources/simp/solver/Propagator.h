@@ -37,6 +37,8 @@ class Propagator{
             for(AbstractPropagator* prop : propagators){
                 // std::cout << "Calling ";prop->printName();
                 prop->propagateLevelZero(s,lits);
+                // std::cout << "Completed ";prop->printName();
+                // std::cout << std::endl;
             }
         }
         void expandModel(){

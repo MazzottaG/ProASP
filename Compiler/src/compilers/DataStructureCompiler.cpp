@@ -85,6 +85,22 @@ void DataStructureCompiler::buildAuxMapHandler(std::string executablePath,const 
                     }
                 outfile << --ind <<"}\n";
             }
+            outfile << ind++ << "void initTuple(Tuple* tuple){\n";
+                bool firstIf=true;
+                const auto& auxMaps = getAuxMapNameForPredicate();
+                for(const std::string& predicate: predNames){
+                    std::string printElse = !firstIf ? "else " : "";
+                    auto it = auxMaps.find(predicate);
+                    if(it!=auxMaps.end()){
+                        auto itPredStruct = predicateToStruct.find(predicate);
+                        std::string predStruct = itPredStruct == predicateToStruct.end() ? "" : itPredStruct->second;
+                        outfile << ind++ << printElse << "if(tuple->getPredicateName() == AuxMapHandler::getInstance().get_"<<predicate<<"()){\n";
+                            outfile << ind << "tuple->initCollisionList("<<it->second.size()<<");\n";
+                        outfile << --ind << "}\n";
+                        firstIf=false;        
+                    }
+                }
+            outfile << --ind <<"}\n";
             outfile << ind++ << "void printTuple(const Tuple* t){\n";
                 // outfile << ind << "if(t->isFalse()) std::cout << \"not \";\n";
                 // outfile << ind << "if(t->isUndef()) std::cout << \"undef \";\n";
