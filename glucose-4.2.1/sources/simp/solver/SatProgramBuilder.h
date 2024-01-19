@@ -20,7 +20,16 @@ class SatProgramBuilder{
                 return false;
             return true;
         }
+        
     private:
+        void printClause(Glucose::vec<Glucose::Lit>& clause){
+            for(unsigned j = 0; j<clause.size(); j++){
+                bool negated = Glucose::sign(clause[j]);
+                int var = Glucose::var(clause[j]);
+                std::cout << (negated ? "-" : "") << var << " ";
+            }   
+            std::cout << "0"<<endl;
+        }
         SatProgramBuilder(){}
         bool addConstraints(Glucose::SimpSolver* solver){
             auto constraint = TupleFactory::getInstance().popConstraint();
@@ -35,6 +44,8 @@ class SatProgramBuilder{
                         int realVar = Generator::getInstance().getRealVar(var);
                         clause.push(Glucose::mkLit(realVar, negated));                  
                     }
+                    // printClause(clause);
+                    
                     if(!solver->addClause_(clause))
                         ok=false;
                     clause.clear();
@@ -62,8 +73,7 @@ class SatProgramBuilder{
                     auxRemapping[bodyId]=realVar;
                 }else{
                     int auxLiteral = TupleFactory::getInstance().addExtraSymbol();
-                    // while (auxLiteral >= solver->nVars()) {solver->setFrozen(solver->newVar(),true);}
-
+                    while (auxLiteral >= solver->nVars()) {solver->setFrozen(solver->newVar(),true);}
                     auxRemapping[bodyId]=auxLiteral;
                     clause.clear();
                     clause.push(Glucose::mkLit(auxLiteral,false));
@@ -72,14 +82,15 @@ class SatProgramBuilder{
                         bool negated = content[i] < 0;
                         int var = negated ? -content[i]: content[i];
                         int realVar = Generator::getInstance().getRealVar(var);
-                    
+                        
                         binClause.clear();
                         binClause.push(Glucose::mkLit(auxLiteral,true));
                         binClause.push(Glucose::mkLit(realVar, negated));
                         clause.push(Glucose::mkLit(realVar, !negated));
                         if(!solver->addClause_(binClause))
-                        return false;  
+                            return false;  
                     }
+                    // printClause(clause);
                     if(!solver->addClause_(clause))
                         return false;
                 }
@@ -109,6 +120,7 @@ class SatProgramBuilder{
                     binClause.clear();
                     binClause.push(Glucose::mkLit(realPairFirst,false));
                     binClause.push(Glucose::mkLit(freshSymbol, true));
+                    // printClause(binClause);
                     if(!solver->addClause_(binClause))
                        return false;                    
                     clause.push(Glucose::mkLit(freshSymbol, false));
@@ -119,32 +131,36 @@ class SatProgramBuilder{
                     binClause.push(Glucose::mkLit(realPairFirst,false));
                     
                     binClause.push(Glucose::mkLit(realSupAtom, true));
+                    // printClause(binClause);
                     if(!solver->addClause_(binClause))
                        return false;                    
                     
                     clause.push(Glucose::mkLit(realSupAtom, false));
                 }
+                // printClause(clause);
                 if(!solver->addClause_(clause)) return false;
             }
             for(auto pair:atomsForLit){
                 //pair contains <head_atom, set<atom>>
 
                 if(auxsForLit.count(pair.first)!=0) continue;
+                
                 int realPairFirst = Generator::getInstance().getRealVar(pair.first);
 
                 clause.clear();
                 clause.push(Glucose::mkLit(realPairFirst,true));
 
-                std::vector<int> debugAtom;
                 for(auto supAtom : pair.second){
                     int realSupAtom = Generator::getInstance().getRealVar(supAtom);
                     binClause.clear();
                     binClause.push(Glucose::mkLit(realPairFirst,false));
                     binClause.push(Glucose::mkLit(realSupAtom, true));
+                    // printClause(binClause);
                     if(!solver->addClause_(binClause))
                        return false;  
                     clause.push(Glucose::mkLit(realSupAtom, false));
                 }
+                // printClause(clause);
                 if(!solver->addClause_(clause)) return false;
             }
             std::cout << "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%"<<std::endl;

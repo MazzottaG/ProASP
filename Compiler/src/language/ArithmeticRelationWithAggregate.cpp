@@ -63,6 +63,7 @@ aspc::ArithmeticRelationWithAggregate::ArithmeticRelationWithAggregate(bool isLo
         negated=!negated;
         comparisonType = aspc::GTE;
     }else if(comparisonType==aspc::LTE){
+        std::cout << "Switching sign: it was " << (negated ? "" : " not ") << "negated and now it is " << (!negated ? "" : " not ") << "negated" << std::endl;
         negated=!negated;
         comparisonType = aspc::GTE;
         plusOne=true;
@@ -101,6 +102,9 @@ bool aspc::ArithmeticRelationWithAggregate::isBoundedValueAssignment(const std::
     if(this->comparisonType != aspc::EQ )
         return false;
     
+    if(guard.isProduct())
+        return false;
+
     unsigned unassignedVariables=0;
     for (const std::string & v : guard.getAllTerms()) {
         if (!boundVariables.count(v) && isVariable(v)) {
@@ -111,6 +115,7 @@ bool aspc::ArithmeticRelationWithAggregate::isBoundedValueAssignment(const std::
     
 }
 std::string aspc::ArithmeticRelationWithAggregate::getAssignedVariable(std::unordered_set<std::string> & set) const {
+    assert(isBoundedValueAssignment(set));
     if(guard.isSingleTerm()){
         if(isVariable(guard.getTerm1()) && set.count(guard.getTerm1())==0)
             return guard.getTerm1();
@@ -121,6 +126,51 @@ std::string aspc::ArithmeticRelationWithAggregate::getAssignedVariable(std::unor
             return guard.getTerm2();
     }
     return "";
+}
+std::string aspc::ArithmeticRelationWithAggregate::getAssignmentAsString(std::unordered_set<std::string> & set) const {
+    assert(isBoundedValueAssignment(set));
+    
+    if(guard.isSingleTerm()){
+        if(isVariable(guard.getTerm1()) && set.count(guard.getTerm1())==0)
+            return guard.getTerm1()+" = sum";
+    }else{
+        if(isVariable(guard.getTerm1()) && set.count(guard.getTerm1())==0)
+            return guard.getTerm1()+" = sum "+(guard.getOperation() == '+' ? "-" : "+")+guard.getTerm2();
+        else if(isVariable(guard.getTerm2()) && set.count(guard.getTerm2())==0)
+            if(guard.getOperation() == '-')
+                return guard.getTerm2() +" = "+ guard.getTerm1()+" - sum";
+            return guard.getTerm2() +" = sum + "+ guard.getTerm1();
+    }
+    return "";
+}
+bool aspc::ArithmeticRelationWithAggregate::isSafeAggSet() const {
+    std::unordered_set<std::string> occuringVariables;
+    addPositiveBodyVariablesToSet(occuringVariables);
+    for(const aspc::Literal& l : aggregate.getAggregateLiterals()){
+        if(l.isNegated() && !l.isBoundedLiteral(occuringVariables)) return false;
+    }
+    for(const aspc::ArithmeticRelation& ineq: aggregate.getAggregateInequalities()){
+        if(!ineq.isBoundedRelation(occuringVariables)) return false;
+    }
+    return true;
+}
+void aspc::ArithmeticRelationWithAggregate::addPositiveBodyVariablesToSet(std::unordered_set<std::string> & set) const {
+    for(const aspc::Literal& l : aggregate.getAggregateLiterals()){
+        if(l.isNegated()) continue;
+        l.addVariablesToSet(set);
+    }
+    bool added=true;
+    while(added){
+        added=false;
+        for(const aspc::ArithmeticRelation& ineq: aggregate.getAggregateInequalities()){
+            if(ineq.isBoundedValueAssignment(set)){
+                std::string var = ineq.getAssignedVariable(set);
+                auto it = set.emplace(var);
+                if(it.second)
+                    added=true;
+            }
+        }
+    }
 }
 void aspc::ArithmeticRelationWithAggregate::addVariablesToSet(std::unordered_set<std::string> & set) const {
     for(const aspc::Literal& l : aggregate.getAggregateLiterals()){

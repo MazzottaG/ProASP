@@ -112,7 +112,8 @@ void AbstractGeneratorCompiler::compileSingleStarter(bool recursive,std::vector<
                 closingPars++;
             }
         }else{
-            printAggregateInitialization(boundVars);
+            std::cout << "  Printing aggregate initialization"<<std::endl;
+            closingPars += printAggregateInitialization(boundVars);
         }
 
     }
@@ -174,6 +175,8 @@ void AbstractGeneratorCompiler::compileNoStarter(bool recursive){
 }
 std::vector<std::vector<unsigned>> AbstractGeneratorCompiler::reorderRule(){
     std::cout << "   Reordering rule: ";rule->print();
+    if(this->leaveAggregateAtEnd()) std::cout << "Aggregate Evaluated At The End"<<std::endl;
+    else std::cout << "Aggregate Evaluated After Positive Body"<<std::endl;
     // general order + ordering starting from positive literal in the same component
     auto body = rule->getFormulas();
     std::vector<std::vector<unsigned>> orderByStarters;
@@ -226,13 +229,29 @@ std::vector<std::vector<unsigned>> AbstractGeneratorCompiler::reorderRule(){
                     }
                 }
             }else if(notVisited){
-                std::cout << "Error ordering rule ";rule->print();
-                exit(180);
+                //there exists at least one formula not containing aggregates that has not been visited
+                if(leaveAggregateAtEnd()){
+                    std::cout << "Error ordering rule ";rule->print();
+                    exit(180);
+                }else{
+                    for(unsigned i=0; i<body.size(); i++){
+                        if(!visitedFormulas[i] && body[i]->containsAggregate() && body[i]->isBoundedValueAssignment(boundVars)){
+                            currentOrdering->push_back(i);
+                            visitedFormulas[i]=true;
+                            boundVars.insert(((const aspc::ArithmeticRelationWithAggregate*)body[i])->getAssignedVariable(boundVars));
+                            selectedFormula=i;
+                        }
+                    }
+                }
+                
+            }
+            if(selectedFormula<body.size()){
+                std::cout << "   Selected ";body[selectedFormula]->print();std::cout << std::endl;
             }
         }
         for(unsigned i=0; i<body.size(); i++){
             if(!visitedFormulas[i] && body[i]->containsAggregate()){
-                std::cout << "   Adding aggregate to current ordering"<<std::endl;
+                std::cout << "   Adding bound aggregate to current ordering"<<std::endl;
                 currentOrdering->push_back(i);
                 visitedFormulas[i]=true;
             }

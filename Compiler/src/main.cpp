@@ -10,7 +10,6 @@ int main(int argc, char *argv[])
 {
 	ProgramReader reader(argc,argv);
 	Analyzer analyzer(reader.getInputProgram(),reader.getInputProgramLabel());
-
 	aspc::Program eagerProgram(analyzer.getEager());
 	std::vector<bool> eagerLabels(analyzer.getEagerLabel());
 	std::vector<std::string> idToPredicate(analyzer.getIdToPredicate());
@@ -50,6 +49,7 @@ int main(int argc, char *argv[])
 		}
 	}
 	r.addDomainRule(generatorRuleLabel);
+	r.addSubSetSumRule(generatorRuleLabel);
 	r.computeGlobalPredicates();
 
 	r.getGeneratorProgram().print();

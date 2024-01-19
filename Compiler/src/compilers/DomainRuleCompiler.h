@@ -10,7 +10,7 @@ class DomainRuleCompiler: public AbstractGeneratorCompiler{
         void printAddClause(std::vector<unsigned>,bool){}
         void printAddConstraintClause(std::vector<unsigned>,bool){}
         void printAddSP(int index){}
-        void printAggregateInitialization(std::unordered_set<std::string>&){}
+        unsigned printAggregateInitialization(std::unordered_set<std::string>&){}
         void printUntrackLiteral(std::string tuplename){
             outfile << ind << "TupleFactory::getInstance().untrackLiteral("<<tuplename<<"->getId());\n";
         }

@@ -94,6 +94,24 @@ class AggregatePropagator: public AbstractPropagator{
                 }
             }
         }
+        void computeSSSum(std::vector<int>& sums){
+            assert(sums.size() == 0);
+            sums.push_back(0);
+            std::unordered_set<int> distinctSums({0});
+            for(unsigned i = 0; i<literals.size();i++){
+                int weight = weights[i];
+                unsigned totalSums = sums.size();
+                for(unsigned j=0; j< totalSums; j++){
+                    int sum = sums[j]+weight;
+                    auto it = distinctSums.emplace(sum);
+                    if(it.second)
+                        sums.push_back(sums[j]+weight);
+                }
+            }
+
+            std::sort(sums.begin(), sums.end(), std::less<int>());
+            return;
+        }
 
         void addBound(TupleLight* tuple, int bound, bool negated=false){
             assert(!negated);
@@ -104,33 +122,33 @@ class AggregatePropagator: public AbstractPropagator{
             }
         }
         void printCurrentStatus(){
-            // std::cout << "Actual sum is "<<currentSum<<std::endl;
-            // std::cout << "Max possible sum is "<<maxPossibleSum<<std::endl;
+            std::cout << "Actual sum is "<<currentSum<<std::endl;
+            std::cout << "Max possible sum is "<<maxPossibleSum<<std::endl;
             
-            // std::cout << "Bounds: {\n";
-            // for(unsigned i = 0; i < ids.size(); i++){
-            //     std::cout << "AggId "<< (ids[i]==NULL ? "NULL": ""); if(ids[i] != NULL) AuxMapHandler::getInstance().printTuple(ids[i]);
-            //     std::cout << "Guard "<< bounds[i]<<std::endl;
-            // }
-            // std::cout << "}\n";
+            std::cout << "Bounds: {\n";
+            for(unsigned i = 0; i < ids.size(); i++){
+                std::cout << "AggId "<< (ids[i]==NULL ? "NULL": ""); if(ids[i] != NULL) AuxMapHandler::getInstance().printTuple(ids[i]);
+                std::cout << "Guard "<< bounds[i]<<std::endl;
+            }
+            std::cout << "}\n";
 
-            // std::cout << "AggSet: {\n";
-            // for(unsigned i = 0; i < literals.size(); i++){
-            //     std::cout << "Literal "; if(aggSetNegated) std::cout << "not "; AuxMapHandler::getInstance().printTuple(literals[i]);
-            //     std::cout << " Weight "<< weights[i]<<std::endl;
-            // }
-            // std::cout << "}\n";
+            std::cout << "AggSet: {\n";
+            for(unsigned i = 0; i < literals.size(); i++){
+                std::cout << "Literal "; if(aggSetNegated) std::cout << "not "; AuxMapHandler::getInstance().printTuple(literals[i]);
+                std::cout << " Weight "<< weights[i]<<std::endl;
+            }
+            std::cout << "}\n";
 
 
-            // std::cout << "AggTerms: {\n";
-            // for(const std::vector<int>& terms : aggTerms){
-            //     std::cout << "   ";
-            //     for(int t : terms){
-            //         std::cout << t << " ";
-            //     }
-            //     std::cout << std::endl;
-            // }
-            // std::cout << "}\n";
+            std::cout << "AggTerms: {\n";
+            for(const std::vector<int>& terms : aggTerms){
+                std::cout << "   ";
+                for(int t : terms){
+                    std::cout << t << " ";
+                }
+                std::cout << std::endl;
+            }
+            std::cout << "}\n";
 
         }
         void printName()const { std::cout << "Grounded Aggregate"<<std::endl;}

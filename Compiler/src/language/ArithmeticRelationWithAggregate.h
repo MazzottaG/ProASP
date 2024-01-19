@@ -46,6 +46,8 @@ namespace aspc {
             virtual bool isBoundedLiteral(const std::unordered_set<std::string> &) const override;
             virtual bool isBoundedValueAssignment(const std::unordered_set<std::string> &) const override;
             virtual void addVariablesToSet(std::unordered_set<std::string> &) const override;
+            void addPositiveBodyVariablesToSet(std::unordered_set<std::string> &) const;
+            bool isSafeAggSet() const;
 
             bool operator==(const ArithmeticRelationWithAggregate& other){
                 if(!(aggregate == other.aggregate)) return false;
@@ -70,6 +72,7 @@ namespace aspc {
             aspc::ArithmeticExpression getGuard() const{return guard;}
             std::string getCompareTypeAsString()const{return aspc::ArithmeticRelation::comparisonType2String[comparisonType];}
             std::string getAssignedVariable(std::unordered_set<std::string> & set) const;
+            std::string getAssignmentAsString(std::unordered_set<std::string> & set) const;
             bool isNegated()const{return negated;}
             bool isPlusOne() const {return plusOne;}
             void setPlusOne(bool isPlusOne){

@@ -15,11 +15,11 @@ std::set<int> ASPCore2CompileProgramListener::watchedTerminalTypes = std::set<in
     ASPCore2Parser::DASH,
     ASPCore2Parser::AGGR_COUNT, 
     ASPCore2Parser::AGGR_SUM,
-     
+    ASPCore2Parser::TIMES
+    
 });
 
 std::set<int> ASPCore2CompileProgramListener::forbiddenTerminalTypes = std::set<int>({
-    ASPCore2Parser::TIMES,
     ASPCore2Parser::SLASH,
     ASPCore2Parser::BACK_SLASH,
     ASPCore2Parser::ANON_VAR

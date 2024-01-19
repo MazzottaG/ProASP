@@ -6,6 +6,7 @@
 #include "DependenciesHandler.h"
 #include "GrounderGenCompiler.h"
 #include "DomainRuleCompiler.h"
+#include "SubSetSumRuleCompiler.h"
 
 class HybridGenerator{
     

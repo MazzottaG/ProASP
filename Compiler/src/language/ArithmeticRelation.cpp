@@ -69,6 +69,16 @@ bool aspc::ArithmeticRelation::operator==(const aspc::ArithmeticRelation& other)
     
 }
 
+void aspc::ArithmeticRelation::addOccurringVariables(std::unordered_set<std::string>& set) const {
+    //assert(isBoundedValueAssignment(set));
+    for(std::string v : left.getAllTerms()){
+        if(isVariable(v)) set.insert(v);
+    }
+    for(std::string v : right.getAllTerms()){
+        if(isVariable(v)) set.insert(v);
+    }
+
+}
 void aspc::ArithmeticRelation::addVariablesToSet(std::unordered_set<std::string>& set) const {
     //assert(isBoundedValueAssignment(set));
     if(isBoundedValueAssignment(set)) {
@@ -112,11 +122,13 @@ bool aspc::ArithmeticRelation::isBoundedValueAssignment(const std::unordered_set
     unsigned unassignedVariables = 0;
     for (const std::string & v : left.getAllTerms()) {
         if (!boundVariables.count(v) && isVariable(v)) {
+            if(left.isProduct()) return false;
             unassignedVariables++;
         }
     }
     for (const std::string & v : right.getAllTerms()) {
         if (!boundVariables.count(v) && isVariable(v)) {
+            if(right.isProduct()) return false;
             unassignedVariables++;
         }
     }
@@ -178,65 +190,136 @@ string invertOperation(char op) {
 
 string aspc::ArithmeticRelation::getAssignmentStringRep(const unordered_set<string>& boundVariables) const {
     //    return left.getStringRep() + " = " + right.getStringRep();
-    string res = "";
-    bool leftContainsUnassigned = true;
-    string unassigned;
-    for (const string & v : left.getAllTerms()) {
-        if (!boundVariables.count(v) && isVariable(v)) {
-            res += v;
-            unassigned = v;
-        }
+    bool containsProduct = false;
+    for(auto exp : {left,right}) {
+        if(left.isProduct())
+            containsProduct=true;
     }
-    for (const string & v : right.getAllTerms()) {
-        if (!boundVariables.count(v) && isVariable(v)) {
-            res += v;
-            unassigned = v;
-            leftContainsUnassigned = false;
-        }
-    }
-
-    res += " = ";
-
-
-
-    ArithmeticExpression evalLeft = left;
-    ArithmeticExpression evalRight = right;
-
-    if (!leftContainsUnassigned) {
-        evalLeft = right;
-        evalRight = left;
-    }
-
-    //don't use right and left anymore
-    if (evalLeft.isSingleTerm()) {
-        return evalLeft.getStringRep() + " = " + evalRight.getStringRep();
-    }
-
-
-    if (!evalLeft.isSingleTerm()) {
-        if (evalLeft.getOperation() == '+') {
-            if (evalLeft.getTerm1() == unassigned) {
-                return res + evalRight.getStringRep() + " - " + evalLeft.getTerm2();
-            }
-            else {
-                return res + evalRight.getStringRep() + " - " + evalLeft.getTerm1();
+    if(!containsProduct){
+        string res = "";
+        bool leftContainsUnassigned = true;
+        string unassigned;
+        for (const string & v : left.getAllTerms()) {
+            if (!boundVariables.count(v) && isVariable(v)) {
+                res += v;
+                unassigned = v;
             }
         }
-        else if (evalLeft.getOperation() == '-') {
-            if (evalLeft.getTerm1() == unassigned) {
-                return res + evalRight.getStringRep() + " + " + evalLeft.getTerm2();
+        for (const string & v : right.getAllTerms()) {
+            if (!boundVariables.count(v) && isVariable(v)) {
+                res += v;
+                unassigned = v;
+                leftContainsUnassigned = false;
             }
-            else {
-                return res + " -"+evalRight.getTerm1() + " + " + evalLeft.getTerm1();
+        }
+
+        res += " = ";
+
+
+
+        ArithmeticExpression evalLeft = left;
+        ArithmeticExpression evalRight = right;
+
+        if (!leftContainsUnassigned) {
+            evalLeft = right;
+            evalRight = left;
+        }
+
+        //don't use right and left anymore
+        if (evalLeft.isSingleTerm()) {
+            return evalLeft.getStringRep() + " = " + evalRight.getStringRep();
+        }
+
+
+        if (!evalLeft.isSingleTerm()) {
+            if (evalLeft.getOperation() == '+') {
+                if (evalLeft.getTerm1() == unassigned) {
+                    return res + evalRight.getStringRep() + " - " + evalLeft.getTerm2();
+                }
+                else {
+                    return res + evalRight.getStringRep() + " - " + evalLeft.getTerm1();
+                }
             }
-            //TODO implement assignment on / and *
-        } else {
-            throw std::runtime_error("unsupported assignment "+getStringRep());
+            else if (evalLeft.getOperation() == '-') {
+                if (evalLeft.getTerm1() == unassigned) {
+                    return res + evalRight.getStringRep() + " + " + evalLeft.getTerm2();
+                }
+                else {
+                    return res + " -"+evalRight.getTerm1() + " + " + evalLeft.getTerm1();
+                }
+                //TODO implement assignment on / and *
+            } else {
+                throw std::runtime_error("unsupported assignment "+getStringRep());
+            }
+        }
+
+
+
+        throw std::runtime_error("unable to getAssignmentStringRep");
+    }else{
+        if(!left.isProduct() && right.isProduct()){
+            std::string res = "";
+            if(left.isSingleTerm()){
+                res = left.getTerm1();
+            }else{
+                std::string left_1 = left.getTerm1();
+                std::string left_2 = left.getTerm2();
+                bool bound_left_1 = !isVariable(left_1) || boundVariables.count(left_1)==1;
+                bool bound_left_2 = !isVariable(left_2) || boundVariables.count(left_2)==1;
+                if(!bound_left_1 && !bound_left_2){
+                    throw std::runtime_error("unable to getAssignmentStringRep");
+                }
+                res = !bound_left_1 ? left_1 : left_2; 
+            }
+            std::string right_1 = right.getTerm1();
+            std::string right_2 = right.getTerm2();
+
+            bool bound_right_1 = !isVariable(right_1) || boundVariables.count(right_1)==1;
+            bool bound_right_2 = !isVariable(right_2) || boundVariables.count(right_2)==1;
+
+            if(!bound_right_1 || !bound_right_2){
+                throw std::runtime_error("unable to getAssignmentStringRep");
+            }
+            if(left.isSingleTerm()){
+                return res + " = " + right_1 + " * " + right_2; 
+            }else{
+                std::string left_1 = left.getTerm1();
+                std::string left_2 = left.getTerm2();
+                return res + " = (" + right_1 + " * " + right_2 +") "+ (left.getOperation() == '+' ? "-" : "+") + (left_1 != res ? left_1 : left_2); 
+
+            }
+        }else if(!right.isProduct() && left.isProduct()){
+            std::string res = "";
+            if(right.isSingleTerm()){
+                res = right.getTerm1();
+            }else{
+                std::string right_1 = right.getTerm1();
+                std::string right_2 = right.getTerm2();
+
+                bool bound_right_1 = !isVariable(right_1) || boundVariables.count(right_1)==1;
+                bool bound_right_2 = !isVariable(right_2) || boundVariables.count(right_2)==1;
+                if(!bound_right_1 && !bound_right_2){
+                    throw std::runtime_error("unable to getAssignmentStringRep");
+                }
+                res = !bound_right_1 ? right_1 : right_2; 
+            }
+            std::string left_1 = left.getTerm1();
+            std::string left_2 = left.getTerm2();
+            bool bound_left_1 = !isVariable(left_1) || boundVariables.count(left_1)==1;
+            bool bound_left_2 = !isVariable(left_2) || boundVariables.count(left_2)==1;
+
+            if(!bound_left_1 || !bound_left_2){
+                throw std::runtime_error("unable to getAssignmentStringRep");
+            }
+            if(right.isSingleTerm()){
+                return res + " = " + left_1 + " * " + left_2; 
+            }else{
+                std::string right_1 = right.getTerm1();
+                std::string right_2 = right.getTerm2();
+                return res + " = (" + left_1 + " * " + left_2 +") "+ (right.getOperation() == '+' ? "-" : "+") + (right_1 != res ? right_1 : right_2); 
+            }
         }
     }
-
-
-
-    throw std::runtime_error("unable to getAssignmentStringRep");
+    
 
 }

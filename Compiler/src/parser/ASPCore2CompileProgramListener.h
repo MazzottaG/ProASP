@@ -29,6 +29,9 @@ class  ASPCore2CompileProgramListener : public ASPCore2BaseListener {
     std::vector<aspc::ArithmeticRelationWithAggregate> buildingAggregates;
     aspc::ComparisonType aggrComparison;
     aspc::ArithmeticExpression guard;
+    bool lowerGuard;
+    bool upperGuard;
+    bool equalAggregate;
     
     aspc::Program program;
     std::vector<aspc::Atom> head;
@@ -49,6 +52,7 @@ class  ASPCore2CompileProgramListener : public ASPCore2BaseListener {
     int expNestingLevel;
     int factorNestingLevel;
     int lastTerminalSize;
+    int factorStartIndex;
 
     bool readingAggregate;
     int aggregateStartIndex;
@@ -65,6 +69,7 @@ public:
       expNestingLevel = -1;
       factorNestingLevel = -1;
       lastTerminalSize = -1;
+      factorStartIndex = -1;
       readingAggregate=false;
       aggregateStartIndex=-1;
       guardStartIndex=-1;
@@ -142,7 +147,6 @@ public:
     program.setStratified(checkStratified());
     std::cout << "Stratified: " << (program.isStratified() ? "Yes" : "No") << std::endl;
     program.print();
-
   }
 
   virtual void enterRule_(ASPCore2Parser::Rule_Context * /*ctx*/) override { }
@@ -247,6 +251,11 @@ public:
           positiveBodyVars.insert(buildingRels[i].getAssignedVariable(positiveBodyVars));
         }
       }
+      for(int i=0;i<buildingAggregates.size();i++){
+        if(buildingAggregates[i].isBoundedValueAssignment(positiveBodyVars)){
+          positiveBodyVars.insert(buildingAggregates[i].getAssignedVariable(positiveBodyVars));
+        }
+      }
     }while (size!=positiveBodyVars.size());
   }
 
@@ -296,8 +305,10 @@ public:
     naf=false;
   }
   virtual void exitNaf_literal(ASPCore2Parser::Naf_literalContext * /*ctx*/) override {
-    if(addedAtom)
+    if(addedAtom){
+      if(naf) std::cout<<"Found negated literal"<<std::endl;
       buildingAtomsPolarity.push_back(naf);
+    }
     addedAtom=false;
   }
 
@@ -408,6 +419,7 @@ public:
     terminals.pop_back();
     terminals.pop_back();
     terminals.pop_back();
+    
   }
 
   virtual void enterCompareop(ASPCore2Parser::CompareopContext * /*ctx*/) override { }
@@ -445,25 +457,62 @@ public:
   virtual void exitExpr(ASPCore2Parser::ExprContext * /*ctx*/) override { 
       expNestingLevel--;
       if(expNestingLevel < 0){
-
         int expLength = terminals.size()-lastTerminalSize;
         if(expLength != 1 && expLength != 3) {std::cout << "Error parsing expression"<<std::endl; exit(180);}
         if(expLength == 1){
-          aspc::ArithmeticExpression exp(terminals.back());
-          buildingExpression.push_back(exp);
-          terminals.back()="";
+          if(terminals.back() != ""){
+            aspc::ArithmeticExpression exp(terminals.back());
+            buildingExpression.push_back(exp);
+            terminals.back()="";
+          }
         }else{
-          aspc::ArithmeticExpression exp(terminals[lastTerminalSize],terminals[lastTerminalSize+2],terminals[lastTerminalSize+1][0]);
+          // if(terminals[lastTerminalSize] == "" || terminals[lastTerminalSize+2] == ""){
+          //   std::cout << "Nested sum or multiplication not allowed"<<std::endl;
+          //   exit(180);
+          // }
+          assert(terminals[lastTerminalSize] == "" && terminals[lastTerminalSize+2] == "");
+          assert(buildingExpression.back().isSingleTerm() && buildingExpression[buildingExpression.size()-2].isSingleTerm());
+          aspc::ArithmeticExpression exp(buildingExpression[buildingExpression.size()-2].getTerm1(),buildingExpression.back().getTerm1(),terminals[lastTerminalSize+1][0]);
           terminals.resize(lastTerminalSize);
           terminals.push_back("");
+          buildingExpression.resize(buildingExpression.size()-2);
           buildingExpression.push_back(exp);
         }
       }
   }
 
   virtual void enterFactor(ASPCore2Parser::FactorContext * /*ctx*/) override {
-   }
+    factorNestingLevel++;
+    if(factorNestingLevel == 0) factorStartIndex = terminals.size();
+    if(factorNestingLevel > 1) {
+      std::cout << "No nested factor supported"<<std::endl;
+      exit(180);
+    }
+  }
   virtual void exitFactor(ASPCore2Parser::FactorContext * /*ctx*/) override { 
+    // for(int i=0;i<factorNestingLevel;i++) std::cout << "   ";
+    // std::cout << "Exiting factor "<< factorNestingLevel-- <<std::endl;
+    factorNestingLevel--;
+    if(factorNestingLevel < 0){
+        assert(factorStartIndex >= 0);
+        int expLength = terminals.size()-factorStartIndex;
+        if(expLength != 1 && expLength != 3) {std::cout << "Error parsing factor: found factor with length "<<expLength<<std::endl; exit(180);}
+        if(expLength == 1){
+          aspc::ArithmeticExpression exp(terminals.back());
+          buildingExpression.push_back(exp);
+          terminals.back()="";
+          // std::cout << "Found factor "<<exp.getTerm1() <<std::endl;
+        }else{
+          aspc::ArithmeticExpression exp(terminals[lastTerminalSize],terminals[lastTerminalSize+2],terminals[lastTerminalSize+1][0]);
+          // std::cout << "Found factor "<<exp.getTerm1();
+          // if(!exp.isSingleTerm())
+          //   std::cout << exp.getOperation();
+          // std::cout << (!exp.isSingleTerm() ? exp.getTerm2() : "") <<std::endl;
+          terminals.resize(factorStartIndex);
+          terminals.push_back("");
+          buildingExpression.push_back(exp);
+        }
+      }
   }
 
   virtual void enterBasic_term(ASPCore2Parser::Basic_termContext * /*ctx*/) override { }
@@ -491,12 +540,29 @@ public:
   virtual void exitQuery(ASPCore2Parser::QueryContext * /*ctx*/) override { }
 
   virtual void enterLower_guard_compare_aggregate(ASPCore2Parser::Lower_guard_compare_aggregateContext * /*ctx*/) override { }
-  virtual void exitLower_guard_compare_aggregate(ASPCore2Parser::Lower_guard_compare_aggregateContext * /*ctx*/) override { }
+  virtual void exitLower_guard_compare_aggregate(ASPCore2Parser::Lower_guard_compare_aggregateContext * /*ctx*/) override {
+    std::cout << "Terminals stack:";
+    for(std::string t : terminals) std::cout << " " << t;
+    std::cout << std::endl;
+    std::cout << "Exiting from lower_guard_compare_aggregate"<<std::endl;
+    lowerGuard=true;
+
+  }
 
   virtual void enterUpper_guard_compare_aggregate(ASPCore2Parser::Upper_guard_compare_aggregateContext * /*ctx*/) override { }
-  virtual void exitUpper_guard_compare_aggregate(ASPCore2Parser::Upper_guard_compare_aggregateContext * /*ctx*/) override { }
+  virtual void exitUpper_guard_compare_aggregate(ASPCore2Parser::Upper_guard_compare_aggregateContext * /*ctx*/) override { 
+    std::cout << "Terminals stack:";
+    for(std::string t : terminals) std::cout << " " << t;
+    std::cout << std::endl;
+    std::cout << "Exiting from upper_guard_compare_aggregate"<<std::endl;
+    upperGuard=true;
+  }
 
-  virtual void enterCompare_aggregate(ASPCore2Parser::Compare_aggregateContext * /*ctx*/) override { }
+  virtual void enterCompare_aggregate(ASPCore2Parser::Compare_aggregateContext * /*ctx*/) override { 
+    lowerGuard=false;
+    upperGuard=false;
+    equalAggregate=true;
+  }
   virtual void exitCompare_aggregate(ASPCore2Parser::Compare_aggregateContext * /*ctx*/) override { }
 
   virtual void enterLower_guard_leftward_left_aggregate(ASPCore2Parser::Lower_guard_leftward_left_aggregateContext * /*ctx*/) override { }
@@ -561,30 +627,41 @@ public:
     aggrBodyLiteralStart = buildingAtoms.size();
     aggrBodyIneqsStart = buildingRels.size();
     aggregateStartIndex = terminals.size();
+    equalAggregate=false;
     std::cout << "Literals starts from id "<<aggrBodyLiteralStart<<std::endl;
   }
   virtual void exitAggregate_atom(ASPCore2Parser::Aggregate_atomContext * /*ctx*/) override { 
     readingAggregate = false;
+    if(equalAggregate){
+      if(terminals.back() == "")
+        guard = buildingExpression.back();
+      else guard = aspc::ArithmeticExpression(terminals.back());
+      terminals.pop_back();
+
+      aggrComparison = aspc::ArithmeticRelation::string2ComparisonType[terminals.back()];
+      terminals.pop_back();
+    }
     std::vector<std::string> variables;
     for(int i=aggregateStartIndex+1; i<terminals.size(); i++){
       variables.push_back(terminals[i]);
     }
-    while (terminals.size() > aggregateStartIndex) terminals.pop_back();
+    while (terminals.size() > aggregateStartIndex+1) terminals.pop_back();
 
     std::vector<aspc::Literal> literals;
     for(int i=aggrBodyLiteralStart; i<buildingAtoms.size();i++){
       literals.push_back(aspc::Literal(buildingAtomsPolarity[i],buildingAtoms[i]));
     }
-    while(buildingAtoms.size() > aggrBodyLiteralStart) buildingAtoms.pop_back();
+    while(buildingAtoms.size() > aggrBodyLiteralStart) {buildingAtoms.pop_back(); buildingAtomsPolarity.pop_back();}
     
     std::vector<aspc::ArithmeticRelation> ineqs;
     for(int i=aggrBodyIneqsStart; i<buildingRels.size();i++){
       ineqs.push_back(aspc::ArithmeticRelation(buildingRels[i]));
     }
     while(buildingRels.size() > aggrBodyIneqsStart) buildingRels.pop_back();
-    
     aspc::Aggregate aggregate(literals,ineqs, variables, terminals[aggregateStartIndex]);
+    terminals.pop_back();
     buildingAggregates.push_back(aspc::ArithmeticRelationWithAggregate (false,guard,aggregate,aggrComparison,nafAggregate));
+
     std::cout << "Parsed aggregates ";
     buildingAggregates.back().print();
     aggregateStartIndex=-1;
@@ -751,6 +828,7 @@ public:
       if(watchedTerminalTypes.count(node->getSymbol()->getType()) != 0)
         terminals.push_back(node->getText());
       if(node->getSymbol()->getType() == ASPCore2Parser::NAF){
+        std::cout << "Found negation"<<std::endl;
         naf=true;
       }
       if(node->getSymbol()->getType() == ASPCore2Parser::AGGR_COUNT || node->getSymbol()->getType() == ASPCore2Parser::AGGR_SUM){

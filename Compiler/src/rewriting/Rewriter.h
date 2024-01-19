@@ -9,19 +9,46 @@
 struct GroundedAggrData{
     std::vector<aspc::Rule> rules;
     aspc::Atom* aggId;
+    bool isEqual;
+    bool genBound;
     aspc::Literal* aggSet;
 
-    GroundedAggrData(): aggId(NULL), aggSet(NULL), rules({}){}
-    GroundedAggrData(const GroundedAggrData& other): aggId(NULL), aggSet(NULL), rules(other.rules){
+    GroundedAggrData(): aggId(NULL), aggSet(NULL), rules({}), isEqual(false), genBound(false){}
+    GroundedAggrData(const GroundedAggrData& other): aggId(NULL), isEqual(other.isEqual), genBound(other.genBound), aggSet(NULL), rules(other.rules){
         if(other.aggSet != NULL)
             setAggSet(*other.aggSet);
         if(other.aggId != NULL)
             setAggId(*other.aggId);
     }
     ~GroundedAggrData(){
-        delete aggId;
-        delete aggSet;
+        if(aggId != NULL)
+            delete aggId;
+        if(aggSet != NULL)
+            delete aggSet;
     }
+    GroundedAggrData& operator=(const GroundedAggrData& other){
+        rules.clear();
+        for(const aspc::Rule& r : other.rules) rules.push_back(r);
+        if(aggId != NULL)
+            delete aggId;
+        aggId=NULL;
+        if(other.aggId != NULL) setAggId(*other.aggId);
+        
+        isEqual=other.isEqual;
+        genBound=other.genBound;
+
+        if(aggSet != NULL)
+            delete aggSet;
+        aggSet=NULL;
+        if(other.aggSet != NULL) setAggSet(*other.aggSet);
+    }
+
+    void setEqual(bool equal){this->isEqual=equal;}
+    bool isEqualAgg()const {return isEqual;}
+
+    void setGenBound(bool gen){this->genBound=gen;}
+    bool isBoundGen()const {return genBound;}
+
     void setAggSet(aspc::Literal l){
         if(aggSet != NULL) delete aggSet;
         aggSet = new aspc::Literal(l);
@@ -52,6 +79,7 @@ class Analyzer;
 class Rewriter{
     public:
         static const int DOMAIN_RULE;
+        static const int SUBSETSUM_RULE;
         static const int GROUND_RULE;
         static const int TO_GENERATE;
         Rewriter(const aspc::Program& p,const std::vector<std::string>& predNames, const std::unordered_map<std::string,unsigned>& predId):program(p),predicateNames(predNames),predicateId(predId){}
@@ -66,6 +94,7 @@ class Rewriter{
         void addToGroundRule(const aspc::Rule&,std::vector<int>&,Analyzer&);
         void rewriteGroundedAggregate(const aspc::Rule& r, Analyzer& analyzer, GroundedAggrData& data);
         void addDomainRule(std::vector<int>&);
+        void addSubSetSumRule(std::vector<int>&);
         void printSharedVars();
         
         const std::vector<std::string>& getPredicateNames()const {return predicateNames;}
@@ -100,6 +129,9 @@ class Rewriter{
         std::vector<std::string> supportPredicates;
         std::unordered_map<std::string,unsigned> supportPredicateId;
 
+        std::vector<std::string> subSetSumPredicates;
+        std::unordered_map<std::string,unsigned> subSetSumPredicateToId;
+
         std::vector<std::string> sharedVarsPredicates;
         std::unordered_map<std::string,unsigned> sharedVarsPredicateId;
 
@@ -123,6 +155,7 @@ class Rewriter{
         std::unordered_map<int,int> aggregateGroundingMapping;
 
         std::vector<aspc::Rule> domainRules;
+        std::vector<aspc::Rule> subSetSumRules;
 
         void clearData(){
             buildingHead.clear();
@@ -132,6 +165,7 @@ class Rewriter{
         }
         void addRuleAfterAggregate(){
             afterAggregate.addRule(aspc::Rule(buildingHead,buildingBody,inequalities,inequalitiesWithAggregate,false,false));
+            std::cout << "Rule after aggregate: ";afterAggregate.getRules().back().print();
         }
 
 };

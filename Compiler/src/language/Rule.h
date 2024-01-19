@@ -75,6 +75,7 @@ namespace aspc {
         void addBodyVars(std::unordered_set<std::string>&) const;
         void addSharedVars(std::unordered_set<std::string>&,std::vector<std::string>&,std::unordered_set<std::string>&,const aspc::ArithmeticRelationWithAggregate*,bool=true) const;
         void addArithmeticRelationsWithAggregate(ArithmeticRelationWithAggregate r);
+        void addPositiveBodyVariablesToSet(std::unordered_set<std::string> &) const;
         RuleType getType() const;
         unsigned getRuleId() const;
         std::vector<std::map<unsigned, std::pair<unsigned, unsigned> > > getJoinIndicesWithJoinOrder(const std::vector<unsigned> & order) const;

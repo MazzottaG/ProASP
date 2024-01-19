@@ -101,6 +101,7 @@ class Propagator{
                 // std::cout << "Calling ";prop->printName();
                 // Glucose::CRef clause = prop->propagate(s,lits,literal);
             for(unsigned prop : TupleFactory::getInstance().getWatcher(literal<0 ? -literal : literal,literal<0)){
+                // std::cout << "Calling ";propagators[prop]->printName();std::cout << std::endl;
                 Glucose::CRef clause = propagators[prop]->propagate(s,lits,literal);
                 if(clause != Glucose::CRef_Undef){
                     // std::cout << "Found Conflict in propagator"<<std::endl;
@@ -149,6 +150,10 @@ class Propagator{
         }
         void activate(){active=true;}
         void addPropagator(AbstractPropagator* prop){ prop->setId(propagators.size()); propagators.push_back(prop); }
+        AbstractPropagator* getPropagator(int propId){
+            assert(propId>0 && propId < propagators.size());
+            return propagators[propId];
+        }
     private:
         int nested_calls = 0;
         Propagator();

@@ -241,9 +241,7 @@ void GeneratorCompiler::compileComponentRules(std::ofstream& outfile,Indentation
                 if(aggrVarTerms != "") aggrVarTerms+=",";
                 aggrVarTerms+=var;
             }
-            if(aggr->getAggregate().isSum()){
-                outfile << ind << "int sum = 0;\n";
-            }
+            outfile << ind << "int sum = 0;\n";
             int tempClosingPars = closingPars;
             for(const aspc::Literal& l: aggr->getAggregate().getAggregateLiterals()) aggrBody.push_back(&l);
             for(const aspc::ArithmeticRelation& l: aggr->getAggregate().getAggregateInequalities()) aggrBody.push_back(&l);
@@ -254,8 +252,12 @@ void GeneratorCompiler::compileComponentRules(std::ofstream& outfile,Indentation
                 closingPars--;
                 outfile << --ind << "}\n"; 
             }
-            outfile << ind++ << "if("<<(aggr->isNegated() ? "! ": "")<<"sum "<<aggr->getCompareTypeAsString() << aggr->getGuard().getStringRep() << (aggr->isPlusOne() ? "+1" : "")<<"){\n";
-            closingPars++; 
+            if(aggr->isBoundedValueAssignment(boundVars))
+                outfile << ind << "int "<<aggr->getAssignmentAsString(boundVars)<< ";\n";
+            else{
+                outfile << ind++ << "if("<<(aggr->isNegated() ? "! ": "")<<"sum "<<aggr->getCompareTypeAsString() << aggr->getGuard().getStringRep() << (aggr->isPlusOne() ? "+1" : "")<<"){\n";
+                closingPars++; 
+            }
         }
     }
     //storing possible heads

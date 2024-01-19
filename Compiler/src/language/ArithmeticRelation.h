@@ -57,6 +57,7 @@ namespace aspc {
         virtual bool isBoundedLiteral(const std::unordered_set<std::string> &) const override;
         virtual bool isBoundedValueAssignment(const std::unordered_set<std::string> &) const override;
         virtual void addVariablesToSet(std::unordered_set<std::string> &) const override;
+        void addOccurringVariables(std::unordered_set<std::string> &)const ;
         virtual bool isPositiveLiteral() const override;
         virtual void print() const override;
         virtual bool isLiteral() const override;

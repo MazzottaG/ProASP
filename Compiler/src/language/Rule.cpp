@@ -334,6 +334,24 @@ void aspc::Rule::bodyReordering() {
     // }
     bodyReordering(starters);
 }
+void aspc::Rule::addPositiveBodyVariablesToSet(std::unordered_set<std::string> & set) const {
+    for(const aspc::Literal& l : getBodyLiterals()){
+        if(l.isNegated()) continue;
+        l.addVariablesToSet(set);
+    }
+    bool added=true;
+    while(added){
+        added=false;
+        for(const aspc::ArithmeticRelation& ineq: getArithmeticRelations()){
+            if(ineq.isBoundedValueAssignment(set)){
+                std::string var = ineq.getAssignedVariable(set);
+                auto it = set.emplace(var);
+                if(it.second)
+                    added=true;
+            }
+        }
+    }
+}
 void aspc::Rule::orderBodyFormulasFromStarter(unsigned starter, std::vector<unsigned>& orderedBodyFormulas)const{
     std::unordered_set<std::string> boundVariables;
     std::unordered_set<unsigned> selectedFormulas;

@@ -28,6 +28,9 @@ class AbstractGenerator{
             for(auto pair: propagators){
                 props.push_back(new AggregatePropagator(pair.second));
             }
+            for(auto pair: propagatorsClone){
+                props.push_back(new AggregatePropagator(pair.second));
+            }
         }
         void printAggrPropagator() const{
 
@@ -38,15 +41,19 @@ class AbstractGenerator{
                 pair.second.printCurrentStatus();
             }
         }
-        std::map<std::vector<int>,AggregatePropagator>& getPropagators(){return propagators;}
+        // std::map<std::vector<int>,AggregatePropagator>& getPropagators(){return propagators;}
+        // std::map<std::vector<int>,AggregatePropagator>& getPropagatorsClone(){return propagatorsClone;}
         void remapLiterals(){
             for(auto& pair : propagators) pair.second.remapStoredLiteral();
+            for(auto& pair : propagatorsClone) pair.second.remapStoredLiteral();
         }
         void printStoredLiterals(){
             for(auto& pair : propagators) pair.second.printStoredLiterals();
+            for(auto& pair : propagatorsClone) pair.second.printStoredLiterals();
         }
     protected:
         std::map<std::vector<int>,AggregatePropagator> propagators;
+        std::map<std::vector<int>,AggregatePropagator> propagatorsClone;
 
 };
 #endif

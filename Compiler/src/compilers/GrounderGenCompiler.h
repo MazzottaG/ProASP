@@ -17,14 +17,15 @@ class GrounderGenCompiler : public AbstractGeneratorCompiler{
             // }
             // std::cout << std::endl; 
         }
-        void compileAggregate(std::unordered_set<std::string>& boundVars,const aspc::ArithmeticRelationWithAggregate* aggr);
+        unsigned compileAggregate(std::unordered_set<std::string>& boundVars,const aspc::ArithmeticRelationWithAggregate* aggr);
         std::string concreteClass(){return "BasicGenerator";}
         void printAddClause(std::vector<unsigned>,bool);
         void printAddConstraintClause(std::vector<unsigned>,bool);
         void printAddSP(int);
-        void printAggregateInitialization(std::unordered_set<std::string>&);
+        unsigned printAggregateInitialization(std::unordered_set<std::string>&);
         void compileConstraintGrounder();
         int printTrackedCheck(std::string tuplename);
+        bool leaveAggregateAtEnd()const override {return false;}
     private:
         GroundedAggrData aggregateData;
 };

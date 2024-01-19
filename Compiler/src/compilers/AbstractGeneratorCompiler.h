@@ -17,13 +17,14 @@ class AbstractGeneratorCompiler{
             // std::cout << std::endl; 
         }
         
-        void compileFromStarter(bool recursive);
-        void compileNoStarter(bool recursive);
+        virtual void compileFromStarter(bool recursive);
+        virtual void compileNoStarter(bool recursive);
         virtual std::string concreteClass(){return "BasicGenerator";}
         virtual void printAddClause(std::vector<unsigned>,bool){}
         virtual void printAddConstraintClause(std::vector<unsigned>,bool){}
         virtual void printAddSP(int index){}
-        virtual void printAggregateInitialization(std::unordered_set<std::string>&){}
+        virtual bool leaveAggregateAtEnd()const{return true;}
+        virtual unsigned printAggregateInitialization(std::unordered_set<std::string>&){}
         virtual void printUntrackLiteral(std::string tuplename){
             outfile << ind << "TupleFactory::getInstance().untrackLiteral("<<tuplename<<"->getId());\n";
         }

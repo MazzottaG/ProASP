@@ -490,16 +490,16 @@ int main(int argc, char** argv)
             }
             // std::vector<AggregatePropagator> propagators;
             // test_propagators(propagators);
+            SatProgramBuilder::getInstance().computeCompletion(&S);
             // std::cout << "Exiting ..."<<std::endl;
             // exit(180);
-            SatProgramBuilder::getInstance().computeCompletion(&S);
             // std::cout << "p cnf "<<TupleFactory::getInstance().size()-1<<" " << S.nClauses()+facts.size()<<std::endl;
             // for(int i=1;i<TupleFactory::getInstance().size(); i++){
             //     std::cout << "c "<<i<<" ";
             //     AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(i));
             //     std::cout << std::endl;
             // }
-            // S.printGeneratedClauses();
+            // // S.printGeneratedClauses();
             // for(unsigned id : facts){
             //     std::cout << id << " 0"<<std::endl;
             // } 

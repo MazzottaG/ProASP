@@ -113,8 +113,14 @@ void HybridGenerator::buildComponentGenerator(int componentId,std::string classN
                 
                 compiler = new AbstractGeneratorCompiler(outfile,ind.getDepth(),&program.getRule(ruleIndex),predNames,predIds,predicateToStruct,originalPredicates);
             }
-            else{
+            else if(ruleLabel[ruleIndex] == Rewriter::DOMAIN_RULE){
                 compiler = new DomainRuleCompiler(outfile,ind.getDepth(),&program.getRule(ruleIndex),predNames,predIds,predicateToStruct,originalPredicates);
+            }
+            else if(ruleLabel[ruleIndex] == Rewriter::SUBSETSUM_RULE){
+                compiler = new SubSetSumRuleCompiler(outfile,ind.getDepth(),&program.getRule(ruleIndex),predNames,predIds,predicateToStruct,originalPredicates);
+            }else{
+                std::cout << "Unknown rule type"<<std::endl;
+                assert(false);
             }
             compiler->compileNoStarter(isRecursive);
             auto usedMaps = compiler->getUsedAuxMaps();
