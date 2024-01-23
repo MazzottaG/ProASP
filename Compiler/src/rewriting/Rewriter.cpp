@@ -695,7 +695,7 @@ void Rewriter::reduceToSigleHeadForPredicate(){
                 if(ariety == 0)
                     ariety=rule->getHead()[0].getTerms().size();
                 else if(ariety != rule->getHead()[0].getTerms().size()){
-                    std::cout << "Error using same predicate name with different ariety value"<<std::endl;
+                    std::cout << "Error using same predicate name with different ariety value: "<<rule->getHead()[0].getPredicateName()<<std::endl;
                     exit(180);
                 }
                 aspc::Rule r(

@@ -903,7 +903,7 @@ void PropagatorCompiler::compileRuleWatcher(unsigned ruleId,std::ofstream& outfi
     //1 means current propagator added to positive literal watchList
     //-1 means current propagator added to negative literal watchList
     //2 means current propagator added to both positive and negative literal watchLists
-    outfile << ind << "std::vector<int> watched(TupleFactory::getInstance().size(),0);\n";
+    // outfile << ind << "std::vector<int> watched(TupleFactory::getInstance().size(),0);\n";
     aspc::Rule rule = program.getRule(ruleId);
     const std::vector<const aspc::Formula*>& body = rule.getFormulas();
     bool ruleWithAggregates = rule.containsAggregate();

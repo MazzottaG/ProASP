@@ -167,8 +167,5 @@ class SatProgramBuilder{
 
             return true;
         }
-        
-    
-
 };
 #endif

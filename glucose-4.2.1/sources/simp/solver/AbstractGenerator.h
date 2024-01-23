@@ -28,9 +28,6 @@ class AbstractGenerator{
             for(auto pair: propagators){
                 props.push_back(new AggregatePropagator(pair.second));
             }
-            for(auto pair: propagatorsClone){
-                props.push_back(new AggregatePropagator(pair.second));
-            }
         }
         void printAggrPropagator() const{
 

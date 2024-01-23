@@ -155,13 +155,20 @@ void AggregatePropagator::propagateLevelZero(Glucose::Solver* solver,Glucose::ve
         // std::cout << "Considering bound ";
         // AuxMapHandler::getInstance().printTuple(ids[i]);
         // std::cout << std::endl;
-        if(ids[i]->isTrue() && currentSum<bounds[i]){
+        if((ids[i]->isTrue() && currentSum+maxPossibleSum < bounds[i]) || (ids[i]->isFalse() && currentSum >= bounds[i])){
+            Glucose::vec<Glucose::Lit> lits;
+            solver->addClause_(lits);
+            return;
+        } else if(ids[i]->isTrue() && currentSum<bounds[i]){
+            // std::cout << "   GroundAggregatePropagator: Evaluating True Bound ";AuxMapHandler::getInstance().printTuple(ids[i]);std::cout<< " with guard "<<bounds[i]<<std::endl;
             // std::cout << "   True Bound"<<std::endl;
             propagateAggregateAsTrue(solver,propagations,i,NULL,false,false);
         }else if(ids[i]->isFalse() && currentSum+maxPossibleSum >= bounds[i]){
+            // std::cout << "   GroundAggregatePropagator: Evaluating False Bound ";AuxMapHandler::getInstance().printTuple(ids[i]);std::cout<< " with guard "<<bounds[i]<<std::endl;
             // std::cout << "   False Bound"<<std::endl;
             propagateAggregateAsFalse(solver,propagations,i,NULL,false,false);
         }else if(ids[i]->isUndef()){
+            // std::cout << "   GroundAggregatePropagator: Evaluating Undef Bound ";AuxMapHandler::getInstance().printTuple(ids[i]);std::cout<< " with guard "<<bounds[i]<<std::endl;
             // std::cout << "   Undef Bound"<<std::endl;
             if(currentSum>=bounds[i]){
                 propagations.push_back(Glucose::mkLit(ids[i]->getId(),false));
