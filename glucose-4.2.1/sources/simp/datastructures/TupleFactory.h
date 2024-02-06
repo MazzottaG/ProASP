@@ -131,6 +131,16 @@ class TupleFactory{
         bool isTracked(int lit){
             return trackedForSupport.count(lit) > 0;
         }
+        void destroyPredicate(int pred_id){
+
+        }
+        void cleanupPredicate(int pred){
+            assert(tupleToInternalVarSets.size()>pred);
+            std::unordered_set<TupleLight*,TuplePointerHash,TuplePointerEq> empty;
+            for(TupleLight* t : tupleToInternalVarSets[pred])
+                t->cleanUpCollisionsList();
+            empty.swap(tupleToInternalVarSets[pred]);
+        }
         void printUsedMemory(){
             unsigned total = 0;
             unsigned totalBytes = 0;
@@ -215,6 +225,7 @@ class TupleFactory{
             return instance;
         }
         static TupleLight bufferTuple;
+        static bool usedFindNoSet;
         void setBufferedTupleStorage(int* vectorData,int size,int predName){
             bufferTuple.setContent(vectorData,size,predName);
         }
@@ -228,7 +239,9 @@ class TupleFactory{
             for(TupleLight* tuple : internalIDToTuple) delete tuple;
         }
         
-
+        void destroyTuples(){
+            for(TupleLight* tuple : internalIDToTuple) delete tuple;
+        }
         void printAvgWatcherSize(int term){
             // TupleLight* t = find({1,term},4);
             // int id = t->getId();
@@ -441,6 +454,16 @@ class TupleFactory{
 
             // assert(it->second == -1);
             return *it;
+        }
+        TupleLight* findNoSet(std::vector<int> terms,int predName){
+            if(!TupleFactory::usedFindNoSet) std::cout << "WARNING: FindNoSet should be used only for debug"<<std::endl;
+            TupleFactory::usedFindNoSet=true;
+            bufferTuple.setContent(terms.data(),terms.size(),predName);
+            for(TupleLight* tuple : internalIDToTuple){
+                if(*tuple == bufferTuple)
+                    return tuple;
+            }
+            return NULL;
         }
         TupleLight* find(std::vector<int> terms,int predName){
             bufferTuple.setContent(terms.data(),terms.size(),predName);

@@ -101,6 +101,34 @@ void DataStructureCompiler::buildAuxMapHandler(std::string executablePath,const 
                     }
                 }
             outfile << --ind <<"}\n";
+            {
+                outfile << ind++ << "void cleanupPredicate(int predicate){\n";
+                    bool firstIf=true;
+                    const auto& auxMaps = getAuxMapNameForPredicate();
+                    for(const std::string& predicate: predNames){
+                        std::string printElse = !firstIf ? "else " : "";
+                        auto it = auxMaps.find(predicate);
+                        if(it!=auxMaps.end()){
+                            auto itPredStruct = predicateToStruct.find(predicate);
+                            std::string predStruct = itPredStruct == predicateToStruct.end() ? "" : itPredStruct->second;
+                            outfile << ind++ << printElse << "if(predicate == AuxMapHandler::getInstance().get_"<<predicate<<"()){\n";
+                            for(const std::vector<unsigned>& indices : it->second){
+                                outfile << ind << "AuxMapHandler::getInstance().get_u"<< predicate << "_";
+                                for(unsigned k :indices) outfile << k << "_";
+                                outfile <<"()->cleanup();\n";
+                                outfile << ind << "AuxMapHandler::getInstance().get_p"<< predicate << "_";
+                                for(unsigned k :indices) outfile << k << "_";
+                                outfile <<"()->cleanup();\n";
+                                outfile << ind << "AuxMapHandler::getInstance().get_f"<< predicate << "_";
+                                for(unsigned k :indices) outfile << k << "_";
+                                outfile <<"()->cleanup();\n";
+                            }
+                            outfile << --ind << "}\n";
+                            firstIf=false;        
+                        }
+                    }
+                outfile << --ind <<"}\n";
+            }
             outfile << ind++ << "void printTuple(const Tuple* t){\n";
                 // outfile << ind << "if(t->isFalse()) std::cout << \"not \";\n";
                 // outfile << ind << "if(t->isUndef()) std::cout << \"undef \";\n";

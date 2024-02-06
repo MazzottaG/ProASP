@@ -1720,6 +1720,7 @@ void PropagatorCompiler::compile(){
     }
     outfile << ind++ << "Propagator::Propagator(){\n";
         outfile << ind << "active=false;\n";
+        outfile << ind << "fullGrounding=true;\n";
         outfile << ind << "unsigned id = 0;\n";
         int propagatorId = 0;
         for(unsigned ruleId : propagatorOrder){

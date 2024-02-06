@@ -48,7 +48,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
  **************************************************************************************************/
 
 #include <errno.h>
-
+#include <unistd.h> 
 #include <signal.h>
 #include <zlib.h>
 #include <sys/resource.h>
@@ -352,12 +352,7 @@ void read_asp(Solver* solver,std::string filename,std::vector<unsigned>& facts){
     }
 
 }
-void analyzePenalty(){
 
-}
-void printAuxMapMem(){
-
-}
 int main(int argc, char** argv)
 {
     try {

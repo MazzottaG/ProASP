@@ -1,27 +1,9 @@
 #include "Analyzer.h"
         
-void Analyzer::addAggregatePredicates(const aspc::ArithmeticRelationWithAggregate* aggrRelation){
-    for(const aspc::Literal& literal : aggrRelation->getAggregate().getAggregateLiterals()){
-        if(!predicateToId.count(literal.getPredicateName())){
-            predicateToId[literal.getPredicateName()]=idToPredicate.size();
-            dependencyGraph.addNode(idToPredicate.size());
-            idToPredicate.push_back(literal.getPredicateName());
-        }
-    }
-}
-void Analyzer::addAggregateDependency(const std::vector<aspc::Atom>* head,const aspc::ArithmeticRelationWithAggregate* aggrRelation){
-    for(const aspc::Literal& literal : aggrRelation->getAggregate().getAggregateLiterals()){
-        int bPredId = predicateToId[literal.getPredicateName()];
-        for(unsigned hId = 0; hId<head->size(); hId++){
-            const aspc::Atom* h = &head->at(hId);
-            int hPredId = predicateToId[h->getPredicateName()];
-            dependencyGraph.addEdge(bPredId,hPredId);
-        }
-    }
-}
+
 bool Analyzer::findAggregateNegativeDependency(const std::vector<std::vector<int>>& scc, unsigned componentId,const aspc::ArithmeticRelationWithAggregate* aggrRelation){
     for(const aspc::Literal& literal : aggrRelation->getAggregate().getAggregateLiterals()){
-        unsigned bodyPredicateId = predicateToId[literal.getPredicateName()];
+        unsigned bodyPredicateId = dependencyManager.getPredicateId(literal.getPredicateName());
         bool found=false;
         for(unsigned id:scc[componentId]) if(id == bodyPredicateId) found=true;
         if(found && literal.isNegated())
@@ -41,58 +23,14 @@ bool Analyzer::labelAggregateLiteral(std::unordered_map<std::string,int>& predTo
     }
     return labeled;
 }
-void Analyzer::buildDependecyGraph(){
-    for(unsigned ruleId = 0; ruleId < program.getRulesSize(); ruleId++){
-        const aspc::Rule* rule = &program.getRule(ruleId);
-        // Map predicates to nodes
-        const std::vector<const aspc::Formula*>* body = &rule->getFormulas();
-        for(unsigned bId = 0; bId<body->size(); bId++){
-            // if(!body->at(bId)->isLiteral() && !body->at(bId)->containsAggregate()) continue;
-            if(body->at(bId)->isLiteral()){
-                const aspc::Literal* literal = (const aspc::Literal*) body->at(bId);
-                if(!predicateToId.count(literal->getPredicateName())){
-                    predicateToId[literal->getPredicateName()]=idToPredicate.size();
-                    dependencyGraph.addNode(idToPredicate.size());
-                    idToPredicate.push_back(literal->getPredicateName());
-                }
-            }else if(body->at(bId)->containsAggregate()){
-                addAggregatePredicates((const aspc::ArithmeticRelationWithAggregate*)body->at(bId));
-            }
-            
-        }
-        if(rule->isConstraint()) continue;
-        const std::vector<aspc::Atom>* head = &rule->getHead();
-        for(unsigned hId = 0; hId<head->size(); hId++){
-            const aspc::Atom* h = &head->at(hId);
-            if(!predicateToId.count(h->getPredicateName())){
-                predicateToId[h->getPredicateName()]=idToPredicate.size();
-                dependencyGraph.addNode(idToPredicate.size());
-                idToPredicate.push_back(h->getPredicateName());
-            }
-        }
-        // Add body to head dependencies
-        for(unsigned bId = 0; bId<body->size(); bId++){
-            if(body->at(bId)->isLiteral()){ 
-                const aspc::Literal* literal = (const aspc::Literal*) body->at(bId);
-                int bPredId = predicateToId[literal->getPredicateName()];
-                for(unsigned hId = 0; hId<head->size(); hId++){
-                    const aspc::Atom* h = &head->at(hId);
-                    int hPredId = predicateToId[h->getPredicateName()];
-                    dependencyGraph.addEdge(bPredId,hPredId);
-                }
-            }else if(body->at(bId)->containsAggregate()){
-                addAggregateDependency(head,(const aspc::ArithmeticRelationWithAggregate*)body->at(bId));
-            }
-        }    
-    }
-}
+
 void Analyzer::mapPredicateToComponent(const std::vector<std::vector<int>>& scc,std::unordered_map<std::string,int>& predicateToComponent){
     unsigned componentId = scc.size()-1;
     while (componentId >= 0){
         std::cout << "Component "<<componentId<<": ";
         bool stratified = true;
         for(int pId : scc[componentId]){
-            std::string predicate = idToPredicate[pId];
+            std::string predicate = dependencyManager.getPredicateName(pId);
             std::cout <<predicate << " ";
             predicateToComponent[predicate]=componentId;
         }
@@ -106,7 +44,7 @@ void Analyzer::labelStratified(std::vector<int>& stratLabel,const std::vector<st
     while (componentId >= 0){
         bool stratified = true;
         for(int pId : scc[componentId]){
-            std::string predicate = idToPredicate[pId];
+            std::string predicate = dependencyManager.getPredicateName(pId);
             std::vector<unsigned> rulesForPredicate = program.getRulesForPredicate(predicate);
             for(unsigned ruleId : rulesForPredicate){
                 const aspc::Rule* rule = &program.getRule(ruleId);
@@ -114,7 +52,7 @@ void Analyzer::labelStratified(std::vector<int>& stratLabel,const std::vector<st
                 for(unsigned fId = 0; fId<body->size(); fId++){
                     if(body->at(fId)->isLiteral()){
                         const aspc::Literal* bodyLiteral = (const aspc::Literal*) body->at(fId);
-                        unsigned bodyPredicateId = predicateToId[bodyLiteral->getPredicateName()];
+                        unsigned bodyPredicateId = dependencyManager.getPredicateId(bodyLiteral->getPredicateName());
                         bool found=false;
                         for(unsigned id:scc[componentId]) if(id == bodyPredicateId) found=true;
                         if(found && bodyLiteral->isNegated())
@@ -192,7 +130,7 @@ void Analyzer::labelEager(std::vector<int>& typeLabel,const std::vector<int>& st
                     if(typeLabel[comp] == TYPE_EAGER){
                         for(int u: scc[comp]){
                             for(int v: scc[componentId]){
-                                if(dependencyGraph.existsEdge(u,v)){
+                                if(dependencyManager.existsEdge(u,v)){
                                     foundDep=true;
                                 }
                             }
@@ -221,7 +159,7 @@ void Analyzer::labelLazy(std::vector<int>& typeLabel,const std::vector<int>& str
                 if(typeLabel[comp] == TYPE_EAGER){
                     for(int u: scc[comp]){
                         for(int v: scc[componentId]){
-                            if(dependencyGraph.existsEdge(u,v))
+                            if(dependencyManager.existsEdge(u,v))
                                 foundDep=true;
                         }
                     }
@@ -256,7 +194,7 @@ void Analyzer::labelLazy(std::vector<int>& typeLabel,const std::vector<int>& str
                     if(typeLabel[comp] == TYPE_LAZY){
                         for(int u: scc[comp]){
                             for(int v: scc[componentId]){
-                                if(dependencyGraph.existsEdge(u,v))
+                                if(dependencyManager.existsEdge(u,v))
                                     foundDep=true;
                             }
                         }
@@ -401,10 +339,26 @@ bool Analyzer::findMaximalDatalogBody(const aspc::Rule* rule,int ruleId,const st
     std::cout << "Analyzer::findMaximalDatalogBody ";
     rule->print();
     const std::vector<const aspc::Formula*>* body = &rule->getFormulas();
-    if(labelFormulas(sccLabel,body,predToComponent,formulaLabeling)){
+    bool onlyDatalog = labelFormulas(sccLabel,body,predicateToComponent,formulaLabeling);
+    rulesBodyLabeling[ruleId]=formulaLabeling;
+    std::cout << "   Labeling rule "<<ruleId<<std::endl;
+    for(unsigned index = 0;index < body->size(); index++){
+        const aspc::Formula* f = body->at(index);
+        std::cout << "      Found formula: ";
+        f->print();
+        std::cout << "   as "<< (formulaLabeling[index] == DATALOG_FORMULA ? "EDB" : (formulaLabeling[index] == NON_DATALOG_FORMULA ? "IDB" : "Unknown"))<<std::endl;
+    }
+    if(onlyDatalog){
         std::cout << "Only datalog" << std::endl;
         return true;
     }
+    if(inputLabel[ruleId]){
+        for(unsigned i=0; i<body->size(); i++){
+            formulaLabeling[i]=NON_DATALOG_FORMULA;
+        }
+        return false;
+    }
+
     std::cout << "Analyzing remaining formulas" << std::endl;
     
     std::unordered_set<std::string> positiveEDBVars;
@@ -547,8 +501,7 @@ void Analyzer::rewriteWithJoin(const aspc::Rule* rule,int ruleId,std::vector<int
         }
     }
     if(!defined){
-        predicateToId[joinPredicate]=idToPredicate.size();
-        idToPredicate.push_back(joinPredicate);
+        dependencyManager.addNewPredicate(joinPredicate);
         joinRuleData[joinPredicate]=edbBodyData;
         datalogPrg.addRule(aspc::Rule({aspc::Atom(joinPredicate,joinRuleTerms[ruleId])},literalsEDB,ineqsEDB,aggregatesEDB,false,false));
     }
@@ -568,13 +521,14 @@ void Analyzer::buildPrograms(const std::vector<std::vector<int>>& scc,const std:
     std::cout << "Building programs"<<std::endl;
     while (componentId >= 0){
         for(int predicateId : scc[componentId]){
-            std::string predicate = idToPredicate[predicateId];
+            std::string predicate = dependencyManager.getPredicateName(predicateId);
             auto rulesForPredicate = program.getRulesForPredicate(predicate);
             for(int ruleId : rulesForPredicate){
                 const aspc::Rule* rule = &program.getRule(ruleId);
                 if(sccLabel[componentId] == TYPE_EAGER){
                     std::vector<int> formulaLabeling(rule->getFormulas().size(),UNK_FORMULA_LABEL);
                     bool fullDatalog = findMaximalDatalogBody(rule,ruleId,sccLabel,predToComponent,formulaLabeling);
+
                     if(fullDatalog)
                         datalogPrg.addRule(*rule);
                     else{
@@ -590,8 +544,10 @@ void Analyzer::buildPrograms(const std::vector<std::vector<int>>& scc,const std:
                         }
                         if(datalogAggr || datalogLit > 1){
                             rewriteWithJoin(rule,ruleId,formulaLabeling,false);
+                            remappingBodyLabeling[eagerLabel.size()-1]=ruleId;
                         }else{
                             joinRuleTerms.erase(ruleId);
+                            remappingBodyLabeling[eagerLabel.size()]=ruleId;
                             eagerPrg.addRule(*rule);
                             eagerLabel.push_back(inputLabel[ruleId]);
                         }
@@ -611,7 +567,9 @@ void Analyzer::buildPrograms(const std::vector<std::vector<int>>& scc,const std:
         if(!rule->isConstraint()) continue;
         std::vector<int> formulaLabeling(rule->getFormulas().size(),UNK_FORMULA_LABEL);
         bool fullDatalog = findMaximalDatalogBody(rule,ruleId,sccLabel,predToComponent,formulaLabeling);
+
         if(fullDatalog){
+            remappingBodyLabeling[eagerLabel.size()]=ruleId;
             eagerPrg.addRule(*rule);
             eagerLabel.push_back(inputLabel[ruleId]);
         }else{
@@ -627,8 +585,11 @@ void Analyzer::buildPrograms(const std::vector<std::vector<int>>& scc,const std:
             }
             if(datalogAggr || datalogLit > 1){
                 rewriteWithJoin(rule,ruleId,formulaLabeling,true);
+                remappingBodyLabeling[eagerLabel.size()-1]=ruleId;
             }else{
                 joinRuleTerms.erase(ruleId);
+                remappingBodyLabeling[eagerLabel.size()]=ruleId;
+
                 eagerPrg.addRule(*rule);
                 eagerLabel.push_back(inputLabel[ruleId]);
             }
@@ -647,7 +608,7 @@ void Analyzer::printProgramBySCC(const std::vector<std::vector<int>>& scc,const 
         if(sccLabel[componentId] == label){
             std::cout << "Component "<<componentId<<std::endl;
             for(int pId : scc[componentId]){
-                std::string predicate = idToPredicate[pId];
+                std::string predicate = dependencyManager.getPredicateName(pId);
                 std::cout << "   Predicate "<<predicate<<std::endl;
                 std::vector<unsigned> rulesForPredicate = program.getRulesForPredicate(predicate);
                 for(unsigned ruleId : rulesForPredicate){
@@ -661,7 +622,9 @@ void Analyzer::printProgramBySCC(const std::vector<std::vector<int>>& scc,const 
     }
 }
 void Analyzer::splitProgram(){
-    auto scc = dependencyGraph.SCC();
+    dependencyManager.buildDependecyGraph(program);
+    auto scc = dependencyManager.getSCC();
+
     if(scc.size() == 0) return;
     mapPredicateToComponent(scc,predicateToComponent);
 
@@ -686,8 +649,7 @@ void Analyzer::splitProgram(){
     buildPrograms(scc,sccTypeLabel,predicateToComponent);        
 }
 
-Analyzer::Analyzer(const aspc::Program& p,const std::vector<bool>& labels):program(p),inputLabel(labels){
-    buildDependecyGraph();
+Analyzer::Analyzer(const aspc::Program& p,const std::vector<bool>& labels,bool fullgrounded):program(p),inputLabel(labels),fullGrounding(fullgrounded){
     splitProgram();
 }
 const std::vector<bool>& Analyzer::getEagerLabel()const {return eagerLabel;}
@@ -695,8 +657,8 @@ const aspc::Program& Analyzer::getDatalog()const {return datalogPrg;}
 const aspc::Program& Analyzer::getEager()const {return eagerPrg;}
 const aspc::Program& Analyzer::getLazy()const {return lazyPrg;}
 
-const std::unordered_map<std::string,unsigned> Analyzer::getPredicateToId()const {return predicateToId;}
-const std::vector<std::string> Analyzer::getIdToPredicate()const {return idToPredicate;} 
+const std::unordered_map<std::string,unsigned> Analyzer::getPredicateToId()const {return dependencyManager.getPredicateToId();}
+const std::vector<std::string> Analyzer::getIdToPredicate()const {return dependencyManager.getIdToPredicate();}
 bool Analyzer::isEDB(std::string predicate){
     return predicateToComponent.count(predicate) && sccTypeLabel[predicateToComponent[predicate]] == TYPE_DATALOG;
 }

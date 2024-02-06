@@ -11,9 +11,11 @@ class Generator{
         }
         ~Generator(){
             for(AbstractGenerator* gen : generators){
-                delete gen;
+                if(gen != NULL){
+                    delete gen;
+                    gen=NULL;
+                }
             }
-
         }
         bool isSolvedByGenerator()const {return solvedByGenerator;}
         std::vector<AggregatePropagator*> collectAggregatePropagators(){
@@ -30,30 +32,31 @@ class Generator{
             }
 
         }
-        void generate(Glucose::SimpSolver* s,std::vector<int>& falseAtoms){
-            std::cout << "Generating ... "<<std::endl;
-            unsigned size=generators.size()-1;
-            for(AbstractGenerator* gen : generators) {
-                //std::cout << "Generator "<<size--<<std::endl;
-                gen->printName();
-                gen->generate(s);
-                std::cout << "Generator consumed"<<std::endl;
-                gen->propagateTrackedLiteral(s,falseAtoms);
-            }
-            std::cout << "Generated --------------"<<std::endl;
-            reorderAggregateSets();
-            for(AbstractGenerator* gen : generators) {
-                gen->remapLiterals();
-            }
-            computePossibleSums();
-            auto& sums = TupleFactory::getInstance().possibleSums();
-            for(auto pair : sums){
-                std::cout << "Possible sum for ";
-                AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(pair.first));
-                std::cout << pair.second << std::endl;
-            }
-            // debug_botttle_filling();
-        }
+        void generate(Glucose::SimpSolver* s,std::vector<int>& falseAtoms);
+        // void generate(Glucose::SimpSolver* s,std::vector<int>& falseAtoms){
+        //     std::cout << "Generating ... "<<std::endl;
+        //     unsigned size=generators.size()-1;
+        //     for(AbstractGenerator* gen : generators) {
+        //         //std::cout << "Generator "<<size--<<std::endl;
+        //         gen->printName();
+        //         gen->generate(s);
+        //         std::cout << "Generator consumed"<<std::endl;
+        //         gen->propagateTrackedLiteral(s,falseAtoms);
+        //     }
+        //     std::cout << "Generated --------------"<<std::endl;
+        //     reorderAggregateSets();
+        //     for(AbstractGenerator* gen : generators) {
+        //         gen->remapLiterals();
+        //     }
+        //     computePossibleSums();
+        //     auto& sums = TupleFactory::getInstance().possibleSums();
+        //     for(auto pair : sums){
+        //         std::cout << "Possible sum for ";
+        //         AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(pair.first));
+        //         std::cout << pair.second << std::endl;
+        //     }
+        //     // debug_botttle_filling();
+        // }
         void reorderAggregateSets();
         void computePossibleSums();
         static bool compTuple(const int& l1,const int& l2){

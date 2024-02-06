@@ -2,9 +2,10 @@
 
 void GrounderGenCompiler::printAddConstraintClause(std::vector<unsigned> order,bool starter){
     std::unordered_set<std::string> boundVars;
+    std::vector<int> formulaLabeling = prgAnalizer->getRemappedRuleBodyLabeling(ruleId);
     rule->addBodyVars(boundVars);
     for(int index : order){
-        if(rule->getFormulas()[index]->isLiteral()){
+        if(rule->getFormulas()[index]->isLiteral() && formulaLabeling[index] != prgAnalizer->DATALOG_FORMULA){
             const aspc::Literal* lit = (const aspc::Literal*)rule->getFormulas()[index];
             std::string sign = lit->isNegated() ? "":"-";
             if(lit->isNegated()){
@@ -34,7 +35,20 @@ void GrounderGenCompiler::printAddConstraintClause(std::vector<unsigned> order,b
 void GrounderGenCompiler::printAddClause(std::vector<unsigned> order,bool starter){
     std::string terms= !starter ? "" : "starter->getId()";
     bool missingAggId=false;
+    std::vector<int> formulaLabeling = prgAnalizer->getRemappedRuleBodyLabeling(ruleId);
+    std::vector<int> clauseFormulas;
+    std::cout << "Computing formula in body clause"<<std::endl;
     for(int index : order){
+        std::cout << "   Considering formula: ";
+        rule->getFormulas()[index]->print();
+        std::cout << " as "<<(formulaLabeling[index] == prgAnalizer->DATALOG_FORMULA ? "EDB" : (formulaLabeling[index] == prgAnalizer->NON_DATALOG_FORMULA ? "IDB" : "Unknown"))<<std::endl;
+        if(rule->getFormulas()[index]->isLiteral() && formulaLabeling[index]!=prgAnalizer->DATALOG_FORMULA){
+            clauseFormulas.push_back(index);
+            std::cout << "      Added in clause"<<std::endl;
+        }
+        if(rule->getFormulas()[index]->containsAggregate()) {clauseFormulas.push_back(index); std::cout << "      Added in clause"<<std::endl;}
+    }
+    for(int index : clauseFormulas){
         if(rule->getFormulas()[index]->isLiteral()){
             const aspc::Literal* lit = (const aspc::Literal*)rule->getFormulas()[index];
             if(terms != "")
@@ -94,9 +108,9 @@ void GrounderGenCompiler::printAddClause(std::vector<unsigned> order,bool starte
     }
 
     if(starter){
-        int bodysize = rule->getFormulas().size();
+        int bodysize = clauseFormulas.size();
         if(bodysize == 1){
-            assert(order.size()==0);
+            //assert(clauseFormulas.size()==0);
             outfile << ind << "Tuple* clauseTuple = starter;\n";
         }else{
             if(missingAggId){
@@ -106,8 +120,8 @@ void GrounderGenCompiler::printAddClause(std::vector<unsigned> order,bool starte
             }else outfile << ind << "Tuple* clauseTuple = TupleFactory::getInstance().addNewInternalClause({"<<terms<<"});\n";
         }
     }else{
-        int bodysize = rule->getFormulas().size();
-        if(bodysize == 1 && rule->getFormulas()[order[0]]->isPositiveLiteral()){
+        int bodysize = clauseFormulas.size();
+        if(bodysize == 1 && rule->getFormulas()[clauseFormulas[0]]->isPositiveLiteral()){
             outfile << ind << "Tuple* clauseTuple = tuple_"<<order[0]<<";\n";
         }else{
             if(missingAggId){

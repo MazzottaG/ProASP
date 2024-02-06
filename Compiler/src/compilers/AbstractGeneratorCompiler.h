@@ -4,6 +4,7 @@
 #include "../utils/Indentation.h"
 #include "../language/Rule.h"
 #include "../utils/SharedFunctions.h"
+#include "../rewriting/Analyzer.h"
 
 class AbstractGeneratorCompiler{
 
@@ -16,7 +17,11 @@ class AbstractGeneratorCompiler{
             // }
             // std::cout << std::endl; 
         }
-        
+
+        void setRuleId(int id){ this->ruleId=id;}
+        void setAnalyzer(Analyzer* analyzer){
+            prgAnalizer=analyzer;
+        }
         virtual void compileFromStarter(bool recursive);
         virtual void compileNoStarter(bool recursive);
         virtual std::string concreteClass(){return "BasicGenerator";}
@@ -45,5 +50,8 @@ class AbstractGeneratorCompiler{
         const std::string auxliteral; 
         std::unordered_map<std::string,std::string> predicateToStruct;
         std::unordered_set<std::string> originalPredicates;
+
+        Analyzer* prgAnalizer;
+        int ruleId;
 };
 #endif

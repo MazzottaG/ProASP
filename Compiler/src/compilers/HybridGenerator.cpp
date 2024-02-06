@@ -30,6 +30,8 @@ void HybridGenerator::buildConstraintGrounder(int ruleId,std::string className,s
             // }
             // std::cout << std::endl;
             compiler = new GrounderGenCompiler(outfile,ind.getDepth(),&program.getRule(ruleId),predNames,predIds,predicateToStruct,prgRewriter->getAggregateGrounding(ruleId),originalPredicates);
+            compiler->setAnalyzer(prgAnalyzer);
+            compiler->setRuleId(ruleId);
             compiler->compileNoStarter(false);
             auto usedMaps = compiler->getUsedAuxMaps();
             for(auto maps : usedMaps){
@@ -49,7 +51,7 @@ void HybridGenerator::buildConstraintGrounder(int ruleId,std::string className,s
     
     outfile << ind << "#endif\n";
 }
-void HybridGenerator::buildComponentGenerator(int componentId,std::string className,std::ofstream& outfile,Indentation& ind){
+void HybridGenerator::buildComponentGenerator(int componentId,std::string className,std::ofstream& outfile,Indentation& ind,std::unordered_set<std::string>& generatedPredicate){
     outfile << ind << "#ifndef "<<className<<"_H\n";
     outfile << ind << "#define "<<className<<"_H\n";
 
@@ -73,9 +75,12 @@ void HybridGenerator::buildComponentGenerator(int componentId,std::string classN
     bool isRecursive = false; // components[componentId].size() > 1;
     // if(!isRecursive){
     for(std::string predicate : components[componentId]){
+        generatedPredicate.insert(predicate);
         // std::string predicate = *components[componentId].begin();
         for(unsigned ruleIndex : program.getRulesForPredicate(predicate)){
             aspc::Rule r = program.getRule(ruleIndex);
+            std::cout << "   Compiling rule: ";
+            r.print();
             const std::vector<const aspc::Formula*>& body = r.getFormulas();
             for(unsigned i = 0; i<body.size(); i++){
                 if(body[i]->isLiteral() && body[i]->isPositiveLiteral()){
@@ -108,6 +113,8 @@ void HybridGenerator::buildComponentGenerator(int componentId,std::string classN
                 // }
                 // std::cout << std::endl;
                 compiler = new GrounderGenCompiler(outfile,ind.getDepth(),&program.getRule(ruleIndex),predNames,predIds,predicateToStruct,prgRewriter->getAggregateGrounding(ruleIndex),originalPredicates);
+                compiler->setAnalyzer(prgAnalyzer);
+                compiler->setRuleId(ruleIndex);
             }
             else if(ruleLabel[ruleIndex] == Rewriter::TO_GENERATE){
                 
@@ -178,8 +185,11 @@ void HybridGenerator::buildComponentGenerator(int componentId,std::string classN
                 for(unsigned ruleIndex : program.getRulesForPredicate(predicate)){
                     const aspc::Rule* rule = &program.getRule(ruleIndex);
                     AbstractGeneratorCompiler* compiler = NULL;
-                    if(ruleLabel[ruleIndex] == Rewriter::GROUND_RULE)
+                    if(ruleLabel[ruleIndex] == Rewriter::GROUND_RULE){
                         compiler = new GrounderGenCompiler(outfile,ind.getDepth(),rule,predNames,predIds,predicateToStruct,prgRewriter->getAggregateGrounding(ruleIndex),originalPredicates);
+                        compiler->setAnalyzer(prgAnalyzer);
+                        compiler->setRuleId(ruleIndex);
+                    }
                     else if(ruleLabel[ruleIndex] == Rewriter::TO_GENERATE)
                         compiler = new AbstractGeneratorCompiler(outfile,ind.getDepth(),rule,predNames,predIds,predicateToStruct,originalPredicates);
                     else{
@@ -247,23 +257,117 @@ void HybridGenerator::compile(){
     }
     outfile << ind++ << name << "::" << name << "(){\n";
         outfile << ind << "remappedId = NULL;\n";
+    std::unordered_set<std::string> generatedPredicates;
+    std::unordered_set<int> compiledConstraint;
+    std::unordered_set<int> cleanedComponents;
     for(int componentId = components.size()-1; componentId >= 0; componentId--){
+        std::cout << "Generated predicates:";
+        for(std::string pred: generatedPredicates) std::cout << " " << pred;
+        std::cout << std::endl;
+        for(int ruleId = 0; ruleId < program.getRulesSize(); ruleId++){
+            if(!program.getRule(ruleId).isConstraint()) continue;
+
+            const std::vector<const aspc::Formula*>& body = program.getRule(ruleId).getFormulas();
+            bool skip = false;
+            for(const aspc::Formula* f: body){
+                if(f->isLiteral()){
+                    const aspc::Literal* lit = (const aspc::Literal*) f;
+                    if(!generatedPredicates.count(lit->getPredicateName()))
+                        skip=true;
+                }else if(f->containsAggregate()){
+                    const aspc::ArithmeticRelationWithAggregate* aggr = (const aspc::ArithmeticRelationWithAggregate*) f;
+                    for(const aspc::Literal& lit: aggr->getAggregate().getAggregateLiterals()){
+                        if(!generatedPredicates.count(lit.getPredicateName()))
+                            skip=true;
+                    }
+                }
+                if(skip) break;
+            }
+            if(skip) continue;
+            compiledConstraint.insert(ruleId);
             Indentation ind_gen(0);
-            std::string className_gen="Comp_"+std::to_string(componentId)+"_Gen";
+            std::string className_gen="Constr_"+std::to_string(ruleId)+"_Gen";
             std::string executorPath_gen = executablePath + "/../../glucose-4.2.1/sources/simp/generators/"+className_gen+".h";
             std::ofstream outfile_gen(executorPath_gen);
             if(!outfile_gen.is_open()){
                 std::cout << "Error unable to open "+className_gen+" file "<<executorPath_gen<<std::endl;
                 exit(180);
             } 
-            buildComponentGenerator(componentId,className_gen,outfile_gen,ind_gen);
+            buildConstraintGrounder(ruleId,className_gen,outfile_gen,ind_gen);
             outfile_gen.close();
-            std::string className="Comp_"+std::to_string(componentId)+"_Gen";
+            std::string className="Constr_"+std::to_string(ruleId)+"_Gen";
             outfile << ind << "generators.push_back(new "<<className<<"());\n";
-            outfile << ind << "solvedByGenerator = " << (/*solvedByGenerator*/ false ? "true" : "false")<<";\n";
+            cleaningComponents.push_back({});
+        }
+        std::cout << "Generator "<<cleaningComponents.size()<<": "<<"Comp_"+std::to_string(componentId)+"_Gen"<<std::endl;
+        cleaningComponents.push_back({});
+        if(prgAnalyzer->isFullGrounding()){
+            std::cout << "Component to remove"<<std::endl;
+            for(int previousComponent = components.size()-1; previousComponent > componentId; previousComponent--){
+                std::cout << "   Checking component "<<previousComponent<<":";
+                for(std::string pred : components[previousComponent]) std::cout << " " << pred;
+                std::cout << std::endl;
+                bool canRemove = !cleanedComponents.count(previousComponent);
+                if(!canRemove) continue;
+                for(int nextComponent = 0; nextComponent <= componentId; nextComponent++){
+                    // nextComponent depends from previousComponent ???
+                    std::cout << "      Checking dependencies with component:";
+                    for(std::string pred : components[nextComponent]) std::cout << " " << pred;
+                    std::cout << std::endl;
+                    if(depHandler.findDenpendecy(previousComponent,nextComponent,negDep)) {
+                        canRemove = false;        
+                        std::cout << "         Found dependency"<<std::endl;
+                    }      
+                }
+                if(!canRemove) {std::cout << "         not cleaned"<<std::endl;continue;}
+                for(int ruleId = 0; ruleId < program.getRulesSize(); ruleId++){
+                    if(!program.getRule(ruleId).isConstraint() || compiledConstraint.count(ruleId)) continue;
+
+                    const std::vector<const aspc::Formula*>& body = program.getRule(ruleId).getFormulas();
+                    bool found = false;
+                    for(const aspc::Formula* f: body){
+                        if(f->isLiteral()){
+                            const aspc::Literal* lit = (const aspc::Literal*) f;
+                            if(components[previousComponent].count(lit->getPredicateName()))
+                                found=true;
+                        }else if(f->containsAggregate()){
+                            const aspc::ArithmeticRelationWithAggregate* aggr = (const aspc::ArithmeticRelationWithAggregate*) f;
+                            for(const aspc::Literal& lit: aggr->getAggregate().getAggregateLiterals()){
+                                if(components[previousComponent].count(lit.getPredicateName()))
+                                    found=true;
+                            }
+                        }
+                        if(found) break;
+                    }
+                    if(found) {canRemove=false; break;}
+                }
+                if(canRemove){
+                    outfile<<ind << "// component "<<previousComponent<<" should be cleaned up\n";
+                    std::cout << "Can be removed "<<previousComponent<<std::endl;
+                    cleaningComponents.back().push_back(previousComponent);
+                    cleanedComponents.insert(previousComponent);
+                }
+            }
+        }
+
+        Indentation ind_gen(0);
+        std::string className_gen="Comp_"+std::to_string(componentId)+"_Gen";
+        std::string executorPath_gen = executablePath + "/../../glucose-4.2.1/sources/simp/generators/"+className_gen+".h";
+        std::ofstream outfile_gen(executorPath_gen);
+        if(!outfile_gen.is_open()){
+            std::cout << "Error unable to open "+className_gen+" file "<<executorPath_gen<<std::endl;
+            exit(180);
+        } 
+        buildComponentGenerator(componentId,className_gen,outfile_gen,ind_gen,generatedPredicates);
+        outfile_gen.close();
+        std::string className="Comp_"+std::to_string(componentId)+"_Gen";
+        outfile << ind << "generators.push_back(new "<<className<<"());\n";
+        outfile << ind << "solvedByGenerator = " << (/*solvedByGenerator*/ false ? "true" : "false")<<";\n";
     }
     for(int ruleId = 0; ruleId < program.getRulesSize(); ruleId++){
-        if(!program.getRule(ruleId).isConstraint()) continue;
+        if(!program.getRule(ruleId).isConstraint() || compiledConstraint.count(ruleId)) continue;
+
+        compiledConstraint.insert(ruleId);
         Indentation ind_gen(0);
         std::string className_gen="Constr_"+std::to_string(ruleId)+"_Gen";
         std::string executorPath_gen = executablePath + "/../../glucose-4.2.1/sources/simp/generators/"+className_gen+".h";
@@ -277,6 +381,60 @@ void HybridGenerator::compile(){
         std::string className="Constr_"+std::to_string(ruleId)+"_Gen";
         outfile << ind << "generators.push_back(new "<<className<<"());\n";
     }
+    outfile << --ind << "}\n";
+    for(int genId = 0; genId < cleaningComponents.size(); genId++){
+        std::cout << "Cleanup after generator "<<genId<<":"<<std::endl;
+        for(int componentId : cleaningComponents[genId])
+            for(std::string predicate : components[componentId])
+                std::cout << "   cleaning predicate "<<predicate<<"\n";
+    }
+    outfile << ind++ << "void "<<name<<"::generate(Glucose::SimpSolver* s,std::vector<int>& falseAtoms){\n";
+        outfile << ind << "std::cout << \"Generating ... \"<<std::endl;\n";
+        outfile << ind << "unsigned size=generators.size()-1;\n";
+        outfile << ind++ << "for(unsigned genId = 0; genId < generators.size(); genId++) {\n";
+            bool printElse = false;
+            for(unsigned i=0; i<cleaningComponents.size(); i++){
+                if(!cleaningComponents[i].empty()){
+                    outfile << ind++ << (printElse ? "else " : "") << "if(genId == "<<i<<"){\n";
+                        for(int componentId : cleaningComponents[i])
+                            for(std::string predicate : components[componentId]){
+                                outfile<<ind << "AuxMapHandler::getInstance().cleanupPredicate(AuxMapHandler::getInstance().get_"<<predicate<<"());\n";
+                                outfile<<ind << "TupleFactory::getInstance().cleanupPredicate(AuxMapHandler::getInstance().get_"<<predicate<<"());\n";
+                            }
+                    outfile << --ind << "}\n";
+                    printElse=false;
+                }
+            }
+            outfile << ind << "AbstractGenerator* gen = generators[genId];\n";
+            outfile << ind << "//std::cout << \"Generator \"<<size--<<std::endl;\n";
+            outfile << ind << "gen->printName();\n";
+            outfile << ind << "gen->generate(s);\n";
+            outfile << ind << "std::cout << \"Generator consumed\"<<std::endl;\n";
+            outfile << ind << "gen->propagateTrackedLiteral(s,falseAtoms);\n";
+        outfile << --ind << "}\n";
+        outfile << ind << "std::cout << \"Generated --------------\"<<std::endl;\n";
+        outfile << ind << "reorderAggregateSets();\n";
+        outfile << ind++ << "for(AbstractGenerator* gen : generators) {\n";
+            outfile << ind << "gen->remapLiterals();\n";
+        outfile << --ind << "}\n";
+        outfile << ind << "computePossibleSums();\n";
+        // outfile << ind << "auto& sums = TupleFactory::getInstance().possibleSums();\n";
+        // outfile << ind++ << "for(auto pair : sums){\n";
+        //     outfile << ind << "std::cout << \"Possible sum for \";\n";
+        //     outfile << ind << "AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(pair.first));\n";
+        //     outfile << ind << "std::cout << pair.second << std::endl;\n";
+        // outfile << --ind << "}\n";
+        if(prgAnalyzer->isFullGrounding()){
+            for(int i=components.size()-1; i>=0; i--){
+                if(!cleanedComponents.count(i)){
+                    for(std::string predicate : components[i]){
+                        outfile<<ind << "AuxMapHandler::getInstance().cleanupPredicate(AuxMapHandler::getInstance().get_"<<predicate<<"());\n";
+                        outfile<<ind << "TupleFactory::getInstance().cleanupPredicate(AuxMapHandler::getInstance().get_"<<predicate<<"());\n";
+                    }
+                }
+            }
+        }
+
     outfile << --ind << "}\n";
     outfile << ind++ << "void "<<name<<"::computePossibleSums(){\n";
 

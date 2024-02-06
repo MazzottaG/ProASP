@@ -152,8 +152,31 @@ aspc::Rule::Rule(const std::vector<aspc::Atom> & head, const std::vector<aspc::L
     }
 
 }
-        
 
+
+bool aspc::Rule::equalBodyExpect(const aspc::Rule& other,const std::unordered_set<std::string>& forbidden){
+    if(bodyLiterals.size()!=other.bodyLiterals.size()) return false;
+    if(arithmeticRelations.size() != other.arithmeticRelations.size()) return false;
+    //TODO: Add Aggregates
+    //TODO: Add check on duplicated literals or ineqs
+    // We assume no duplicated literals or ineqs
+    for(const aspc::Literal& lit : bodyLiterals){
+        if(forbidden.count(lit.getPredicateName())) continue;
+        bool found = false;
+        for(const aspc::Literal& lit1 : other.bodyLiterals){
+            if(lit == lit1){found = true; break;}
+        }
+        if(!found) return false;
+    }
+    for(const aspc::ArithmeticRelation& ineq : arithmeticRelations){
+        bool found = false;
+        for(const aspc::ArithmeticRelation& ineq1 : other.arithmeticRelations){
+            if(ineq == ineq1){found = true; break;}
+        }
+        if(!found) return false;
+    }
+    return true;
+}
 aspc::Rule::Rule(const Rule& other) :
 head(other.head), bodyLiterals(other.bodyLiterals), ruleId(other.ruleId), arithmeticRelations(other.arithmeticRelations),arithmeticRelationsWithAggregate(other.arithmeticRelationsWithAggregate), orderedBodyByStarters(other.orderedBodyByStarters), orderedBodyIndexesByStarters(other.orderedBodyIndexesByStarters) {
     for (unsigned i = 0; i < bodyLiterals.size(); i++) {
@@ -333,6 +356,76 @@ void aspc::Rule::bodyReordering() {
         starters.push_back(formulas.size());
     // }
     bodyReordering(starters);
+}
+/*
+std::string getFresh(const std::unordered_set<std::string>& forbidden,unsigned& index){
+    std::string remapped_var = "X_"+std::to_string(index);
+    while(forbidden.count(remapped_var) == 1){
+        index++;
+        remapped_var = "X_"+std::to_string(index);
+    }
+    return remapped_var;
+}
+*/
+aspc::Rule aspc::Rule::cloneWithRenamedVariables(const std::unordered_map<std::string,std::string>& mapping) const{
+    std::vector<aspc::Atom> remappedHead;
+    if(!isConstraint()){
+        std::vector<std::string> freshHeadTerms;
+        const aspc::Atom* head_atom = &getHead()[0];
+        for(unsigned k=0;k<head_atom->getAriety();k++){
+            if(head_atom->isVariableTermAt(k)){
+                auto it = mapping.find(head_atom->getTermAt(k));
+                std::string mappedVar = it != mapping.end() ? it->second : head_atom->getTermAt(k);
+                freshHeadTerms.push_back(mappedVar);
+            }else{
+                freshHeadTerms.push_back(head_atom->getTermAt(k));
+            }
+        }
+        remappedHead.push_back(aspc::Atom(head_atom->getPredicateName(),freshHeadTerms));
+    }
+    std::vector<aspc::Literal> remappedLiterals;
+    std::vector<aspc::ArithmeticRelation> remappedIneqs;
+    for(const aspc::Formula* f : formulas){
+        if(f->isLiteral()){
+            const aspc::Literal* literal = (const aspc::Literal*)f;
+            std::vector<std::string> freshLitTerms;
+            for(unsigned k=0;k<literal->getAriety();k++){
+                if(literal->isVariableTermAt(k)){
+                    auto it = mapping.find(literal->getTermAt(k));
+                    std::string mappedVar = it != mapping.end() ? it->second : literal->getTermAt(k);
+                    freshLitTerms.push_back(mappedVar);
+                }else{
+                    freshLitTerms.push_back(literal->getTermAt(k));
+                }
+            }
+            remappedLiterals.push_back(aspc::Literal(literal->isNegated(),aspc::Atom(literal->getPredicateName(),freshLitTerms)));
+        } else if(!f->containsAggregate()){
+            const aspc::ArithmeticRelation* ineq = (const aspc::ArithmeticRelation*)f;
+            std::vector<aspc::ArithmeticExpression> right_left;
+            for(aspc::ArithmeticExpression exp : {ineq->getRight(),ineq->getLeft()}){
+                std::string term_1=exp.getTerm1();
+                std::string remapped_term_1 = term_1;
+                if(isVariable(term_1)){
+                    auto it = mapping.find(term_1);
+                    remapped_term_1 = it != mapping.end() ? it->second : term_1;
+                }
+                bool singleTerm = exp.isSingleTerm();
+                std::string term_2 = singleTerm ? "" : exp.getTerm2();
+                std::string remapped_term_2 = term_2;
+                if(!singleTerm && isVariable(term_1)){
+                    auto it = mapping.find(term_2);
+                    remapped_term_2 = it != mapping.end() ? it->second : term_2;
+                }
+                char op = singleTerm ? '?' : exp.getOperation();
+                right_left.push_back(singleTerm ? aspc::ArithmeticExpression(remapped_term_1) : aspc::ArithmeticExpression(remapped_term_1,remapped_term_2,op));
+            }
+            remappedIneqs.push_back(aspc::ArithmeticRelation(right_left[1],right_left[0],ineq->getComparisonType()));
+        }else{
+            std::cout << "Error: remapping with aggregate not supported yet"<<std::endl;
+            exit(180);
+        }
+    }
+    return aspc::Rule(remappedHead,remappedLiterals,remappedIneqs,false);
 }
 void aspc::Rule::addPositiveBodyVariablesToSet(std::unordered_set<std::string> & set) const {
     for(const aspc::Literal& l : getBodyLiterals()){

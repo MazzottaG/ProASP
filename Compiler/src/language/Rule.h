@@ -66,7 +66,7 @@ namespace aspc {
         Rule(const std::vector<aspc::Atom> & head, const std::vector<aspc::Literal> & body, const std::vector<ArithmeticRelation> & inequalities, bool reorderBody);
         Rule(const std::vector<aspc::Atom> & head, const std::vector<aspc::Literal> & body, const std::vector<ArithmeticRelation> & inequalities, const std::vector<ArithmeticRelationWithAggregate> & inequalitiesWithAggregate, bool reorderBody, bool rewriting);
         Rule(const Rule& other);
-
+        bool equalBodyExpect(const Rule& other,const std::unordered_set<std::string>& forbidden);
         virtual ~Rule();
         const std::vector<aspc::Atom> & getHead() const;
         const std::vector<aspc::Literal> & getBodyLiterals() const;
@@ -76,6 +76,7 @@ namespace aspc {
         void addSharedVars(std::unordered_set<std::string>&,std::vector<std::string>&,std::unordered_set<std::string>&,const aspc::ArithmeticRelationWithAggregate*,bool=true) const;
         void addArithmeticRelationsWithAggregate(ArithmeticRelationWithAggregate r);
         void addPositiveBodyVariablesToSet(std::unordered_set<std::string> &) const;
+        aspc::Rule cloneWithRenamedVariables(const std::unordered_map<std::string,std::string>& mapping) const;
         RuleType getType() const;
         unsigned getRuleId() const;
         std::vector<std::map<unsigned, std::pair<unsigned, unsigned> > > getJoinIndicesWithJoinOrder(const std::vector<unsigned> & order) const;

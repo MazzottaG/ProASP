@@ -11,7 +11,10 @@ class InstanceExpansion{
         }
         ~InstanceExpansion(){
             for(AbstractGenerator* gen : generators){
-                delete gen;
+                if(gen != NULL){
+                    delete gen;
+                    gen=NULL;
+                }
             }
         }
         bool isSolvedByGenerator()const {return solvedByGenerator;}

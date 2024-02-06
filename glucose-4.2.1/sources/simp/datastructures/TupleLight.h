@@ -61,10 +61,13 @@ public:
     virtual ~TupleLight() {
         if(content != NULL){
             delete [] content;
+            content = NULL;
         }
 
-        if(collisionsLists != nullptr)
-            delete [] collisionsLists;
+        if(collisionsLists != nullptr) {
+            delete[] collisionsLists;
+            collisionsLists = nullptr;
+        }
     }
 
     TupleLight(const std::initializer_list<int> & l, bool negated = false, int waspID = 0) :
@@ -340,7 +343,10 @@ public:
             return reason;
         #endif
     }
-
+    void cleanUpCollisionsList(){
+        if(collisionsLists!=nullptr) delete collisionsLists;
+        collisionsLists=nullptr;
+    }
 private:
     int predicateName;
     TruthStatus status;

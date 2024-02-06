@@ -4,12 +4,12 @@
 #include "compilers/HybridGenerator.h"
 #include "compilers/PropagatorCompiler.h"
 #include "rewriting/Rewriter.h"
-#include "rewriting/Analyzer.h"
 
 int main(int argc, char *argv[])
 {
 	ProgramReader reader(argc,argv);
-	Analyzer analyzer(reader.getInputProgram(),reader.getInputProgramLabel());
+
+	Analyzer analyzer(reader.getInputProgram(),reader.getInputProgramLabel(),reader.isFullGrounding());
 	aspc::Program eagerProgram(analyzer.getEager());
 	std::vector<bool> eagerLabels(analyzer.getEagerLabel());
 	std::vector<std::string> idToPredicate(analyzer.getIdToPredicate());
@@ -25,11 +25,19 @@ int main(int argc, char *argv[])
 		}
 	}
 	std::cout << "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%"<<std::endl;
-
 	std::cout << "%%%%%%%%%%%% Grounded Propagator Program %%%%%%%%%%%%"<<std::endl;
 	for(unsigned ruleId=0; ruleId<rulesSize; ruleId++){
 		if(eagerLabels[ruleId]){
 			eagerProgram.getRule(ruleId).print();
+			std::vector<int> bodyLabeling = analyzer.getRemappedRuleBodyLabeling(ruleId);
+			const std::vector<const aspc::Formula*>& body = eagerProgram.getRule(ruleId).getFormulas();
+			std::cout << "   Found labeling for rule: "<<ruleId<<std::endl;
+			for(unsigned index = 0;index < body.size(); index++){
+				const aspc::Formula* f = body[index];
+				std::cout << "      Found formula: ";
+				f->print();
+				std::cout << "   as "<< (bodyLabeling[index] == analyzer.DATALOG_FORMULA ? "EDB" : (bodyLabeling[index] == analyzer.NON_DATALOG_FORMULA ? "IDB" : "Unknown"))<<std::endl;
+			}
 		}
 	}
 	std::cout << "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%"<<std::endl;
@@ -178,7 +186,7 @@ int main(int argc, char *argv[])
 	std::cout << std::endl;
 	GeneratorCompiler datalogCompiler (analyzer.getDatalog(),executablePath,analyzer.getIdToPredicate(),analyzer.getPredicateToId(),&dc,true,originalPredicates,"InstanceExpansion",true,"InstExp",false,predicateToStruct);
 	datalogCompiler.compile();
-	HybridGenerator genCompiler(&r,r.getGeneratorProgram(), generatorRuleLabel, executablePath, r.getPredicateNames(), r.getPredicateId(), &dc,originalPredicates,predicateToStruct,predicateToAggrIndex,aggrIdToAggrSet);
+	HybridGenerator genCompiler(&analyzer,&r,r.getGeneratorProgram(), generatorRuleLabel, executablePath, r.getPredicateNames(), r.getPredicateId(), &dc,originalPredicates,predicateToStruct,predicateToAggrIndex,aggrIdToAggrSet);
 	genCompiler.compile();
 	GeneratorCompiler lazyCompiler (analyzer.getLazy(),executablePath,analyzer.getIdToPredicate(),analyzer.getPredicateToId(),&dc,true,originalPredicates,"ModelExpansion",true,"ModExp",true,predicateToStruct);
 	lazyCompiler.compile();

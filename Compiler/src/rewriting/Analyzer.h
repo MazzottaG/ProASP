@@ -3,6 +3,7 @@
 #include "../language/Program.h"
 #include "../utils/GraphWithTarjanAlgorithm.h"
 #include "../utils/SharedFunctions.h"
+#include "../compilers/DependencyManager.h"
 struct RuleBody{
 
     //projection terms
@@ -84,9 +85,7 @@ class Analyzer{
     private:
         std::vector<bool> inputLabel;
         aspc::Program program;
-        GraphWithTarjanAlgorithm dependencyGraph;
-        std::vector<std::string> idToPredicate;
-        std::unordered_map<std::string,unsigned> predicateToId;
+        DependencyManager dependencyManager;
 
         // Rewriter output
         std::vector<bool> eagerLabel;
@@ -100,14 +99,15 @@ class Analyzer{
         std::vector<int> sccTypeLabel;
         std::unordered_map<std::string,int> predicateToComponent;
 
+        std::unordered_map<int,std::vector<int>> rulesBodyLabeling;
+        std::unordered_map<int,int> remappingBodyLabeling;
 
+        bool fullGrounding;
         
-        void addAggregatePredicates(const aspc::ArithmeticRelationWithAggregate* aggrRelation);
-        void addAggregateDependency(const std::vector<aspc::Atom>* head,const aspc::ArithmeticRelationWithAggregate* aggrRelation);
         bool findAggregateNegativeDependency(const std::vector<std::vector<int>>& scc, unsigned componentId,const aspc::ArithmeticRelationWithAggregate* aggrRelation);
         bool labelAggregateLiteral(std::unordered_map<std::string,int>& predToComponent,std::vector<int>& sccLabel,const aspc::ArithmeticRelationWithAggregate* aggrRelation);
-        void buildDependecyGraph();
         void mapPredicateToComponent(const std::vector<std::vector<int>>& scc,std::unordered_map<std::string,int>& predicateToComponent);
+        void renameVariablesForComponent();
         void labelStratified(std::vector<int>& stratLabel,const std::vector<std::vector<int>>& scc);
         void labelLazyness(const std::vector<std::vector<int>>& scc, std::unordered_map<std::string,int>& predToComponent,std::vector<int>& sccLabel);
         void labelEager(std::vector<int>& typeLabel,const std::vector<int>& stratLabel,const std::vector<int>& lazyLabel,const std::vector<std::vector<int>>& scc);
@@ -121,11 +121,11 @@ class Analyzer{
         bool canExportAggregate(const aspc::ArithmeticRelationWithAggregate* aggrRelation, std::unordered_set<std::string> positiveEDBVars, std::unordered_set<std::string> positiveIDBVars);
         bool findMaximalDatalogBody(const aspc::Rule* rule,int ruleId,const std::vector<int>& sccLabel,std::unordered_map<std::string,int>& predToComponent,std::vector<int>& formulaLabeling);
         void rewriteWithJoin(const aspc::Rule* rule,int ruleId,std::vector<int> formulaLabeling,bool isConstraint);
-        
+
         void buildPrograms(const std::vector<std::vector<int>>& scc,const std::vector<int>&  sccLabel,std::unordered_map<std::string,int>& predToComponent);
         void printProgramBySCC(const std::vector<std::vector<int>>& scc,const std::vector<int>& sccLabel,int label);
         void splitProgram();
-        
+        std::pair<std::unordered_map<std::string,std::string>,bool> getVariableMapping(const aspc::Rule* r1,const aspc::Rule* r2)const;
         
     public:
 
@@ -151,7 +151,7 @@ class Analyzer{
         const int NON_DATALOG_FORMULA   = 2;
 
 
-        Analyzer(const aspc::Program& p,const std::vector<bool>& labels);
+        Analyzer(const aspc::Program& p,const std::vector<bool>& labels,bool fullGrounding);
         const std::vector<bool>& getEagerLabel()const;
         const aspc::Program& getDatalog()const;
         const aspc::Program& getEager()const;
@@ -159,7 +159,18 @@ class Analyzer{
 
         const std::unordered_map<std::string,unsigned> getPredicateToId()const;
         const std::vector<std::string> getIdToPredicate()const;
+
+        std::vector<int> getRemappedRuleBodyLabeling(int ruleId) {
+            assert(remappingBodyLabeling.count(ruleId)!=0);
+            assert(rulesBodyLabeling.count(remappingBodyLabeling[ruleId])!=0); 
+            return rulesBodyLabeling[remappingBodyLabeling[ruleId]];
+        }
+        std::vector<int> getRuleBodyLabeling(int ruleId) {
+            assert(rulesBodyLabeling.count(ruleId)!=0); 
+            return rulesBodyLabeling[ruleId];
+        }
         bool isEDB(std::string predicate);
+        bool isFullGrounding()const{return fullGrounding;}
         
 };
 #endif

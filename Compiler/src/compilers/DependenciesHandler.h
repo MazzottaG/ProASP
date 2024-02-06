@@ -78,6 +78,20 @@ class DependenciesHandler{
         
         bool isBuiltSCC(bool full=false){return full ? builtSCCFull : builtSCC;}
         const std::vector<std::unordered_set<std::string>>& getComponents(bool full=false){return full ? full_components : components;}
+        bool findDenpendecy(int from, int to, bool full=false){
+            GraphWithTarjanAlgorithm* dg = full ? &full_dg : &pdg;
+            std::vector<std::unordered_set<std::string>>* comps = full ? &full_components : &components;
+            for(std::string from_pred : comps->at(from)){
+                std::cout << "            Checking edges from "<<from_pred<<std::endl;
+                int from_id = local_predicates[from_pred];
+                for(std::string to_pred : comps->at(to)){
+                    std::cout << "               to "<<to_pred<<std::endl;
+                    int to_id = local_predicates[to_pred];
+                    if(dg->existsEdge(from_id,to_id)) return true;
+                }
+            }
+            return false;
+        }
 
         std::vector<std::unordered_set<std::string>> getNotStratifiedComponents(){
             if(!builtSCCFull) computeSCC(true);

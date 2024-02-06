@@ -19,5 +19,6 @@
 #include "../../core/Solver.h"
 
 TupleLight TupleFactory::bufferTuple;
+bool TupleFactory::usedFindNoSet=false;
 std::vector<unsigned> TupleFactory::EMPTY_WATCHER;
 // std::vector<AbstractPropagator*> TupleFactory::EMPTY_WATCHER;

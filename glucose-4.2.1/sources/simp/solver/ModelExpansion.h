@@ -11,6 +11,7 @@ class ModelExpansion{
         }
         ~ModelExpansion(){
             for(AbstractGenerator* gen : generators){
+                if(gen != NULL)
                 delete gen;
             }
 

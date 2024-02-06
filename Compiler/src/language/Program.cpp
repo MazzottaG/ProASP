@@ -41,8 +41,7 @@
 
 using namespace std;
 
-aspc::Program::Program() {
-
+aspc::Program::Program():rules({}),facts({}),predicates({}),aggregatePredicates({}),rulesForPredicate({}),rules_by_type({}),stratified(true),tight(true) {
 }
 aspc::Program::Program(const aspc::Program& p):facts(p.facts),predicates(p.predicates),aggregatePredicates(p.aggregatePredicates),stratified(p.stratified),tight(p.tight){
     for(int i=0;i<p.getRulesSize();i++){

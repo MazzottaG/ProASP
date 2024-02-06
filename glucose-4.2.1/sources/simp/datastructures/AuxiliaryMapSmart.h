@@ -59,13 +59,14 @@ class AuxiliaryMapSmart {
 public:
 
     AuxiliaryMapSmart(const std::vector<unsigned> & keyIndices) :
-        keySize(keyIndices.size()), keyIndices(keyIndices){
+        cleanedUp(false),keySize(keyIndices.size()), keyIndices(keyIndices){
     }
 
     virtual ~AuxiliaryMapSmart() {
     }
 
     inline std::vector< int >& getValuesVec(const std::vector<int>& key) {
+        if(cleanedUp) return EMPTY_RESULT_VEC;
         std::bitset<S> keyCode;
         valueToPos(key,keyCode);
         const auto it = tuples.find(keyCode);
@@ -88,6 +89,8 @@ public:
 
     // inline const std::set< int, AggregateSetCmp >& getValuesSet(const std::vector<int>& key) const {
     inline IndexedSet& getValuesSet(const std::vector<int>& key) {
+        if(cleanedUp) return EMPTY_RESULT_SET;
+
         std::bitset<S> keyCode;
         valueToPos(key,keyCode);
         const auto it = tuples.find(keyCode);
@@ -121,7 +124,7 @@ public:
         return usedBytes;
     }
     inline void insert2Vec(const TupleLight & value) {
-
+        if(cleanedUp) return;
         std::bitset<S> keyCode;
         std::vector<int> key = getKey(value);
         valueToPos(key,keyCode);
@@ -131,6 +134,7 @@ public:
         collisionVector.push_back(value.getId());
     }
     inline void insert2Set(const TupleLight & value) {
+        if(cleanedUp) return;
         std::bitset<S> keyCode;
         std::vector<int> key = getKey(value);
         valueToPos(key,keyCode);
@@ -178,6 +182,11 @@ public:
         }
         return size;
     }
+    void cleanup(){
+        std::unordered_map<std::bitset<S>, std::variant < std::vector< int >, IndexedSet > > emptyMap;
+        emptyMap.swap(tuples);
+        cleanedUp=true;    
+    }
 protected:
 
     inline void valueToPos(const std::vector<int> & key, std::bitset<S>& keyCode) const {
@@ -196,7 +205,9 @@ protected:
         }
         return key;
     }
+    
     std::unordered_map<std::bitset<S>, std::variant < std::vector< int >, IndexedSet > > tuples;
+    bool cleanedUp;
     // std::unordered_map<std::bitset<S>, std::variant < std::vector< int >, std::set< int, AggregateSetCmp> > > tuples;
     // std::unordered_map<std::bitset<S>, std::variant < std::vector< int >, std::variant< std::set< int, AggregateSetCmp>, std::set<int> > > > tuples;
     unsigned keySize;

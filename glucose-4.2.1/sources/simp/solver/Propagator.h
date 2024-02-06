@@ -15,9 +15,11 @@ class Propagator{
         }
         
         ~Propagator(){
-            std::cout << "Destroying propagators"<<std::endl;
             for(AbstractPropagator* prop : propagators){
-                delete prop;
+                if(prop != NULL){
+                    delete prop;
+                    prop = NULL;
+                }
             }
         }
         void attachWatchers(){
@@ -158,6 +160,7 @@ class Propagator{
         int nested_calls = 0;
         Propagator();
         bool active;
+        bool fullGrounding;
         std::vector<AbstractPropagator*> propagators;
 };
 
