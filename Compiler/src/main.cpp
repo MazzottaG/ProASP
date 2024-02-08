@@ -41,18 +41,19 @@ int main(int argc, char *argv[])
 		}
 	}
 	std::cout << "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%"<<std::endl;
-	Rewriter r(propagatorProgram,idToPredicate,predicateToId);
+	Rewriter r(&analyzer,propagatorProgram,idToPredicate,predicateToId);
 	r.reduceToSigleHeadForPredicate();
 	r.rewriteAggregates();
 	r.computeCompletion();
-
 	r.printSharedVars();
 
 	std::cout<<"Generator Program\n";
 	std::cout<<"-----\n";
 	std::vector<int> generatorRuleLabel(r.getGeneratorProgram().getRulesSize(),Rewriter::TO_GENERATE);
+    std::unordered_map<unsigned, unsigned > traceToGroundLabeledRule;
 	for(unsigned ruleId=0; ruleId < eagerProgram.getRulesSize(); ruleId++){
 		if(eagerLabels[ruleId]){
+            if(!eagerProgram.getRule(ruleId).containsAggregate()) traceToGroundLabeledRule[generatorRuleLabel.size()]=ruleId;
 			r.addToGroundRule(eagerProgram.getRule(ruleId),generatorRuleLabel,analyzer);
 		}
 	}
@@ -186,7 +187,7 @@ int main(int argc, char *argv[])
 	std::cout << std::endl;
 	GeneratorCompiler datalogCompiler (analyzer.getDatalog(),executablePath,analyzer.getIdToPredicate(),analyzer.getPredicateToId(),&dc,true,originalPredicates,"InstanceExpansion",true,"InstExp",false,predicateToStruct);
 	datalogCompiler.compile();
-	HybridGenerator genCompiler(&analyzer,&r,r.getGeneratorProgram(), generatorRuleLabel, executablePath, r.getPredicateNames(), r.getPredicateId(), &dc,originalPredicates,predicateToStruct,predicateToAggrIndex,aggrIdToAggrSet);
+	HybridGenerator genCompiler(&analyzer,&r,r.getGeneratorProgram(), generatorRuleLabel, executablePath, r.getPredicateNames(), r.getPredicateId(), &dc,originalPredicates,predicateToStruct,predicateToAggrIndex,aggrIdToAggrSet,traceToGroundLabeledRule);
 	genCompiler.compile();
 	GeneratorCompiler lazyCompiler (analyzer.getLazy(),executablePath,analyzer.getIdToPredicate(),analyzer.getPredicateToId(),&dc,true,originalPredicates,"ModelExpansion",true,"ModExp",true,predicateToStruct);
 	lazyCompiler.compile();

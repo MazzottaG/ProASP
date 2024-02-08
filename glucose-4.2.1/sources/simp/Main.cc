@@ -274,6 +274,7 @@ int parseTupleUndef(const std::string & literalString) {
             terms.push_back(ConstantsManager::getInstance().mapConstant(literalString.substr(start, i - start)));
         }
     }
+//    TupleLight* tuple=TupleFactory::getInstance().findNoSet(terms, AuxMapHandler::getInstance().getPredicateId(predicateName));
     TupleLight* tuple=TupleFactory::getInstance().find(terms, AuxMapHandler::getInstance().getPredicateId(predicateName));
     return tuple != NULL ? tuple->getId(): -1;
 }

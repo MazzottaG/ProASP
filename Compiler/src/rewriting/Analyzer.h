@@ -1,4 +1,4 @@
-#ifndef SMARTREWRITER_H
+#ifndef ANALYZER_H
 #define ANALYZER_H
 #include "../language/Program.h"
 #include "../utils/GraphWithTarjanAlgorithm.h"
@@ -171,6 +171,7 @@ class Analyzer{
         }
         bool isEDB(std::string predicate);
         bool isFullGrounding()const{return fullGrounding;}
+        bool isJoinPredicate(std::string predicate){return joinRuleData.find(predicate)!=joinRuleData.end();}
         
 };
 #endif

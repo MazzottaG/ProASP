@@ -29,6 +29,8 @@ class DependencyManager {
             predicateToId[predicate]=idToPredicate.size();
             idToPredicate.push_back(predicate);
         }
+        std::pair< std::vector<std::pair<aspc::Rule,unsigned> >,bool> checkComponent(const aspc::Program& inputProgram, int component_id);
+        std::pair<std::unordered_map<std::string,std::string>,bool> getVariableMapping(const aspc::Rule* r1,const aspc::Rule* r2)const;
         const std::unordered_map<std::string,unsigned> getPredicateToId()const {return predicateToId;}
         const std::vector<std::string> getIdToPredicate()const {return idToPredicate;}
 

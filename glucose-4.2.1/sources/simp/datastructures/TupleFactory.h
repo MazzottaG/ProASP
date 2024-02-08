@@ -237,6 +237,7 @@ class TupleFactory{
         
         ~TupleFactory(){
             for(TupleLight* tuple : internalIDToTuple) delete tuple;
+            bufferTuple.clearContent();
         }
         
         void destroyTuples(){

@@ -4,6 +4,7 @@
 #include "../utils/AggrSetPredicate.h"
 #include "../utils/SharedVars.h"
 #include "../utils/SharedFunctions.h"
+#include "Analyzer.h"
 #include <cassert>
 
 struct GroundedAggrData{
@@ -82,7 +83,7 @@ class Rewriter{
         static const int SUBSETSUM_RULE;
         static const int GROUND_RULE;
         static const int TO_GENERATE;
-        Rewriter(const aspc::Program& p,const std::vector<std::string>& predNames, const std::unordered_map<std::string,unsigned>& predId):program(p),predicateNames(predNames),predicateId(predId){}
+        Rewriter(Analyzer* prgAnalyzer, const aspc::Program& p,const std::vector<std::string>& predNames, const std::unordered_map<std::string,unsigned>& predId):analyzer(prgAnalyzer), program(p),predicateNames(predNames),predicateId(predId){}
         void reduceToSigleHeadForPredicate();
         std::pair<bool,std::pair<std::string,AggrSetPredicate>> buildAggregateSet(std::unordered_set<std::string> bodyVariables,const aspc::ArithmeticRelationWithAggregate& aggregareRelation,const std::vector<aspc::Literal>& bodyLits,const std::vector<aspc::ArithmeticRelation>& bodyIneqs);
         std::pair<bool,std::pair<std::string,AggrSetPredicate>> buildBody(std::unordered_set<std::string> aggregateBodyVariables,const aspc::Rule& r,std::string auxValPred,std::vector<std::string> auxValTerm);
@@ -156,6 +157,8 @@ class Rewriter{
 
         std::vector<aspc::Rule> domainRules;
         std::vector<aspc::Rule> subSetSumRules;
+
+        Analyzer* analyzer;
 
         void clearData(){
             buildingHead.clear();

@@ -7,7 +7,7 @@
 
 class GrounderGenCompiler : public AbstractGeneratorCompiler{
     public:
-        GrounderGenCompiler(std::ofstream& file,int indentation,const aspc::Rule* r,const std::vector<std::string>& predNames,const std::unordered_map<std::string,unsigned>& predIds,const std::unordered_map<std::string,std::string>& predicateToStruct,GroundedAggrData& groundAgg, std::unordered_set<std::string>& origPreds):AbstractGeneratorCompiler(file,indentation,r,predNames,predIds,predicateToStruct,origPreds),aggregateData(groundAgg){
+        GrounderGenCompiler(std::ofstream& file,int indentation,const aspc::Rule* r,const std::vector<std::string>& predNames,const std::unordered_map<std::string,unsigned>& predIds,const std::unordered_map<std::string,std::string>& predicateToStruct,GroundedAggrData& groundAgg, std::unordered_set<std::string>& origPreds,int realRuleId):AbstractGeneratorCompiler(file,indentation,r,predNames,predIds,predicateToStruct,origPreds),originalRuleId(realRuleId),aggregateData(groundAgg){
             std::cout << "Building GrounderGenCompiler"<<std::endl;
             aggregateData.print();
             // std::cout << "GrounderGenCompiler::constructor ";
@@ -28,5 +28,6 @@ class GrounderGenCompiler : public AbstractGeneratorCompiler{
         bool leaveAggregateAtEnd()const override {return false;}
     private:
         GroundedAggrData aggregateData;
+        int originalRuleId;
 };
 #endif

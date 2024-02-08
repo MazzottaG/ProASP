@@ -29,7 +29,9 @@ void HybridGenerator::buildConstraintGrounder(int ruleId,std::string className,s
             //     std::cout << pred << " ";
             // }
             // std::cout << std::endl;
-            compiler = new GrounderGenCompiler(outfile,ind.getDepth(),&program.getRule(ruleId),predNames,predIds,predicateToStruct,prgRewriter->getAggregateGrounding(ruleId),originalPredicates);
+            auto it = traceToGroundRule.find(ruleId);
+            int originalRuleIndex = it != traceToGroundRule.end() ? it->second : -1;
+            compiler = new GrounderGenCompiler(outfile,ind.getDepth(),&program.getRule(ruleId),predNames,predIds,predicateToStruct,prgRewriter->getAggregateGrounding(ruleId),originalPredicates,originalRuleIndex);
             compiler->setAnalyzer(prgAnalyzer);
             compiler->setRuleId(ruleId);
             compiler->compileNoStarter(false);
@@ -112,7 +114,9 @@ void HybridGenerator::buildComponentGenerator(int componentId,std::string classN
                 //     std::cout << pred << " ";
                 // }
                 // std::cout << std::endl;
-                compiler = new GrounderGenCompiler(outfile,ind.getDepth(),&program.getRule(ruleIndex),predNames,predIds,predicateToStruct,prgRewriter->getAggregateGrounding(ruleIndex),originalPredicates);
+                auto it = traceToGroundRule.find(ruleIndex);
+                int originalRuleIndex = it != traceToGroundRule.end() ? it->second : -1;
+                compiler = new GrounderGenCompiler(outfile,ind.getDepth(),&program.getRule(ruleIndex),predNames,predIds,predicateToStruct,prgRewriter->getAggregateGrounding(ruleIndex),originalPredicates,originalRuleIndex);
                 compiler->setAnalyzer(prgAnalyzer);
                 compiler->setRuleId(ruleIndex);
             }
@@ -186,7 +190,9 @@ void HybridGenerator::buildComponentGenerator(int componentId,std::string classN
                     const aspc::Rule* rule = &program.getRule(ruleIndex);
                     AbstractGeneratorCompiler* compiler = NULL;
                     if(ruleLabel[ruleIndex] == Rewriter::GROUND_RULE){
-                        compiler = new GrounderGenCompiler(outfile,ind.getDepth(),rule,predNames,predIds,predicateToStruct,prgRewriter->getAggregateGrounding(ruleIndex),originalPredicates);
+                        auto it = traceToGroundRule.find(ruleIndex);
+                        int originalRuleIndex = it != traceToGroundRule.end() ? it->second : -1;
+                        compiler = new GrounderGenCompiler(outfile,ind.getDepth(),rule,predNames,predIds,predicateToStruct,prgRewriter->getAggregateGrounding(ruleIndex),originalPredicates,originalRuleIndex);
                         compiler->setAnalyzer(prgAnalyzer);
                         compiler->setRuleId(ruleIndex);
                     }

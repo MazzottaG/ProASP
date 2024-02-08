@@ -788,8 +788,121 @@ void Rewriter::printSharedVars(){
     }
 }
 void Rewriter::computeCompletion(){
-    for(unsigned i=0; i<afterAggregate.getRulesSize(); i++){
-        aspc::Rule rule = afterAggregate.getRule(i);
+    DependencyManager dependencyManager;
+
+    dependencyManager.buildDependecyGraph(afterAggregate);
+    auto scc = dependencyManager.getSCC();
+    std::unordered_set<unsigned >skipRule;
+
+    aspc::Program completionProgram;
+
+    std::cout << "Applying negative loop completion on:"<<std::endl;
+    for(int componentId = scc.size()-1; componentId >=0; componentId--){
+        auto pair = dependencyManager.checkComponent(afterAggregate,componentId);
+        std::cout << "   Component:";
+        for(int predicate : scc[componentId]) std::cout << " " <<dependencyManager.getPredicateName(predicate);
+        std::cout << std::endl;
+        if(pair.second){
+            for(auto ruledata : pair.first){
+                skipRule.insert(ruledata.second);
+            }
+            std::string predicate_1 = dependencyManager.getPredicateName(scc[componentId][0]);
+            std::string predicate_2 = dependencyManager.getPredicateName(scc[componentId][1]);
+
+            std::vector<aspc::Literal> extractionLiterals;
+            std::vector<aspc::ArithmeticRelation> extractionIneqs;
+
+            for(const aspc::Formula* f : pair.first[0].first.getFormulas()){
+                if(!f->isLiteral()){
+                    extractionIneqs.push_back(*((const aspc::ArithmeticRelation*) f));
+                }else {
+                    const aspc::Literal* lit = (const aspc::Literal*) f;
+                    if(lit->getPredicateName() != predicate_1 && lit->getPredicateName() != predicate_2){
+                        extractionLiterals.push_back(*lit);
+                    }
+                }
+            }
+
+            bool extract = extractionLiterals.size() > 1 || extractionIneqs.size() > 0;
+            aspc::Literal headLit(false,pair.first[0].first.getHead()[0]);
+            if(extract){
+                // extracting propagator rule dom :- shared body
+
+                aspc::Atom projected_head("Dom_"+predicate_1+"_"+predicate_2,headLit.getTerms());
+                aspc::Rule domainRule ({projected_head},extractionLiterals,extractionIneqs,false);
+                completionProgram.addRule(domainRule);
+//                std::cout << "Propagator rule ";domainRule.print();
+                extractionLiterals.clear();
+                extractionLiterals.push_back(aspc::Literal(false,projected_head));
+                extractionIneqs.clear();
+            }
+            // extraction literals contains the unique body literal; extraction ineqs is empty
+
+            // generating rule a :- body na :- body
+            aspc::Rule generateP1 ({aspc::Atom(predicate_1,headLit.getTerms())},extractionLiterals,extractionIneqs,false);
+//            std::cout << "Generator rule ";generateP1.print();
+            generatorProgram.addRule(generateP1);
+            aspc::Rule generateP2 ({aspc::Atom(predicate_2,headLit.getTerms())},extractionLiterals,extractionIneqs,false);
+//            std::cout << "Generator rule ";generateP2.print();
+            generatorProgram.addRule(generateP2);
+            // ---------------------------------------------------
+
+            assert(extractionLiterals.size() == 1 && extractionIneqs.empty());
+            std::unordered_set<std::string> headVars;
+            headLit.addVariablesToSet(headVars);
+            bool edb = analyzer->isEDB(extractionLiterals[0].getPredicateName());
+            bool bound = extractionLiterals[0].isBoundedLiteral(headVars);
+            aspc::Atom p1_head(predicate_1,headLit.getTerms());
+            aspc::Atom p2_head(predicate_2,headLit.getTerms());
+
+            // Adding constraint :- a, na.
+            aspc::Rule bothTrue ({},{aspc::Literal(false,p1_head),aspc::Literal(false,p2_head)},{},false);
+            completionProgram.addRule(bothTrue);
+//            std::cout << "Propagator constraint ";bothTrue.print();
+
+            if(!bound){
+                // Adding projection rule proj :- body
+                // if body is edb than this rule is evaluated as Datalog rule
+                // otherwise it will be a propagator rule
+
+                aspc::Atom projected_head("Proj_"+extractionLiterals[0].getPredicateName(),headLit.getTerms());
+                aspc::Rule projectionRule ({projected_head},{extractionLiterals[0]},{},false);
+                completionProgram.addRule(projectionRule);
+//                std::cout << (edb ? "Datalog rule " : "Propagator rule ");projectionRule.print();
+                extractionLiterals.clear();
+                extractionLiterals.push_back(aspc::Literal(false,projected_head));
+            }
+
+            // extractionLiterals contains the body literal projected on head variables
+            // Adding constraint :-body, not a, not na.
+            aspc::Rule bothFalse ({},{extractionLiterals[0],aspc::Literal(true,p1_head),aspc::Literal(true,p2_head)},{},false);
+//            std::cout << "Propagator constraint ";bothFalse.print();
+            completionProgram.addRule(bothFalse);
+            if(!edb && !analyzer->isJoinPredicate(extractionLiterals[0].getPredicateName())){
+                // add constraint :- a, not body :-na, not body
+                aspc::Literal support_literal(true,extractionLiterals[0].getAtom());
+                aspc::Literal head_p1(false,aspc::Atom(predicate_1,headLit.getTerms()));
+                aspc::Literal head_p2(false,aspc::Atom(predicate_2,headLit.getTerms()));
+
+                aspc::Rule constraint_1({},{head_p1,support_literal},{},false);
+                aspc::Rule constraint_2({},{head_p2,support_literal},{},false);
+
+                completionProgram.addRule(constraint_1);
+                completionProgram.addRule(constraint_2);
+
+//                std::cout << "Propagator constraint ";constraint_1.print();
+//                std::cout << "Propagator constraint ";constraint_2.print();
+            }
+            // Ciao Beppone! Ma perché fai queste cose in C++??
+        }
+    }
+    for(unsigned i=0; i<afterAggregate.getRulesSize(); i++) {
+        if (skipRule.count(i)) continue;
+        completionProgram.addRule(afterAggregate.getRule(i));
+    }
+    std::cout << "Applying standard completion on:"<<std::endl;
+    for(unsigned i=0; i<completionProgram.getRulesSize(); i++){
+        aspc::Rule rule = completionProgram.getRule(i);
         if(rule.isConstraint()) {
             propagatorsProgram.addRule(rule);
             //labeledPropgatorRules.push_back(labeledSingleHeadRules[i]);
@@ -804,6 +917,7 @@ void Rewriter::computeCompletion(){
             generatorProgram.addRule(genAggId);
             continue;
         }
+
         aspc::Atom head = rule.getHead()[0];
         std::unordered_set<std::string> headVariables;
         for(unsigned k = 0; k<head.getAriety(); k++){

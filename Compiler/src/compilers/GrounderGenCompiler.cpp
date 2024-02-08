@@ -2,7 +2,8 @@
 
 void GrounderGenCompiler::printAddConstraintClause(std::vector<unsigned> order,bool starter){
     std::unordered_set<std::string> boundVars;
-    std::vector<int> formulaLabeling = prgAnalizer->getRemappedRuleBodyLabeling(ruleId);
+
+    std::vector<int> formulaLabeling = originalRuleId >=0 ? prgAnalizer->getRemappedRuleBodyLabeling(originalRuleId) : std::vector<int>(rule->getFormulas().size(),prgAnalizer->NON_DATALOG_FORMULA);
     rule->addBodyVars(boundVars);
     for(int index : order){
         if(rule->getFormulas()[index]->isLiteral() && formulaLabeling[index] != prgAnalizer->DATALOG_FORMULA){
@@ -35,7 +36,7 @@ void GrounderGenCompiler::printAddConstraintClause(std::vector<unsigned> order,b
 void GrounderGenCompiler::printAddClause(std::vector<unsigned> order,bool starter){
     std::string terms= !starter ? "" : "starter->getId()";
     bool missingAggId=false;
-    std::vector<int> formulaLabeling = prgAnalizer->getRemappedRuleBodyLabeling(ruleId);
+    std::vector<int> formulaLabeling = originalRuleId >=0 ? prgAnalizer->getRemappedRuleBodyLabeling(originalRuleId) : std::vector<int>(rule->getFormulas().size(),prgAnalizer->NON_DATALOG_FORMULA);
     std::vector<int> clauseFormulas;
     std::cout << "Computing formula in body clause"<<std::endl;
     for(int index : order){
