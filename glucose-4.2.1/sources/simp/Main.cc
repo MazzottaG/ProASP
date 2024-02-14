@@ -313,6 +313,13 @@ void read_asp(Solver* solver,std::string filename,std::vector<unsigned>& facts){
             unsigned start=0;
             bool skip = false;
             for(unsigned i=0;i<line.size();i++){
+                if(line[i] == '%') {
+                    if(!warning)
+                        std::cout << "WARNING: found comment in "<<filename<<std::endl;
+                    warning=true;
+                    std::cout << "Ignored line "<<line.substr(i,line.size()-i)<<std::endl;
+                    break;
+                }
                 if(line[i] == '.'){
                     skip=true;
                     int tupleId = parseTuple(line.substr(start,i-start),parsedTuples,alphanumericConstants);
@@ -486,29 +493,7 @@ int main(int argc, char** argv)
             }
             // std::vector<AggregatePropagator> propagators;
             // test_propagators(propagators);
-            SatProgramBuilder::getInstance().computeCompletion(&S);
-            // std::cout << "Exiting ..."<<std::endl;
-            // exit(180);
-            // std::cout << "p cnf "<<TupleFactory::getInstance().size()-1<<" " << S.nClauses()+facts.size()<<std::endl;
-            // for(int i=1;i<TupleFactory::getInstance().size(); i++){
-            //     std::cout << "c "<<i<<" ";
-            //     AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(i));
-            //     std::cout << std::endl;
-            // }
-            // // S.printGeneratedClauses();
-            // for(unsigned id : facts){
-            //     std::cout << id << " 0"<<std::endl;
-            // } 
-            // for(int id : falseAtoms)
-            //     std::cout << -id << " 0"<<std::endl;
-            // std::cout << "End cnf"<<std::endl;
-            TupleFactory::getInstance().destroyClauses();
-            TupleFactory::getInstance().destroyConstraints();
-            std::cout << "Found "<<S.nVars()<<" glucose variables"<<std::endl;
-            int lastVar = TupleFactory::getInstance().getLastId();
-            std::cout << "Generated "<<lastVar<<" symbols"<<std::endl;
-            // if(lastVar >= S.nVars()) S.newVars(lastVar);
-            // std::cout << "Allocated "<<S.nVars()<<" glucose variables"<<std::endl;
+
             Propagator::getInstance().attachWatchers();
             for(unsigned id : facts){
                 #ifdef DEBUG_PROP
@@ -555,6 +540,29 @@ int main(int argc, char** argv)
             Propagator::getInstance().activate();
             if(S.okay())  
                 Propagator::getInstance().propagateAtLevel0(&S,lits);
+            if(S.okay()){
+                SatProgramBuilder::getInstance().computeCompletion(&S);
+                // std::cout << "Exiting ..."<<std::endl;
+                // exit(180);
+                // std::cout << "p cnf "<<TupleFactory::getInstance().size()-1<<" " << S.nClauses()+facts.size()<<std::endl;
+                // for(int i=1;i<TupleFactory::getInstance().size(); i++){
+                //     std::cout << "c "<<i<<" ";
+                //     AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(i));
+                //     std::cout << std::endl;
+                // }
+                // // S.printGeneratedClauses();
+                // for(unsigned id : facts){
+                //     std::cout << id << " 0"<<std::endl;
+                // }
+                // for(int id : falseAtoms)
+                //     std::cout << -id << " 0"<<std::endl;
+                // std::cout << "End cnf"<<std::endl;
+                TupleFactory::getInstance().destroyClauses();
+                TupleFactory::getInstance().destroyConstraints();
+                std::cout << "Found "<<S.nVars()<<" glucose variables"<<std::endl;
+                int lastVar = TupleFactory::getInstance().getLastId();
+                std::cout << "Generated "<<lastVar<<" symbols"<<std::endl;
+            }
         }
         if (S.verbosity > 0){
             printf("c |  Number of variables:  %12d                                                                   |\n", S.nVars());
