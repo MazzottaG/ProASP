@@ -308,6 +308,7 @@ void read_asp(Solver* solver,std::string filename,std::vector<unsigned>& facts){
     std::vector<std::pair<std::string,std::vector<std::string>>> parsedTuples;
     std::set<std::string> alphanumericConstants;
     string line;
+    bool warning=false;
     if (inputFile.is_open()){
         while ( getline (inputFile,line) ){
             unsigned start=0;

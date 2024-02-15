@@ -104,11 +104,11 @@ void SubSetSumRuleCompiler::compileNoStarter(bool recursive){
         outfile << --ind << "}\n";
     }
     outfile << --ind << "}\n";
-    outfile << ind << "std::vector<int>* generatedSums = &AuxMapHandler::getInstance().get_p"<<head->getPredicateName()<<"_()->getValuesVec({});\n";
-    usedAuxMap[head->getPredicateName()].insert({});
-    outfile << ind++ << "for(unsigned i=0;i<generatedSums->size();i++){\n"; 
-        outfile << ind << "AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(generatedSums->at(i)));\n";
-    outfile << --ind << "}\n"; 
+//    outfile << ind << "std::vector<int>* generatedSums = &AuxMapHandler::getInstance().get_p"<<head->getPredicateName()<<"_()->getValuesVec({});\n";
+//    usedAuxMap[head->getPredicateName()].insert({});
+//    outfile << ind++ << "for(unsigned i=0;i<generatedSums->size();i++){\n";
+//        outfile << ind << "AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(generatedSums->at(i)));\n";
+//    outfile << --ind << "}\n";
 
 }
 

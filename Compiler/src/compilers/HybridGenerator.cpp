@@ -271,8 +271,7 @@ void HybridGenerator::compile(){
         for(std::string pred: generatedPredicates) std::cout << " " << pred;
         std::cout << std::endl;
         for(int ruleId = 0; ruleId < program.getRulesSize(); ruleId++){
-            if(!program.getRule(ruleId).isConstraint()) continue;
-
+            if(!program.getRule(ruleId).isConstraint() || compiledConstraint.count(ruleId)) continue;
             const std::vector<const aspc::Formula*>& body = program.getRule(ruleId).getFormulas();
             bool skip = false;
             for(const aspc::Formula* f: body){
