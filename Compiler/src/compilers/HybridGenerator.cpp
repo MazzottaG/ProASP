@@ -297,7 +297,7 @@ void HybridGenerator::compile(){
             if(!outfile_gen.is_open()){
                 std::cout << "Error unable to open "+className_gen+" file "<<executorPath_gen<<std::endl;
                 exit(180);
-            } 
+            }
             buildConstraintGrounder(ruleId,className_gen,outfile_gen,ind_gen);
             outfile_gen.close();
             std::string className="Constr_"+std::to_string(ruleId)+"_Gen";
@@ -320,9 +320,9 @@ void HybridGenerator::compile(){
                     for(std::string pred : components[nextComponent]) std::cout << " " << pred;
                     std::cout << std::endl;
                     if(depHandler.findDenpendecy(previousComponent,nextComponent,negDep)) {
-                        canRemove = false;        
+                        canRemove = false;
                         std::cout << "         Found dependency"<<std::endl;
-                    }      
+                    }
                 }
                 if(!canRemove) {std::cout << "         not cleaned"<<std::endl;continue;}
                 for(int ruleId = 0; ruleId < program.getRulesSize(); ruleId++){

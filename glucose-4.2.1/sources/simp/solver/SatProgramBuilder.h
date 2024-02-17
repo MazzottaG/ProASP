@@ -66,7 +66,6 @@ class SatProgramBuilder{
                 unsigned bodyLength = clauseData.second;
                 TupleLight* body = clauseData.first;
                 int * content = body->getContent();
-
                 if(bodyLength == 1 && content[0] > 0){
                     int var = content[0];
                     int realVar = Generator::getInstance().getRealVar(var);
@@ -116,7 +115,6 @@ class SatProgramBuilder{
                 std::vector<std::string> debugAux;
                 for(auto aux : pair.second){
                     int freshSymbol = auxRemapping[aux];
-                    
                     binClause.clear();
                     binClause.push(Glucose::mkLit(realPairFirst,false));
                     binClause.push(Glucose::mkLit(freshSymbol, true));

@@ -4,6 +4,7 @@ void GrounderGenCompiler::printAddConstraintClause(std::vector<unsigned> order,b
     std::unordered_set<std::string> boundVars;
 
     std::vector<int> formulaLabeling = originalRuleId >=0 ? prgAnalizer->getRemappedRuleBodyLabeling(originalRuleId) : std::vector<int>(rule->getFormulas().size(),prgAnalizer->NON_DATALOG_FORMULA);
+
     rule->addBodyVars(boundVars);
     for(int index : order){
         if(rule->getFormulas()[index]->isLiteral() && formulaLabeling[index] != prgAnalizer->DATALOG_FORMULA){
@@ -109,28 +110,29 @@ void GrounderGenCompiler::printAddClause(std::vector<unsigned> order,bool starte
     }
 
     if(starter){
-        int bodysize = clauseFormulas.size();
-        if(bodysize == 1){
-            //assert(clauseFormulas.size()==0);
-            outfile << ind << "Tuple* clauseTuple = starter;\n";
-        }else{
-            if(missingAggId){
-                outfile<<ind << "std::vector<int> terms({"<<terms<<"});\n";
-                outfile << ind << "if(sum_index < subSetSums.size()-1) terms.push_back(-nextAggId->getId());\n";
-                outfile << ind << "Tuple* clauseTuple = TupleFactory::getInstance().addNewInternalClause(terms);\n";
-            }else outfile << ind << "Tuple* clauseTuple = TupleFactory::getInstance().addNewInternalClause({"<<terms<<"});\n";
-        }
+//        int bodysize = clauseFormulas.size();
+//        if(bodysize == 1){
+//            //assert(clauseFormulas.size()==0);
+//            outfile << ind << "Tuple* clauseTuple = starter;\n";
+//        }else{
+        if(missingAggId){
+            outfile<<ind << "std::vector<int> terms({"<<terms<<"});\n";
+            outfile << ind << "if(sum_index < subSetSums.size()-1) terms.push_back(-nextAggId->getId());\n";
+            outfile << ind << "Tuple* clauseTuple = TupleFactory::getInstance().addNewInternalClause(terms);\n";
+        }else outfile << ind << "Tuple* clauseTuple = TupleFactory::getInstance().addNewInternalClause({"<<terms<<"});\n";
+//        }
     }else{
-        int bodysize = clauseFormulas.size();
-        if(bodysize == 1 && rule->getFormulas()[clauseFormulas[0]]->isPositiveLiteral()){
-            outfile << ind << "Tuple* clauseTuple = tuple_"<<order[0]<<";\n";
-        }else{
-            if(missingAggId){
-                outfile<<ind << "std::vector<int> terms({"<<terms<<"});\n";
-                outfile << ind << "if(sum_index < subSetSums.size()-1) terms.push_back(-nextAggId->getId());\n";
-                outfile << ind << "Tuple* clauseTuple = TupleFactory::getInstance().addNewInternalClause(terms);\n";
-            }else outfile << ind << "Tuple* clauseTuple = TupleFactory::getInstance().addNewInternalClause({"<<terms<<"});\n";
-        }
+//        int bodysize = clauseFormulas.size();
+//        if(bodysize == 1 && rule->getFormulas()[clauseFormulas[0]]->isPositiveLiteral()){
+//            outfile << ind << "Tuple* clauseTuple = tuple_"<<clauseFormulas[0]<<";\n";
+//            outfile << ind << "Tuple* clauseTuple = TupleFactory::getInstance().addNewInternalClause({"<<terms<<"});\n";
+//        }else{
+        if(missingAggId){
+            outfile<<ind << "std::vector<int> terms({"<<terms<<"});\n";
+            outfile << ind << "if(sum_index < subSetSums.size()-1) terms.push_back(-nextAggId->getId());\n";
+            outfile << ind << "Tuple* clauseTuple = TupleFactory::getInstance().addNewInternalClause(terms);\n";
+        }else outfile << ind << "Tuple* clauseTuple = TupleFactory::getInstance().addNewInternalClause({"<<terms<<"});\n";
+//        }
     }
     // for(int index : order){
     //     if(rule->getFormulas()[index]->isLiteral()){
