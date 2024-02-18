@@ -26,6 +26,7 @@
 #include <climits>
 #include <variant>
 #include <set>
+#include <memory>
 // #include "AggregateSetCmp.h"
 // #include "../utils/ConstantsManager.h"
 #include "IndexedSet.h"
