@@ -108,31 +108,33 @@ void GrounderGenCompiler::printAddClause(std::vector<unsigned> order,bool starte
             }
         }
     }
-
+    usedAuxInRuleCompletion=false;
     if(starter){
-//        int bodysize = clauseFormulas.size();
-//        if(bodysize == 1){
-//            //assert(clauseFormulas.size()==0);
-//            outfile << ind << "Tuple* clauseTuple = starter;\n";
-//        }else{
-        if(missingAggId){
-            outfile<<ind << "std::vector<int> terms({"<<terms<<"});\n";
-            outfile << ind << "if(sum_index < subSetSums.size()-1) terms.push_back(-nextAggId->getId());\n";
-            outfile << ind << "Tuple* clauseTuple = TupleFactory::getInstance().addNewInternalClause(terms);\n";
-        }else outfile << ind << "Tuple* clauseTuple = TupleFactory::getInstance().addNewInternalClause({"<<terms<<"});\n";
-//        }
+        int bodysize = clauseFormulas.size();
+        if(bodysize == 0){
+            //TODO Check what if rule is of the form a:-not b and not b is the starter
+            //WARNING it assumes the recursive generator starts from positive literal
+            outfile << ind << "Tuple* clauseTuple = starter;\n";
+        }else{
+            if(missingAggId){
+                outfile<<ind << "std::vector<int> terms({"<<terms<<"});\n";
+                outfile << ind << "if(sum_index < subSetSums.size()-1) terms.push_back(-nextAggId->getId());\n";
+                outfile << ind << "Tuple* clauseTuple = TupleFactory::getInstance().addNewInternalClause(terms);\n";
+            }else outfile << ind << "Tuple* clauseTuple = TupleFactory::getInstance().addNewInternalClause({"<<terms<<"});\n";
+            usedAuxInRuleCompletion=true;
+        }
     }else{
-//        int bodysize = clauseFormulas.size();
-//        if(bodysize == 1 && rule->getFormulas()[clauseFormulas[0]]->isPositiveLiteral()){
-//            outfile << ind << "Tuple* clauseTuple = tuple_"<<clauseFormulas[0]<<";\n";
-//            outfile << ind << "Tuple* clauseTuple = TupleFactory::getInstance().addNewInternalClause({"<<terms<<"});\n";
-//        }else{
-        if(missingAggId){
-            outfile<<ind << "std::vector<int> terms({"<<terms<<"});\n";
-            outfile << ind << "if(sum_index < subSetSums.size()-1) terms.push_back(-nextAggId->getId());\n";
-            outfile << ind << "Tuple* clauseTuple = TupleFactory::getInstance().addNewInternalClause(terms);\n";
-        }else outfile << ind << "Tuple* clauseTuple = TupleFactory::getInstance().addNewInternalClause({"<<terms<<"});\n";
-//        }
+        int bodysize = clauseFormulas.size();
+        if(bodysize == 1 && rule->getFormulas()[clauseFormulas[0]]->isPositiveLiteral()){
+            outfile << ind << "Tuple* clauseTuple = tuple_"<<clauseFormulas[0]<<";\n";
+        }else{
+            if(missingAggId){
+                outfile<<ind << "std::vector<int> terms({"<<terms<<"});\n";
+                outfile << ind << "if(sum_index < subSetSums.size()-1) terms.push_back(-nextAggId->getId());\n";
+                outfile << ind << "Tuple* clauseTuple = TupleFactory::getInstance().addNewInternalClause(terms);\n";
+            }else outfile << ind << "Tuple* clauseTuple = TupleFactory::getInstance().addNewInternalClause({"<<terms<<"});\n";
+            usedAuxInRuleCompletion=true;
+        }
     }
     // for(int index : order){
     //     if(rule->getFormulas()[index]->isLiteral()){
@@ -331,10 +333,7 @@ unsigned GrounderGenCompiler::printAggregateInitialization(std::unordered_set<st
     return closingPars;
 }
 void GrounderGenCompiler::printAddSP(int index){
-    bool useAux = true;
-    auto& body = rule->getFormulas();
-    if(body.size() == 1 && body[0]->isPositiveLiteral()) useAux=false;
-    outfile << ind << "TupleFactory::getInstance()."<<(useAux ? "addAuxForLiteral" : "addAtomForLiteral")<<"(head_"<<index<<"->getId(),clauseTuple->getId());\n";
+    outfile << ind << "TupleFactory::getInstance()."<<(usedAuxInRuleCompletion ? "addAuxForLiteral" : "addAtomForLiteral")<<"(head_"<<index<<"->getId(),clauseTuple->getId());\n";
 }
 
 int GrounderGenCompiler::printTrackedCheck(std::string tuplename){

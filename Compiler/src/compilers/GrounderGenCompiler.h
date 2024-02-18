@@ -29,5 +29,6 @@ class GrounderGenCompiler : public AbstractGeneratorCompiler{
     private:
         GroundedAggrData aggregateData;
         int originalRuleId;
+        bool usedAuxInRuleCompletion;
 };
 #endif
