@@ -74,8 +74,8 @@ class TupleFactory{
         std::vector<std::unordered_set<TupleLight*,TuplePointerHash,TuplePointerEq>> tupleToInternalVarSets;
         std::vector<TupleLight*> internalIDToTuple;
 
-        std::unordered_map<int,std::unordered_set<int>> auxAtomsForLiteral;
-        std::unordered_map<int,std::unordered_set<int>> atomsForLiteral;
+        std::unordered_map<int,std::set<int>> auxAtomsForLiteral;
+        std::unordered_map<int,std::set<int>> atomsForLiteral;
         std::unordered_set<int> trackedForSupport;
 
         // std::vector<std::vector<AbstractPropagator*>> negativeWatcher;
@@ -105,13 +105,13 @@ class TupleFactory{
         int getLastId() const{
             return internalIDToTuple.size()-1;
         }
-        std::unordered_map<int,std::unordered_set<int>>& getAuxsForLiteral(){
+        std::unordered_map<int,std::set<int>>& getAuxsForLiteral(){
             return auxAtomsForLiteral;
         }
         void addAuxForLiteral(int var,int auxVar){
             auxAtomsForLiteral[var].insert(auxVar);
         }
-        std::unordered_map<int,std::unordered_set<int>>& getAtomsForLiteral(){
+        std::unordered_map<int,std::set<int>>& getAtomsForLiteral(){
             return atomsForLiteral;
         }
         void addAtomForLiteral(int var,int atom){
