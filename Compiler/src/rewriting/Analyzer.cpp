@@ -589,7 +589,6 @@ void Analyzer::buildPrograms(const std::vector<std::vector<int>>& scc,const std:
         }else{
             bool datalogAggr = false;
             unsigned datalogLit   = 0;
-
             for(unsigned i=0; i<rule->getFormulas().size();i++){
                 const aspc::Formula* f = rule->getFormulas().at(i);
                 if(formulaLabeling[i] == DATALOG_FORMULA){
@@ -597,7 +596,8 @@ void Analyzer::buildPrograms(const std::vector<std::vector<int>>& scc,const std:
                     else if(f->containsAggregate()) datalogAggr = true;
                 }
             }
-            if(datalogAggr || datalogLit > 1){
+            bool tooVariables = joinRuleTerms[ruleId].size() >= datalogLit/2;
+            if(!tooVariables && (datalogAggr || datalogLit > 1)){
                 rewriteWithJoin(rule,ruleId,formulaLabeling,true);
                 remappingBodyLabeling[eagerLabel.size()-1]=ruleId;
             }else{
