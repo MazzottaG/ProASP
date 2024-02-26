@@ -2024,20 +2024,20 @@ lbool Solver::solve_(bool do_simp, bool turn_off_simp) // Parameters are useless
         if(true){
             Propagator::getInstance().expandModel();
             //std::cout << "Answer: ";
-            std::cout << "START MODEL"<<std::endl;
+            //std::cout << "START MODEL"<<std::endl;
             std::vector<unsigned>& visible=TupleFactory::getInstance().getVisibleAtoms();
             bool error = false;
             for(unsigned id: visible){
                 TupleLight* t = TupleFactory::getInstance().getTupleFromInternalID(id);
                 if(t != NULL && t->isTrue()) {AuxMapHandler::getInstance().printTuple(t);}
-                if(t != NULL && t->isFalse()) {std::cout<<"-";AuxMapHandler::getInstance().printTuple(t);}
-                if(t != NULL && t->isUndef()) {std::cout<<"undefined";AuxMapHandler::getInstance().printTuple(t); error = true;}
-                std::cout << std::endl;
+                //if(t != NULL && t->isFalse()) {std::cout<<"-";AuxMapHandler::getInstance().printTuple(t);}
+                //if(t != NULL && t->isUndef()) {std::cout<<"undefined";AuxMapHandler::getInstance().printTuple(t); error = true;}
+                std::cout << " ";
                 // if(t != NULL && t->isFalse()) {std::cout << ":-";AuxMapHandler::getInstance().printTuple(t);}
             }
             assert(!error);
-            std::cout << "END MODEL"<<std::endl;
-            // std::cout << std::endl;
+//            std::cout << "END MODEL"<<std::endl;
+             std::cout << std::endl;
         }
     } else if(status == l_False && conflict.size() == 0)
         ok = false;
