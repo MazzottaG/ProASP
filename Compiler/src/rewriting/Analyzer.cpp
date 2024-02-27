@@ -589,14 +589,26 @@ void Analyzer::buildPrograms(const std::vector<std::vector<int>>& scc,const std:
         }else{
             bool datalogAggr = false;
             unsigned datalogLit   = 0;
+            std::unordered_set<std::string> tmp_formula_variables;
             for(unsigned i=0; i<rule->getFormulas().size();i++){
                 const aspc::Formula* f = rule->getFormulas().at(i);
                 if(formulaLabeling[i] == DATALOG_FORMULA){
-                    if(f->isLiteral()) datalogLit++;
+                    if(f->isLiteral()) {
+                        ((const aspc::Literal*) f)->addVariablesToSet(tmp_formula_variables);
+                        datalogLit++;
+                    }
                     else if(f->containsAggregate()) datalogAggr = true;
                 }
             }
-            bool tooVariables = joinRuleTerms[ruleId].size() >= datalogLit/2;
+//            std::cout << "Projected terms:";
+//            for(std::string v : joinRuleTerms[ruleId]) std::cout << " " << v;
+//            std::cout << std::endl;
+//            std::cout << "EDB terms:";
+//            for(std::string v : tmp_formula_variables) std::cout << " " << v;
+//            std::cout << std::endl;
+
+            float estimate = joinRuleTerms[ruleId].size() > 0 ? (tmp_formula_variables.size()-joinRuleTerms[ruleId].size())/joinRuleTerms[ruleId].size() * datalogLit : 0;
+            bool tooVariables = estimate>=1;
             if(!tooVariables && (datalogAggr || datalogLit > 1)){
                 rewriteWithJoin(rule,ruleId,formulaLabeling,true);
                 remappingBodyLabeling[eagerLabel.size()-1]=ruleId;
