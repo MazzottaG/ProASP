@@ -822,15 +822,22 @@ void Rewriter::computeCompletion(){
                     }
                 }
             }
-
+            bool datalogBody = true;
+            for(aspc::Literal l: extractionLiterals) if(!analyzer->isEDB(l.getPredicateName())) datalogBody = false;
             bool extract = extractionLiterals.size() > 1 || extractionIneqs.size() > 0;
             aspc::Literal headLit(false,pair.first[0].first.getHead()[0]);
             if(extract){
                 // extracting propagator rule dom :- shared body
-
-                aspc::Atom projected_head("Dom_"+predicate_1+"_"+predicate_2,headLit.getTerms());
+                std::string dom_pred = "Dom_"+predicate_1+"_"+predicate_2;
+                aspc::Atom projected_head(dom_pred,headLit.getTerms());
                 aspc::Rule domainRule ({projected_head},extractionLiterals,extractionIneqs,false);
-                completionProgram.addRule(domainRule);
+                auto it = predicateId.emplace(dom_pred,predicateNames.size());
+                if(it.second) predicateNames.push_back(dom_pred);
+                if(datalogBody){
+                    analyzer->addDatalogRule(domainRule);
+                }else{
+                    completionProgram.addRule(domainRule);
+                }
 //                std::cout << "Propagator rule ";domainRule.print();
                 extractionLiterals.clear();
                 extractionLiterals.push_back(aspc::Literal(false,projected_head));
@@ -850,7 +857,7 @@ void Rewriter::computeCompletion(){
             assert(extractionLiterals.size() == 1 && extractionIneqs.empty());
             std::unordered_set<std::string> headVars;
             headLit.addVariablesToSet(headVars);
-            bool edb = analyzer->isEDB(extractionLiterals[0].getPredicateName());
+            bool edb = analyzer->isEDB(extractionLiterals[0].getPredicateName()) || (datalogBody && extractionLiterals[0].getPredicateName().substr(0,4)=="Dom_");
             bool bound = extractionLiterals[0].isBoundedLiteral(headVars);
             aspc::Atom p1_head(predicate_1,headLit.getTerms());
             aspc::Atom p2_head(predicate_2,headLit.getTerms());
@@ -864,8 +871,11 @@ void Rewriter::computeCompletion(){
                 // Adding projection rule proj :- body
                 // if body is edb than this rule is evaluated as Datalog rule
                 // otherwise it will be a propagator rule
+                std::string proj_pred = "Proj_"+extractionLiterals[0].getPredicateName();
+                aspc::Atom projected_head(proj_pred,headLit.getTerms());
+                auto it = predicateId.emplace(proj_pred,predicateNames.size());
+                if(it.second) predicateNames.push_back(proj_pred);
 
-                aspc::Atom projected_head("Proj_"+extractionLiterals[0].getPredicateName(),headLit.getTerms());
                 aspc::Rule projectionRule ({projected_head},{extractionLiterals[0]},{},false);
                 completionProgram.addRule(projectionRule);
 //                std::cout << (edb ? "Datalog rule " : "Propagator rule ");projectionRule.print();
@@ -893,7 +903,6 @@ void Rewriter::computeCompletion(){
 //                std::cout << "Propagator constraint ";constraint_1.print();
 //                std::cout << "Propagator constraint ";constraint_2.print();
             }
-            // Ciao Beppone! Ma perché fai queste cose in C++??
         }
     }
     for(unsigned i=0; i<afterAggregate.getRulesSize(); i++) {
@@ -1012,8 +1021,8 @@ void Rewriter::computeCompletion(){
             int supAtom = buildingAux ? -1 :0;
             for(unsigned k=0;k<bodyLiterals.size();k++){
                 // Adding :- aux, not l in propagator only
-                // if(edbPredicates.count(bodyLiterals[k].getPredicateName()))
-                //     continue;
+                if(analyzer->isEDB(bodyLiterals[k].getPredicateName()))
+                    continue;
                 aspc::Rule constraint(
                     {},
                     {aspc::Literal(false,aspc::Atom(predicate,terms)),aspc::Literal(!bodyLiterals[k].isNegated(),bodyLiterals[k].getAtom())},

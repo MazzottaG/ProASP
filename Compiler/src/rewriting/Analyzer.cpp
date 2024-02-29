@@ -515,6 +515,7 @@ void Analyzer::rewriteWithJoin(const aspc::Rule* rule,int ruleId,std::vector<int
     eagerLabel.push_back(inputLabel[ruleId]);
 }
 
+
 void Analyzer::buildPrograms(const std::vector<std::vector<int>>& scc,const std::vector<int>&  sccLabel,std::unordered_map<std::string,int>& predToComponent){
     unsigned componentId = scc.size()-1;
     eagerLabel.clear();
@@ -686,5 +687,6 @@ const aspc::Program& Analyzer::getLazy()const {return lazyPrg;}
 const std::unordered_map<std::string,unsigned> Analyzer::getPredicateToId()const {return dependencyManager.getPredicateToId();}
 const std::vector<std::string> Analyzer::getIdToPredicate()const {return dependencyManager.getIdToPredicate();}
 bool Analyzer::isEDB(std::string predicate){
+    if(joinRuleData.find(predicate) != joinRuleData.end()) return true;
     return predicateToComponent.count(predicate) && sccTypeLabel[predicateToComponent[predicate]] == TYPE_DATALOG;
 }

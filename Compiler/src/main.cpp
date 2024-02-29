@@ -44,7 +44,7 @@ int main(int argc, char *argv[])
 	Rewriter r(&analyzer,propagatorProgram,idToPredicate,predicateToId);
 	r.reduceToSigleHeadForPredicate();
 	r.rewriteAggregates();
-	r.computeCompletion();
+    r.computeCompletion();
 	r.printSharedVars();
 
 	std::cout<<"Generator Program\n";
@@ -72,7 +72,7 @@ int main(int argc, char *argv[])
 	const aspc::Program* prgLazy = &analyzer.getLazy();
 	const aspc::Program* prgDatalog = &analyzer.getDatalog();
 
-	std::unordered_map<std::string,std::string> predicateToStruct;
+    std::unordered_map<std::string,std::string> predicateToStruct;
 	std::unordered_map<std::string,unsigned> predicateToAggrIndex;
 	std::unordered_map<std::string,std::string> aggrIdToAggrSet;
 	for(unsigned ruleId = 0; ruleId<prgProp->getRulesSize(); ruleId++){
@@ -195,3 +195,4 @@ int main(int argc, char *argv[])
 	propCompiler.compile();
 	dc.buildAuxMapHandler(executablePath,r.getPredicateNames(),predicateToStruct);
 }
+

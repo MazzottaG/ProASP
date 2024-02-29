@@ -157,6 +157,8 @@ class Analyzer{
         const aspc::Program& getEager()const;
         const aspc::Program& getLazy()const;
 
+        void addDatalogRule(const aspc::Rule& rule){datalogPrg.addRule(rule);}
+
         const std::unordered_map<std::string,unsigned> getPredicateToId()const;
         const std::vector<std::string> getIdToPredicate()const;
 
