@@ -33,7 +33,7 @@
 #include <string>
 #include<iostream>
 
-aspc::ArithmeticExpression::ArithmeticExpression() {
+aspc::ArithmeticExpression::ArithmeticExpression():term1(""),term2(""),operation(' '),singleTerm(true) {
 
 }
 aspc::ArithmeticExpression::ArithmeticExpression(const aspc::ArithmeticExpression& expr){
@@ -41,13 +41,16 @@ aspc::ArithmeticExpression::ArithmeticExpression(const aspc::ArithmeticExpressio
     if(!expr.isSingleTerm()){
         operation=expr.getOperation();
         term2=expr.getTerm2();
+    }else{
+        term2="";
+        operation=' ';
     }
     singleTerm = expr.isSingleTerm();
 }
 aspc::ArithmeticExpression::ArithmeticExpression(const std::string& term1, const std::string& term2, char operation) : term1(term1), term2(term2), operation(operation), singleTerm(false) {
 }
 
-aspc::ArithmeticExpression::ArithmeticExpression(const std::string& term1) : term1(term1), singleTerm(true) {
+aspc::ArithmeticExpression::ArithmeticExpression(const std::string& term1) : term1(term1), term2(""), operation(' '), singleTerm(true) {
 }
 bool aspc::ArithmeticExpression::operator==(const aspc::ArithmeticExpression& expr)const{
     if(term1!=expr.term1 || singleTerm!=expr.singleTerm)

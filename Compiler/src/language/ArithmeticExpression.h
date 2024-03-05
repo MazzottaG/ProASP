@@ -92,7 +92,7 @@ namespace aspc {
         std::vector<std::string> getAllTerms() const;
         
         std::string getStringRep() const;
-        bool isProduct()const { return operation == '*';}
+        bool isProduct()const { return !singleTerm && operation == '*';}
 
     private:
         std::string term1;
