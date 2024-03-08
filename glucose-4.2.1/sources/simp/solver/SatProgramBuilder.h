@@ -13,21 +13,27 @@ class SatProgramBuilder{
             static SatProgramBuilder instance;
             return instance;
         }
+
         bool computeCompletion(Glucose::SimpSolver* solver){
-            bool ok=true;
             std::unordered_map<unsigned,unsigned> auxRemapping;
-            if(!auxCompletion(auxRemapping,solver) || !headAtomCompletion(auxRemapping,solver) || !addConstraints(solver))
+            if(!auxCompletion(auxRemapping,solver) || !headAtomCompletion(auxRemapping,solver) || !addConstraints(solver)) {
+                cleanup();
                 return false;
+            }
             return true;
         }
         
     private:
+        void cleanup(){
+            TupleFactory::getInstance().cleanupCompletionStruct();
+        }
         void printClause(Glucose::vec<Glucose::Lit>& clause){
             for(unsigned j = 0; j<clause.size(); j++){
                 bool negated = Glucose::sign(clause[j]);
                 int var = Glucose::var(clause[j]);
                 std::cout << (negated ? "-" : "") << var << " ";
-            }   
+                // std::cout << (negated ? "-" : ""); AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(var)); std::cout<< " ";
+            }
             std::cout << "0"<<endl;
         }
         SatProgramBuilder(){}
@@ -76,16 +82,15 @@ class SatProgramBuilder{
                     auxRemapping[bodyId]=auxLiteral;
                     clause.clear();
                     clause.push(Glucose::mkLit(auxLiteral,false));
-
                     for(int i=0; i<bodyLength; i++){
                         bool negated = content[i] < 0;
                         int var = negated ? -content[i]: content[i];
                         int realVar = Generator::getInstance().getRealVar(var);
-                        
                         binClause.clear();
                         binClause.push(Glucose::mkLit(auxLiteral,true));
                         binClause.push(Glucose::mkLit(realVar, negated));
                         clause.push(Glucose::mkLit(realVar, !negated));
+                        // printClause(binClause);
                         if(!solver->addClause_(binClause))
                             return false;  
                     }
@@ -111,7 +116,6 @@ class SatProgramBuilder{
                 clause.clear();
                 int realPairFirst = Generator::getInstance().getRealVar(pair.first);
                 clause.push(Glucose::mkLit(realPairFirst,true));
-
                 std::vector<std::string> debugAux;
                 for(auto aux : pair.second){
                     int freshSymbol = auxRemapping[aux];
@@ -120,7 +124,7 @@ class SatProgramBuilder{
                     binClause.push(Glucose::mkLit(freshSymbol, true));
                     // printClause(binClause);
                     if(!solver->addClause_(binClause))
-                       return false;                    
+                        return false;
                     clause.push(Glucose::mkLit(freshSymbol, false));
                 }
                 for(auto supAtom : atomsForLit[pair.first]){
@@ -129,14 +133,15 @@ class SatProgramBuilder{
                     binClause.push(Glucose::mkLit(realPairFirst,false));
                     
                     binClause.push(Glucose::mkLit(realSupAtom, true));
-                    // printClause(binClause);
+                    //printClause(binClause);
                     if(!solver->addClause_(binClause))
-                       return false;                    
-                    
+                        return false;
+
                     clause.push(Glucose::mkLit(realSupAtom, false));
                 }
                 // printClause(clause);
-                if(!solver->addClause_(clause)) return false;
+                if(!solver->addClause_(clause))
+                    return false;
             }
             for(auto pair:atomsForLit){
                 //pair contains <head_atom, set<atom>>

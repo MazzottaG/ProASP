@@ -332,7 +332,10 @@ class TupleFactory{
             // assert(it->getWaspID() == id);
             return *it;
         }
-
+        void cleanupCompletionStruct(){
+            cleanupConstraints();
+            cleanupClauses();
+        }
         // %%%%%%%%%%%%%%%%%%%%%%%%% Constraint Grounding Methods %%%%%%%%%%%%%%%%%%%%%%%%%
         void initConstraintGen(){
             if(generatorConstraint == NULL)
@@ -369,6 +372,15 @@ class TupleFactory{
                 constraintIDToLength->pop_back();
             }
             return std::make_pair(res,res_len);
+        }
+        void cleanupConstraints(){
+            if(constraintIDToTuple!=NULL){
+                std::pair<TupleLight*,unsigned> pair = popConstraint();
+                while(pair.first != NULL){
+                    delete pair.first;
+                    pair = popConstraint();
+                }
+            }
         }
         void destroyConstraints(){
             std::cout << "Destroying"<<std::endl;
@@ -419,6 +431,15 @@ class TupleFactory{
                 clauseIDToLength->pop_back();
             }
             return std::make_pair(res,res_len);
+        }
+        void cleanupClauses(){
+            if(clauseIDToTuple!=NULL){
+                std::pair<TupleLight*,unsigned> pair = popClause();
+                while(pair.first != NULL){
+                    delete pair.first;
+                    pair = popClause();
+                }
+            }
         }
         void destroyClauses(){
             std::cout << "Destroying Clauses"<<std::endl;
