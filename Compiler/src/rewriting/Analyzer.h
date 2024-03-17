@@ -103,7 +103,8 @@ class Analyzer{
         std::unordered_map<int,int> remappingBodyLabeling;
 
         bool fullGrounding;
-        
+        bool foundLazyRule;
+
         bool findAggregateNegativeDependency(const std::vector<std::vector<int>>& scc, unsigned componentId,const aspc::ArithmeticRelationWithAggregate* aggrRelation);
         bool labelAggregateLiteral(std::unordered_map<std::string,int>& predToComponent,std::vector<int>& sccLabel,const aspc::ArithmeticRelationWithAggregate* aggrRelation);
         void mapPredicateToComponent(const std::vector<std::vector<int>>& scc,std::unordered_map<std::string,int>& predicateToComponent);
@@ -172,7 +173,7 @@ class Analyzer{
             return rulesBodyLabeling[ruleId];
         }
         bool isEDB(std::string predicate);
-        bool isFullGrounding()const{return fullGrounding;}
+        bool isFullGrounding()const{return fullGrounding && !foundLazyRule;}
         bool isJoinPredicate(std::string predicate){return joinRuleData.find(predicate)!=joinRuleData.end();}
         
 };

@@ -168,6 +168,7 @@ void Analyzer::labelLazy(std::vector<int>& typeLabel,const std::vector<int>& str
             if(foundDep){
                 if(lazyLabel[componentId] == LAZY){
                     typeLabel[componentId] = TYPE_LAZY;
+                    foundLazyRule=true;
                 }else{
                     if(lazyLabel[componentId] == NOT_LAZY){
                         std::cout << "Error: component "<<componentId<<" depends from eager, cannot be lazy and has not be labeled as eager"<<std::endl;
@@ -207,6 +208,8 @@ void Analyzer::labelLazy(std::vector<int>& typeLabel,const std::vector<int>& str
                     }else if(lazyLabel[componentId] == LAZY){
                         typeLabel[componentId]=TYPE_LAZY;
                         newLazy=true;
+                        foundLazyRule=true;
+
                     }else{
                         std::cout << "Error: unable to find lazyness label for "<<componentId<<std::endl;
                         exit(180);
@@ -676,7 +679,7 @@ void Analyzer::splitProgram(){
     buildPrograms(scc,sccTypeLabel,predicateToComponent);        
 }
 
-Analyzer::Analyzer(const aspc::Program& p,const std::vector<bool>& labels,bool fullgrounded):program(p),inputLabel(labels),fullGrounding(fullgrounded){
+Analyzer::Analyzer(const aspc::Program& p,const std::vector<bool>& labels,bool fullgrounded):program(p),inputLabel(labels),fullGrounding(fullgrounded),foundLazyRule(false){
     splitProgram();
 }
 const std::vector<bool>& Analyzer::getEagerLabel()const {return eagerLabel;}

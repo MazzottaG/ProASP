@@ -2032,7 +2032,7 @@ lbool Solver::solve_(bool do_simp, bool turn_off_simp) // Parameters are useless
                 if(t != NULL && t->isTrue()) {AuxMapHandler::getInstance().printTuple(t);}
                 //if(t != NULL && t->isFalse()) {std::cout<<"-";AuxMapHandler::getInstance().printTuple(t);}
                 //if(t != NULL && t->isUndef()) {std::cout<<"undefined";AuxMapHandler::getInstance().printTuple(t); error = true;}
-                std::cout << " ";
+//                std::cout << " ";
                 // if(t != NULL && t->isFalse()) {std::cout << ":-";AuxMapHandler::getInstance().printTuple(t);}
             }
             assert(!error);
