@@ -676,7 +676,7 @@ void Analyzer::splitProgram(){
     buildPrograms(scc,sccTypeLabel,predicateToComponent);        
 }
 
-Analyzer::Analyzer(const aspc::Program& p,const std::vector<bool>& labels,bool fullgrounded):program(p),inputLabel(labels),fullGrounding(fullgrounded){
+Analyzer::Analyzer(const aspc::Program& p,const std::vector<bool>& labels,bool fullgrounded, std::set<std::string> predicatedDefinedByPosProgram):program(p),inputLabel(labels),fullGrounding(fullgrounded), predicatesDefinedInPosCycleProgram(predicatesDefinedInPosCycleProgram){
     splitProgram();
 }
 const std::vector<bool>& Analyzer::getEagerLabel()const {return eagerLabel;}

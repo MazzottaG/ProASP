@@ -8,42 +8,65 @@ ProgramReader::ProgramReader(int argc, char *argv[]){
 	label = false;
 	fullGrounding=true;
 	unsigned programSize=0;
-    for(int fileIndex = 1; fileIndex<3; fileIndex++){
+    for(int fileIndex = 1; fileIndex<4; fileIndex++){
     // for(int fileIndex = 0; fileIndex<2; fileIndex++){
-		std::string filename(argv[fileIndex]);
-		antlr4::ANTLRFileStream input;
-		input.loadFromFile(filename);
-		ASPCore2Lexer lexer (&input);
-		antlr4::CommonTokenStream tokens(&lexer);
-		ASPCore2Parser parser (&tokens);
-		parser.addParseListener(&listener);
-		parser.program();
-		for(unsigned i=programSize; i<listener.getProgram().getRulesSize(); i++){
-			if(!label) fullGrounding=false;
-			ruleLabel.push_back(label);
-			
-			if(listener.getProgram().getRule(i).isConstraint()) continue;
-			for(aspc::Atom h : listener.getProgram().getRule(i).getHead()){
-				if(label)
-					toGroundPredicates.insert(h.getPredicateName());
-				else propagatorPredicates.insert(h.getPredicateName());
-			}
-			
-		}
-		programSize=listener.getProgram().getRulesSize();
-		label=!label;
+        std::string filename(argv[fileIndex]);
+        antlr4::ANTLRFileStream input;
+        input.loadFromFile(filename);
+        ASPCore2Lexer lexer (&input);
+        antlr4::CommonTokenStream tokens(&lexer);
+        ASPCore2Parser parser (&tokens);
+        if (fileIndex < 3){
+            parser.addParseListener(&listener);
+            parser.program();
+            for(unsigned i=programSize; i<listener.getProgram().getRulesSize(); i++){
+                if(!label) fullGrounding=false;
+                ruleLabel.push_back(label);
+                
+                if(listener.getProgram().getRule(i).isConstraint()) continue;
+                for(aspc::Atom h : listener.getProgram().getRule(i).getHead()){
+                    if(label)
+                        toGroundPredicates.insert(h.getPredicateName());
+                    else propagatorPredicates.insert(h.getPredicateName());
+                }
+                
+            }
+            programSize=listener.getProgram().getRulesSize();
+            label=!label;
+        }else{
+            parser.addParseListener(&specialListener);
+            parser.program();
+        }
 	}
 	listener.getProgram().findPredicates(originalPredicates);
+    //add also predicates of pos cycle program to original predicates so that theyn will 
+    //be printed in the answer sets
+    specialListener.getProgram().findPredicates(originalPredicates);
+    if(posCyclePredsDefinedInProgram(listener.getProgram(), specialListener.getProgram())){
+        std::cout << "Predicated defined inside positive cycle program cannot be defined inside to-generate or to-compile program\n";
+        exit(1);
+    }    
+    //call rewriting and marking of rules
 	std::cout << "%%%%%%%%%%%%%%%%%%%%%% "<<(fullGrounding ? "Full Grounding ": "")<<"Input Program %%%%%%%%%%%%%%%%%%%%%%" <<std::endl;
     listener.getProgram().print();
-	std::cout << "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%" <<std::endl;
+    std::cout << "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%" <<std::endl;
     rewriteRuleForComponent();
     std::cout << "%%%%%%%%%%%%%%%%%%%%%% "<<(fullGrounding ? "Full Grounding ": "")<<"Rewritten Input Program %%%%%%%%%%%%%%%%%%%%%%" <<std::endl;
     for(unsigned ruleId = 0; ruleId<rewrittenProgram.getRulesSize();ruleId++){
         std::cout << (rewrittenRuleLabel[ruleId] ? "Ground " : "Compile ");
         rewrittenProgram.getRule(ruleId).print();
     }
-    std::cout << "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%" <<std::endl;
+    std::cout << "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%" <<std::endl;	
+}
+
+bool ProgramReader::posCyclePredsDefinedInProgram(const aspc::Program& program, const aspc::Program& posCycleProgram){
+    for(const std::string& posCycleHeadPredicate : posCycleProgram.getHeadPredicates()){
+        const std::set<std::string>& programHeadPredicates = program.getHeadPredicates();
+        if(std::find(programHeadPredicates.begin(), programHeadPredicates.end(), posCycleHeadPredicate) != programHeadPredicates.end()){
+            return true;
+        }
+    }
+    return false;
 }
 
 void ProgramReader::labelHybridRule(aspc::Program& program, std::vector<bool>& currenLabel,std::vector<std::string>& idToPred,std::unordered_map<std::string,unsigned>& predToId){

@@ -11,6 +11,7 @@
 #include "../parser/ASPCore2Parser.h"
 #include "../parser/ASPCore2CompileProgramListener.h"
 #include "DependencyManager.h"
+#include "../rewriting/PosCycleRewriter.h"
 
 class ProgramReader{
 
@@ -19,6 +20,7 @@ class ProgramReader{
         void labelHybridRule(aspc::Program& program, std::vector<bool>& currenLabel,std::vector<std::string>& idToPredicate,std::unordered_map<std::string,unsigned>& predicateToId);
         void rewriteGroundingPredicate(aspc::Program& program, std::vector<bool>& currenLabel,std::vector<std::string>& idToPredicate,std::unordered_map<std::string,unsigned>& predicateToId);
         const aspc::Program& getInputProgram(){ return rewrittenProgram;}
+        const aspc::Program& getPosCycleProgram(){ return specialListener.getProgram();}
         const std::vector<bool>& getInputProgramLabel(){ return rewrittenRuleLabel;}
         const std::unordered_set<std::string>& getOriginalPredicates(){ return originalPredicates;}
         bool isFullGrounding()const {return fullGrounding;}
@@ -30,6 +32,7 @@ private:
         bool label;
         bool fullGrounding;
         ASPCore2CompileProgramListener listener;
+        ASPCore2CompileProgramListener specialListener;
         std::vector<bool> ruleLabel;
         std::unordered_set<std::string> originalPredicates;
         std::unordered_set<std::string> toGroundPredicates;
@@ -39,10 +42,9 @@ private:
         std::vector<std::pair<std::string,int>> remapped;
 
         DependencyManager dependencyManager;
-
         aspc::Program rewrittenProgram;
         std::vector<bool> rewrittenRuleLabel;
 
-
+        bool posCyclePredsDefinedInProgram(const aspc::Program& , const aspc::Program&);
 };
 #endif

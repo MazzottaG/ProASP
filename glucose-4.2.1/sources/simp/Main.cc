@@ -63,6 +63,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "../simp/utils/ConstantsManager.h"
 #include "../simp/solver/Generator.h"
 #include "../simp/solver/InstanceExpansion.h"
+#include "../simp/solver/InstanceExpansionPosCycle.h"
 #include "../simp/solver/ModelExpansion.h"
 #include "../simp/solver/Propagator.h"
 #include "../simp/solver/AuxMapHandler.h"
@@ -488,6 +489,7 @@ int main(int argc, char** argv)
             TupleFactory::getInstance().initConstraintGen();
             std::vector<int> falseAtoms;
             Generator::getInstance().generate(&S,falseAtoms);
+            InstanceExpansionPosCycle::getInstance().generate(&S);
             for(AggregatePropagator* prop : Generator::getInstance().collectAggregatePropagators()){
                 // prop->printCurrentStatus();
                 Propagator::getInstance().addPropagator(prop);
