@@ -48,6 +48,12 @@ void Analyzer::labelStratified(std::vector<int>& stratLabel,const std::vector<st
             std::vector<unsigned> rulesForPredicate = program.getRulesForPredicate(predicate);
             for(unsigned ruleId : rulesForPredicate){
                 const aspc::Rule* rule = &program.getRule(ruleId);
+                //no component that contains predicated defined by P.P. in head may be stratified
+                for(auto& head : rule->getHead()){
+                    if(predicatesDefinedInPosCycleProgram.count(head.getPredicateName())){
+                       stratified = false; 
+                    }
+                }
                 const std::vector<const aspc::Formula*>* body = &rule->getFormulas();
                 for(unsigned fId = 0; fId<body->size(); fId++){
                     if(body->at(fId)->isLiteral()){
@@ -57,6 +63,10 @@ void Analyzer::labelStratified(std::vector<int>& stratLabel,const std::vector<st
                         for(unsigned id:scc[componentId]) if(id == bodyPredicateId) found=true;
                         if(found && bodyLiteral->isNegated())
                             stratified = false;
+                        //mark as non_stratified all components that contain at least one rule that depends from P.P.-defined predicates
+                        if(predicatesDefinedInPosCycleProgram.count(bodyLiteral->getPredicateName())){
+                            stratified = false;
+                        }
                     }else if(body->at(fId)->containsAggregate()){
                         bool found = findAggregateNegativeDependency(scc,componentId,(const aspc::ArithmeticRelationWithAggregate*)body->at(fId));
                         if(found) stratified=false;
@@ -676,7 +686,7 @@ void Analyzer::splitProgram(){
     buildPrograms(scc,sccTypeLabel,predicateToComponent);        
 }
 
-Analyzer::Analyzer(const aspc::Program& p,const std::vector<bool>& labels,bool fullgrounded, std::set<std::string> predicatedDefinedByPosProgram):program(p),inputLabel(labels),fullGrounding(fullgrounded), predicatesDefinedInPosCycleProgram(predicatesDefinedInPosCycleProgram){
+Analyzer::Analyzer(const aspc::Program& p,const std::vector<bool>& labels,bool fullgrounded, std::set<std::string>& predsDefinedByPosProgram):program(p),inputLabel(labels),fullGrounding(fullgrounded), predicatesDefinedInPosCycleProgram(predsDefinedByPosProgram){
     splitProgram();
 }
 const std::vector<bool>& Analyzer::getEagerLabel()const {return eagerLabel;}

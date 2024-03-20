@@ -39,13 +39,14 @@ ProgramReader::ProgramReader(int argc, char *argv[]){
         }
 	}
 	listener.getProgram().findPredicates(originalPredicates);
+    posCycleProgram = &specialListener.getProgram();
     //add also predicates of pos cycle program to original predicates so that theyn will 
     //be printed in the answer sets
-    specialListener.getProgram().findPredicates(originalPredicates);
-    if(posCyclePredsDefinedInProgram(listener.getProgram(), specialListener.getProgram())){
+    posCycleProgram->findPredicates(originalPredicates);
+    if(posCyclePredsDefinedInProgram(listener.getProgram(), *posCycleProgram)){
         std::cout << "Predicated defined inside positive cycle program cannot be defined inside to-generate or to-compile program\n";
         exit(1);
-    }    
+    }
     //call rewriting and marking of rules
 	std::cout << "%%%%%%%%%%%%%%%%%%%%%% "<<(fullGrounding ? "Full Grounding ": "")<<"Input Program %%%%%%%%%%%%%%%%%%%%%%" <<std::endl;
     listener.getProgram().print();
@@ -56,7 +57,22 @@ ProgramReader::ProgramReader(int argc, char *argv[]){
         std::cout << (rewrittenRuleLabel[ruleId] ? "Ground " : "Compile ");
         rewrittenProgram.getRule(ruleId).print();
     }
-    std::cout << "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%" <<std::endl;	
+    std::cout << "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%" <<std::endl;
+    
+    PosCycleRewriter posCycleRewriter(*posCycleProgram);
+    //check that constraints inside to-compile and to-ground program do not contain in the body
+    //literals belonging to two distinct components of the scc of pos-cycle program
+	posCycleRewriter.crossComponentPredicatesAppearInConstraintForProgram(getInputProgram());
+    mergePosCycleProgramAndInputProgram(posCycleRewriter.getGeneratorProgram());
+}
+
+void ProgramReader::mergePosCycleProgramAndInputProgram(const aspc::Program& genProgramPosCycle){
+    //add generator rules and constraints of PosCycleProgram to inputProgram(which is intended to be the rewritten program)
+    for(const aspc::Rule& rule : genProgramPosCycle.getRules()){
+        rewrittenProgram.addRule(rule);
+        //consider all rules of posCycleProgram as to compile
+        rewrittenRuleLabel.push_back(false);
+    }
 }
 
 bool ProgramReader::posCyclePredsDefinedInProgram(const aspc::Program& program, const aspc::Program& posCycleProgram){

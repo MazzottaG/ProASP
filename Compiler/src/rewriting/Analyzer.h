@@ -1,5 +1,6 @@
 #ifndef ANALYZER_H
 #define ANALYZER_H
+#include <algorithm>
 #include "../language/Program.h"
 #include "../utils/GraphWithTarjanAlgorithm.h"
 #include "../utils/SharedFunctions.h"
@@ -152,7 +153,7 @@ class Analyzer{
         const int NON_DATALOG_FORMULA   = 2;
 
 
-        Analyzer(const aspc::Program& p,const std::vector<bool>& labels,bool fullGrounding, std::set<std::string> predicatedDefinedByPosProgram);
+        Analyzer(const aspc::Program& p,const std::vector<bool>& labels,bool fullGrounding, std::set<std::string>& predicatedDefinedByPosProgram);
         const std::vector<bool>& getEagerLabel()const;
         const aspc::Program& getDatalog()const;
         const aspc::Program& getEager()const;

@@ -9,13 +9,8 @@
 int main(int argc, char *argv[])
 {
 	ProgramReader reader(argc,argv);
-	PosCycleRewriter posCycleRewriter(reader.getPosCycleProgram());
-	//check that constraints inside to-compile and to-ground program do not contain in the body
-    //literals belonging to two distinct components of the scc of pos-cycle program
-	posCycleRewriter.crossComponentPredicatesAppearInConstraintForProgram(reader.getInputProgram());
-	const aspc::Program* prgDatalogPosCycle = &posCycleRewriter.getGeneratorProgram();
-	std::set<std::string> predicatesDefinedByPosProgram = posCycleRewriter.getPredicatesDefinedInPosCycleProgram();
-
+	const aspc::Program* prgDatalogPosCycle = &reader.getPosCycleGeneratorProgram();
+	std::set<std::string> predicatesDefinedByPosProgram = prgDatalogPosCycle->getHeadPredicates();// posCycleRewriter.getPredicatesDefinedInPosCycleProgram();
 	Analyzer analyzer(reader.getInputProgram(),reader.getInputProgramLabel(),reader.isFullGrounding(), predicatesDefinedByPosProgram);
 	aspc::Program eagerProgram(analyzer.getEager());
 	std::vector<bool> eagerLabels(analyzer.getEagerLabel());
@@ -54,7 +49,7 @@ int main(int argc, char *argv[])
     r.computeCompletion();
 	r.printSharedVars();
 
-	std::cout<<"Generator Program\n";
+	std::cout<<"Generator Program (after merge with generator for posCycle)\n";
 	std::cout<<"-----\n";
 	std::vector<int> generatorRuleLabel(r.getGeneratorProgram().getRulesSize(),Rewriter::TO_GENERATE);
     std::unordered_map<unsigned, unsigned > traceToGroundLabeledRule;
@@ -79,10 +74,6 @@ int main(int argc, char *argv[])
 	const aspc::Program* prgLazy = &analyzer.getLazy();
 	const aspc::Program* prgDatalog = &analyzer.getDatalog();
 	
-	std::cout<<"Generator Program for posCycle\n";
-	std::cout<<"-----\n";
-	prgDatalogPosCycle->print();
-	std::cout<<"-----\n";
 	
     std::unordered_map<std::string,std::string> predicateToStruct;
 	std::unordered_map<std::string,unsigned> predicateToAggrIndex;
@@ -144,7 +135,7 @@ int main(int argc, char *argv[])
 		}
 	}
 	
-	for(const aspc::Program* prg : {prgProp,prgLazy,prgDatalog, prgDatalogPosCycle})
+	for(const aspc::Program* prg : {prgProp,prgLazy,prgDatalog})
 		for(unsigned ruleId = 0; ruleId<prg->getRulesSize(); ruleId++){
 			const aspc::Rule* rule = &prg->getRule(ruleId);
 			const std::vector<aspc::Atom>* head = &rule->getHead();
@@ -199,9 +190,6 @@ int main(int argc, char *argv[])
 	std::cout << std::endl;
 	GeneratorCompiler datalogCompiler (analyzer.getDatalog(),executablePath,analyzer.getIdToPredicate(),analyzer.getPredicateToId(),&dc,true,originalPredicates,"InstanceExpansion",true,"InstExp",false,predicateToStruct);
 	datalogCompiler.compile();
-	//prgDatalogPosCycle->print();
-	GeneratorCompiler posCycleCompiler (*prgDatalogPosCycle,executablePath,posCycleRewriter.getIdToPredicate(),posCycleRewriter.getPredicateToId(),&dc,true,originalPredicates,"InstanceExpansionPosCycle",false,"InstExpPos",false,predicateToStruct);
-	//posCycleCompiler.compile();
 	HybridGenerator genCompiler(&analyzer,&r,r.getGeneratorProgram(), generatorRuleLabel, executablePath, r.getPredicateNames(), r.getPredicateId(), &dc,originalPredicates,predicateToStruct,predicateToAggrIndex,aggrIdToAggrSet,traceToGroundLabeledRule);
 	genCompiler.compile();
 	GeneratorCompiler lazyCompiler (analyzer.getLazy(),executablePath,analyzer.getIdToPredicate(),analyzer.getPredicateToId(),&dc,true,originalPredicates,"ModelExpansion",true,"ModExp",true,predicateToStruct);
