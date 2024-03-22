@@ -22,12 +22,12 @@ class ProgramReader{
         const aspc::Program& getInputProgram(){ return rewrittenProgram;}
         const aspc::Program& getPosCycleProgram(){ return specialListener.getProgram();}
         const aspc::Program& getPosCycleGeneratorProgram(){ return *posCycleProgram;}
+        const aspc::Program& getPosCyclePropagatorProgram(){ return *posCyclePropagatorProgram;}
         const std::vector<bool>& getInputProgramLabel(){ return rewrittenRuleLabel;}
         const std::unordered_set<std::string>& getOriginalPredicates(){ return originalPredicates;}
         bool isFullGrounding()const {return fullGrounding;}
         void rewriteRuleForComponent();
         std::pair<std::unordered_map<std::string,std::string>,bool> getVariableMapping(const aspc::Rule* r1,const aspc::Rule* r2)const;
-
 private:
 
         bool label;
@@ -45,6 +45,9 @@ private:
         DependencyManager dependencyManager;
         aspc::Program rewrittenProgram;
         const aspc::Program* posCycleProgram;
+        const aspc::Program* posCyclePropagatorProgram;
+        PosCycleRewriter posCycleRewriter;
+        
         std::vector<bool> rewrittenRuleLabel;
         bool posCyclePredsDefinedInProgram(const aspc::Program& , const aspc::Program&);
         void mergePosCycleProgramAndInputProgram(const aspc::Program&);

@@ -1,11 +1,13 @@
 #include "PosCycleRewriter.h"
 
-PosCycleRewriter::PosCycleRewriter(const aspc::Program& program):program(program){
-    if(!program.isStratified()){
+
+void PosCycleRewriter::rewrite(const aspc::Program* prg){
+    this->program = prg;
+    if(!program->isStratified()){
         std::cout <<"Lazy propagator can only work with stratified programs";
         exit(1);
     }
-    dependencyManager.buildDependecyGraph(program);
+    dependencyManager.buildDependecyGraph(*program);
     sccs = dependencyManager.getSCC();
     
     //compute recursive predicates
@@ -22,16 +24,20 @@ PosCycleRewriter::PosCycleRewriter(const aspc::Program& program):program(program
     }
     rewriteConstraintsAsGeneratorRules();
     rewriteComponentRulesAsConstraint();
-    addNonRecursiveComponentsToGenerator();
+    splitGeneratorAndPropagatorProgram();
 }
 
-const aspc::Program& PosCycleRewriter::getGeneratorProgram()const{
+const aspc::Program& PosCycleRewriter::getGeneratorProgram() const{
     return generatorProgram;
+}
+
+const aspc::Program& PosCycleRewriter::getPropagatorProgram() const{
+    return propagatorProgram;
 }
 
 void PosCycleRewriter::rewriteConstraintsAsGeneratorRules(){
     //no constraint can contain two predicates in its body defined in two distinct components
-    for(const aspc::Rule& rule : program.getRules()){
+    for(const aspc::Rule& rule : program->getRules()){
         if(rule.isConstraint() && crossComponentPredicatesAppearsInConstraint(rule)){
             std::cout << "Constraints cannot contain predicates defined by two different sccs of the positive cycle program\n";
             exit(1);
@@ -39,7 +45,7 @@ void PosCycleRewriter::rewriteConstraintsAsGeneratorRules(){
             
     }
 
-    for(const aspc::Rule& rule : program.getRules()){
+    for(const aspc::Rule& rule : program->getRules()){
         if(rule.isConstraint()){
             for(const aspc::Literal& lit : rule.getBodyLiterals()){
                 if(recursivePredicates.count(lit.getPredicateName())){
@@ -62,17 +68,15 @@ void PosCycleRewriter::crossComponentPredicatesAppearInConstraintForProgram(cons
 }
 
 bool PosCycleRewriter::crossComponentPredicatesAppearsInConstraint(const aspc::Rule& constraint) const{
-    //no scc found at the moment
-    int currentSCC = -1;
-    //std::set<std::string> headPredicates = program.getHeadPredicates();
+    std::unordered_set<int> sccsForConstraint;
     for(const aspc::Literal& lit : constraint.getBodyLiterals()){
         if(std::find(recursivePredicates.begin(), recursivePredicates.end(), lit.getPredicateName()) != recursivePredicates.end()){
             for(unsigned i = 0; i < sccs.size(); ++i){
                 if(std::find(sccs[i].begin(), sccs[i].end(), dependencyManager.getPredicateToId().at(lit.getPredicateName())) != sccs[i].end()){
-                    if(currentSCC != -1){
+                    sccsForConstraint.insert(i);
+                    if(sccsForConstraint.size() > 1){
                         return true;
                     }
-                    currentSCC = i;
                 }
             }
         }
@@ -97,14 +101,15 @@ void PosCycleRewriter::rewriteConstraintAsGeneratorsForPredicate(const aspc::Rul
             generatorProgram.addPredicate(constrBodyLiterals[i].getPredicateName(), constrBodyLiterals[i].getAriety());
         }
         else{
-            genRulesBodyPredicates.push_back(constrBodyLiterals[i]);
-            generatorProgram.addPredicate(constrBodyLiterals[i].getPredicateName(), constrBodyLiterals[i].getAriety());
-            if(constrBodyLiterals[i].isPositiveLiteral()){
-                for(const std::string& var : constrBodyLiterals[i].getVariables()){
-                    posBodyVars.insert(var);
+            if(!recursivePredicates.count(constrBodyLiterals[i].getPredicateName())){   
+                genRulesBodyPredicates.push_back(constrBodyLiterals[i]);
+                generatorProgram.addPredicate(constrBodyLiterals[i].getPredicateName(), constrBodyLiterals[i].getAriety());
+                if(constrBodyLiterals[i].isPositiveLiteral()){
+                    for(const std::string& var : constrBodyLiterals[i].getVariables()){
+                        posBodyVars.insert(var);
+                    }
                 }
             }
-        
         }
     }
 
@@ -119,22 +124,23 @@ void PosCycleRewriter::rewriteConstraintAsGeneratorsForPredicate(const aspc::Rul
     for(unsigned i = 0; i < rule->getArithmeticRelationsWithAggregate().size();i++){     
         aggregates.push_back(rule->getArithmeticRelationsWithAggregate().at(i));
     }
-    
-    for(aspc::Literal lit : genRulesHeadPredicates){
-        for(const std::string& headVar : lit.getVariables()){
-            if(!posBodyVars.count(headVar)){
-                std::cout << "head variables of generator rules for lazy propragator must be bound by positive body vars";
-                exit(1);
+    if(!genRulesBodyPredicates.empty()){
+        for(aspc::Literal lit : genRulesHeadPredicates){
+            for(const std::string& headVar : lit.getVariables()){
+                if(!posBodyVars.count(headVar)){
+                    std::cout << "head variables of generator rules for lazy propragator must be bound by positive body vars";
+                    exit(1);
+                }
             }
+            const aspc::Atom a(lit.getPredicateName(), lit.getTerms());
+            std::vector<aspc::Atom> head;
+            head.push_back(a);
+            aspc::Rule generatorRule(head, genRulesBodyPredicates, ineqs, aggregates, false, false); 
+            generatorRule.print();
+            generatorProgram.addRule(generatorRule);
+            
         }
-        const aspc::Atom a(lit.getPredicateName(), lit.getTerms());
-        std::vector<aspc::Atom> head;
-        head.push_back(a);
-        aspc::Rule generatorRule(head, genRulesBodyPredicates, ineqs, aggregates, false, false); 
-        generatorRule.print();
-        generatorProgram.addRule(generatorRule);
-        
-    }
+    }//else constraint contains only P.P.-defined predicates (no generation of symbols is needed)
     std::cout<<"-----\n";
 }
 
@@ -142,7 +148,7 @@ void PosCycleRewriter::rewriteConstraintAsGeneratorsForPredicate(const aspc::Rul
 //a(X,Z) :-a(X,Y), c(Z) not b(X, Y) -> :- a(X,Y), c(Z), not b(X, Y), not a(X,Z).
 //Remember that program is stratified
 void PosCycleRewriter::rewriteComponentRulesAsConstraint(){
-    for(const aspc::Rule& rule : program.getRules()){
+    for(const aspc::Rule& rule : program->getRules()){
         if(!rule.isConstraint()){
             if(recursivePredicates.count(rule.getHead()[0].getPredicateName())){
                 rewriteComponentRuleAsConstraint(&rule);
@@ -185,18 +191,27 @@ void PosCycleRewriter::rewriteComponentRuleAsConstraint(const aspc::Rule* rule){
 
 //add components defined in P.P. that are non-recursive
 //In this way the lazy propagator will now have to care about them
-void PosCycleRewriter::addNonRecursiveComponentsToGenerator(){
-    for(const aspc::Rule& rule : program.getRules()){
+void PosCycleRewriter::splitGeneratorAndPropagatorProgram(){
+    for(const aspc::Rule& rule : program->getRules()){
         if(!rule.isConstraint()){
-            if(recursivePredicates.count(rule.getHead()[0].getPredicateName()) == 0){
-                generatorProgram.addRule(rule);
+            bool toAdd = true;
+            for(auto& pred : rule.getHead()){
+                if(recursivePredicates.count(pred.getPredicateName()) == 0){
+                    if(toAdd){
+                        generatorProgram.addRule(aspc::Rule(rule));
+                        toAdd = false;
+                    }
+                }
+            }
+            if(toAdd){
+                propagatorProgram.addRule(aspc::Rule(rule));
             }
         }
     }
 }
 
 std::set<std::string> PosCycleRewriter::getPredicatesDefinedInPosCycleProgram(){
-    return program.getHeadPredicates();
+    return program->getHeadPredicates();
 }
 
 const std::unordered_map<std::string,unsigned> PosCycleRewriter::getPredicateToId()const {return dependencyManager.getPredicateToId();}

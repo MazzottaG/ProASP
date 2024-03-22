@@ -59,11 +59,12 @@ ProgramReader::ProgramReader(int argc, char *argv[]){
     }
     std::cout << "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%" <<std::endl;
     
-    PosCycleRewriter posCycleRewriter(*posCycleProgram);
+    posCycleRewriter.rewrite(posCycleProgram);
     //check that constraints inside to-compile and to-ground program do not contain in the body
     //literals belonging to two distinct components of the scc of pos-cycle program
 	posCycleRewriter.crossComponentPredicatesAppearInConstraintForProgram(getInputProgram());
-    mergePosCycleProgramAndInputProgram(posCycleRewriter.getGeneratorProgram());
+    mergePosCycleProgramAndInputProgram(posCycleRewriter.getGeneratorProgram()); 
+    posCyclePropagatorProgram = &posCycleRewriter.getPropagatorProgram();
 }
 
 void ProgramReader::mergePosCycleProgramAndInputProgram(const aspc::Program& genProgramPosCycle){

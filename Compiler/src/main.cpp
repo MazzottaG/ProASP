@@ -10,7 +10,8 @@ int main(int argc, char *argv[])
 {
 	ProgramReader reader(argc,argv);
 	const aspc::Program* prgDatalogPosCycle = &reader.getPosCycleGeneratorProgram();
-	std::set<std::string> predicatesDefinedByPosProgram = prgDatalogPosCycle->getHeadPredicates();// posCycleRewriter.getPredicatesDefinedInPosCycleProgram();
+	const aspc::Program* prgPropagatorPosCycle = &reader.getPosCyclePropagatorProgram();
+	std::set<std::string> predicatesDefinedByPosProgram = prgDatalogPosCycle->getHeadPredicates();
 	Analyzer analyzer(reader.getInputProgram(),reader.getInputProgramLabel(),reader.isFullGrounding(), predicatesDefinedByPosProgram);
 	aspc::Program eagerProgram(analyzer.getEager());
 	std::vector<bool> eagerLabels(analyzer.getEagerLabel());
@@ -69,6 +70,12 @@ int main(int argc, char *argv[])
 	std::cout<<"Propagator Program\n";
 	std::cout<<"-----\n";
 	r.getPropagatorsProgram().print();
+	
+	std::cout<<"-----\n";
+	std::cout<<"Positive Cycle propagator Program\n";
+	prgPropagatorPosCycle->print();
+	
+	
 	const aspc::Program* prgProp = &r.getPropagatorsProgram();
 	const aspc::Program* prgGen = &r.getGeneratorProgram();
 	const aspc::Program* prgLazy = &analyzer.getLazy();

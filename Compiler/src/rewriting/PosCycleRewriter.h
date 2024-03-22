@@ -7,8 +7,9 @@
 
 class PosCycleRewriter{
 private:
-    aspc::Program program;
+    const aspc::Program* program;
     aspc::Program generatorProgram;
+    aspc::Program propagatorProgram;
     DependencyManager dependencyManager;
     std::vector<std::vector<int>> sccs;
     std::unordered_set<std::string> recursivePredicates;
@@ -17,13 +18,15 @@ private:
     void rewriteConstraintsAsGeneratorRules();
     void rewriteConstraintAsGeneratorsForPredicate(const aspc::Rule*, unsigned);
     void rewriteComponentRuleAsConstraint(const aspc::Rule*);
-    void addNonRecursiveComponentsToGenerator();
+    void splitGeneratorAndPropagatorProgram();
 
 
 public:
     void crossComponentPredicatesAppearInConstraintForProgram(const aspc::Program& )const;
-    PosCycleRewriter(const aspc::Program&);
-    const aspc::Program& getGeneratorProgram() const;    
+    PosCycleRewriter(){};
+    void rewrite(const aspc::Program*);
+    const aspc::Program& getGeneratorProgram() const;
+    const aspc::Program& getPropagatorProgram() const;    
     const std::unordered_map<std::string,unsigned> getPredicateToId() const;
     const std::vector<std::string> getIdToPredicate() const;
     std::set<std::string> getPredicatesDefinedInPosCycleProgram();
