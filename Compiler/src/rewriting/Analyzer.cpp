@@ -51,7 +51,7 @@ void Analyzer::labelStratified(std::vector<int>& stratLabel,const std::vector<st
                 //no component that contains predicated defined by P.P. in head may be stratified
                 for(auto& head : rule->getHead()){
                     if(predicatesDefinedInPosCycleProgram.count(head.getPredicateName())){
-                       stratified = false; 
+                       stratified = false;
                     }
                 }
                 const std::vector<const aspc::Formula*>* body = &rule->getFormulas();
@@ -531,50 +531,61 @@ void Analyzer::buildPrograms(const std::vector<std::vector<int>>& scc,const std:
     eagerLabel.clear();
     std::cout << "Building programs"<<std::endl;
     while (componentId >= 0){
+        //component is marked as EAGER and it defines some predicate of PosProgram then no rule can go in datalog
+        bool compDefinesPosProgramPredicates = false;
+        for(unsigned i = 0; i < scc[i].size(); ++i){
+                if(predicatesDefinedInPosCycleProgram.count(dependencyManager.getPredicateName(scc[componentId][i])))
+                    compDefinesPosProgramPredicates = true;
+        }
         for(int predicateId : scc[componentId]){
             std::string predicate = dependencyManager.getPredicateName(predicateId);
             auto rulesForPredicate = program.getRulesForPredicate(predicate);
             for(int ruleId : rulesForPredicate){
                 const aspc::Rule* rule = &program.getRule(ruleId);
                 if(sccLabel[componentId] == TYPE_EAGER){
-                    std::vector<int> formulaLabeling(rule->getFormulas().size(),UNK_FORMULA_LABEL);
-                    bool fullDatalog = findMaximalDatalogBody(rule,ruleId,sccLabel,predToComponent,formulaLabeling);
+                    if(compDefinesPosProgramPredicates){
+                        eagerPrg.addRule(*rule);
+                        eagerLabel.push_back(inputLabel[ruleId]);
+                    }else{
+                        std::vector<int> formulaLabeling(rule->getFormulas().size(),UNK_FORMULA_LABEL);
+                        bool fullDatalog = findMaximalDatalogBody(rule,ruleId,sccLabel,predToComponent,formulaLabeling);
 
-                    if(fullDatalog)
-                        datalogPrg.addRule(*rule);
-                    else{
-                        bool datalogAggr = false;
-                        unsigned datalogLit   = 0;
-                        const aspc::Literal* firstEDB=NULL;
-                        for(unsigned i=0; i<rule->getFormulas().size();i++){
-                            const aspc::Formula* f = rule->getFormulas().at(i);
-                            if(formulaLabeling[i] == DATALOG_FORMULA){
-                                if(f->isLiteral()) {
-                                    datalogLit++;
-                                    if(firstEDB == NULL){
-                                        firstEDB = (const aspc::Literal*)f;
+                        if(fullDatalog)
+                            datalogPrg.addRule(*rule);
+                        else{
+                            bool datalogAggr = false;
+                            unsigned datalogLit   = 0;
+                            const aspc::Literal* firstEDB=NULL;
+                            for(unsigned i=0; i<rule->getFormulas().size();i++){
+                                const aspc::Formula* f = rule->getFormulas().at(i);
+                                if(formulaLabeling[i] == DATALOG_FORMULA){
+                                    if(f->isLiteral()) {
+                                        datalogLit++;
+                                        if(firstEDB == NULL){
+                                            firstEDB = (const aspc::Literal*)f;
+                                        }
                                     }
+                                    else if(f->containsAggregate()) datalogAggr = true;
                                 }
-                                else if(f->containsAggregate()) datalogAggr = true;
                             }
-                        }
-                        bool projection=false;
-                        if(datalogLit == 1){
-                            assert(firstEDB != NULL);
-                            std::unordered_set<std::string> headVars;
-                            aspc::Literal(false,rule->getHead()[0]).addVariablesToSet(headVars);
-                            if(!firstEDB->isBoundedLiteral(headVars)){
-                                projection=true;
+                            bool projection=false;
+                            if(datalogLit == 1){
+                                assert(firstEDB != NULL);
+                                std::unordered_set<std::string> headVars;
+                                aspc::Literal(false,rule->getHead()[0]).addVariablesToSet(headVars);
+                                if(!firstEDB->isBoundedLiteral(headVars)){
+                                    projection=true;
+                                }
                             }
-                        }
-                        if(datalogAggr || projection || datalogLit > 1){
-                            rewriteWithJoin(rule,ruleId,formulaLabeling,false);
-                            remappingBodyLabeling[eagerLabel.size()-1]=ruleId;
-                        }else{
-                            joinRuleTerms.erase(ruleId);
-                            remappingBodyLabeling[eagerLabel.size()]=ruleId;
-                            eagerPrg.addRule(*rule);
-                            eagerLabel.push_back(inputLabel[ruleId]);
+                            if(datalogAggr || projection || datalogLit > 1){
+                                rewriteWithJoin(rule,ruleId,formulaLabeling,false);
+                                remappingBodyLabeling[eagerLabel.size()-1]=ruleId;
+                            }else{
+                                joinRuleTerms.erase(ruleId);
+                                remappingBodyLabeling[eagerLabel.size()]=ruleId;
+                                eagerPrg.addRule(*rule);
+                                eagerLabel.push_back(inputLabel[ruleId]);
+                            }
                         }
                     }
                 }

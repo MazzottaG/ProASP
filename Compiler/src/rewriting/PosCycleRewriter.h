@@ -12,17 +12,19 @@ private:
     aspc::Program propagatorProgram;
     DependencyManager dependencyManager;
     std::vector<std::vector<int>> sccs;
-    std::unordered_set<std::string> recursivePredicates;
-    bool crossComponentPredicatesAppearsInConstraint(const aspc::Rule&) const;
+    //std::unordered_set<std::string> recursivePredicates;
+    std::set<std::string> predicatesDefinedInPosCycleProgram;
+    bool crossComponentPredicatesAppearsInConstraint(const aspc::Rule&);
+    bool constraintPredicatesBoundByExternalPreds(const aspc::Rule&);
     void rewriteComponentRulesAsConstraint();
     void rewriteConstraintsAsGeneratorRules();
     void rewriteConstraintAsGeneratorsForPredicate(const aspc::Rule*, unsigned);
     void rewriteComponentRuleAsConstraint(const aspc::Rule*);
-    void splitGeneratorAndPropagatorProgram();
+    void buildPropagatorProgram();
 
 
 public:
-    void crossComponentPredicatesAppearInConstraintForProgram(const aspc::Program& )const;
+    void crossComponentPredicatesAppearInConstraintForProgram(const aspc::Program& );
     PosCycleRewriter(){};
     void rewrite(const aspc::Program*);
     const aspc::Program& getGeneratorProgram() const;
@@ -30,6 +32,7 @@ public:
     const std::unordered_map<std::string,unsigned> getPredicateToId() const;
     const std::vector<std::string> getIdToPredicate() const;
     std::set<std::string> getPredicatesDefinedInPosCycleProgram();
+    std::unordered_set<int> removePredicatesFromConstrID;
 };
 
 #endif /*POSCYCLEPROGRAM*/
