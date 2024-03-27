@@ -25,9 +25,12 @@ class LazyPropagatorCompiler{
         //compile scc of pos Cycle program
         void compileSCC(std::vector<int>, unsigned);
         //compile propagators for constraints is pos cycle Program
-        void compileConstraints();
-        void computePropagatorOrder();
-        void openPropagatorFile(bool, unsigned);
+        //void compileConstraints();
+        //void computePropagatorOrder();
+        void openPropagatorFile(unsigned);
         void closePropagatorFile();
+        void compileComponentWatched(std::vector<int> scc, unsigned index);
+        void compileRuleWatcher(unsigned, std::unordered_map<std::string, int>&);
+
 };
 #endif /*LAZYPROPAGATORCOMPILER*/

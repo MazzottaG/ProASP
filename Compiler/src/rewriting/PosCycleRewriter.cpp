@@ -4,8 +4,8 @@
 void PosCycleRewriter::rewrite(const aspc::Program* prg){
     this->program = prg;
     if(!program->isStratified()){
-        std::cout <<"Lazy propagator can only work with stratified programs";
-        exit(1);
+        std::cout <<"Lazy propagator can only work with stratified programs\n";
+        exit(180);
     }
     dependencyManager.buildDependecyGraph(*program);
     sccs = dependencyManager.getSCC();
@@ -24,7 +24,7 @@ void PosCycleRewriter::rewrite(const aspc::Program* prg){
     // }
     predicatesDefinedInPosCycleProgram = program->getHeadPredicates();
     rewriteConstraintsAsGeneratorRules();
-    rewriteComponentRulesAsConstraint();
+    //rewriteComponentRulesAsConstraint();
     buildPropagatorProgram();
 }
 
@@ -41,8 +41,8 @@ void PosCycleRewriter::rewriteConstraintsAsGeneratorRules(){
     //except when external predicates (predicates not define in P.P.) bind all the variables
     for(const aspc::Rule& rule : program->getRules()){
         if(rule.isConstraint() && crossComponentPredicatesAppearsInConstraint(rule)){
-            std::cout << "Constraints cannot contain predicates defined by two different sccs of the positive cycle program\n";
-            exit(1);
+            std::cout << "Constraints cannot contain predicates defined by two different sccs of the positive cycle program\nIn case this is needed, all variables must be bound by predicates not defined in positive cycle program\n";
+            exit(180);
         }
             
     }
@@ -63,7 +63,7 @@ void PosCycleRewriter::crossComponentPredicatesAppearInConstraintForProgram(cons
         if(rule.isConstraint()){
             if(crossComponentPredicatesAppearsInConstraint(rule)){
                 std::cout <<  "Constraints have literals in their body that belong to two different sccs of the positive cycle program\n";
-                exit(1);
+                exit(180);
             }  
         }
     }
@@ -78,7 +78,7 @@ bool PosCycleRewriter::crossComponentPredicatesAppearsInConstraint(const aspc::R
                     sccsForConstraint.insert(i);
                     if(sccsForConstraint.size() > 1){
                         if(!constraintPredicatesBoundByExternalPreds(constraint)) return true;
-                        else removePredicatesFromConstrID.insert(constraint.getRuleId());
+                        //else removePredicatesFromConstrID.insert(constraint.getRuleId());
                     }
                 }
             }
@@ -101,6 +101,16 @@ bool PosCycleRewriter::constraintPredicatesBoundByExternalPreds(const aspc::Rule
             }
         }
     }
+
+    //add bound vars from arithmetic relations
+    for(const aspc::ArithmeticRelation& rel : constraint.getArithmeticRelations())
+    {
+        if(rel.isBoundedValueAssignment(externalPredicatesVariables)){
+            std::string assignedVar =  rel.getAssignedVariable(externalPredicatesVariables);
+            externalPredicatesVariables.insert(assignedVar);
+        }
+    }
+    
     for(const std::string& var : posPredicatesVariables){
         if(!externalPredicatesVariables.count(var))
             return false;
@@ -142,7 +152,10 @@ void PosCycleRewriter::rewriteConstraintAsGeneratorsForPredicate(const aspc::Rul
 
     for(unsigned i = 0; i < rule->getArithmeticRelations().size();i++){       
         ineqs.push_back(rule->getArithmeticRelations().at(i));
-            
+        if(rule->getArithmeticRelations().at(i).isBoundedValueAssignment(posBodyVars)){
+            std::string assignedVar =  rule->getArithmeticRelations().at(i).getAssignedVariable(posBodyVars);
+            posBodyVars.insert(assignedVar);
+        }
     }
 
     for(unsigned i = 0; i < rule->getArithmeticRelationsWithAggregate().size();i++){     
@@ -227,7 +240,7 @@ void PosCycleRewriter::rewriteComponentRuleAsConstraint(const aspc::Rule* rule){
 void PosCycleRewriter::buildPropagatorProgram(){
     for(const aspc::Rule& rule : program->getRules()){
         if(!rule.isConstraint()){
-            bool toAdd = true;
+            //bool toAdd = true;
             propagatorProgram.addRule(rule);
             // for(auto& pred : rule.getHead()){
             //     //if(recursivePredicates.count(pred.getPredicateName()) == 0){

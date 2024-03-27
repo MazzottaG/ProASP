@@ -93,6 +93,7 @@ class Rewriter{
         void addOriginalConstraint();
         void computeGlobalPredicates();
         void addToGroundRule(const aspc::Rule&,std::vector<int>&,Analyzer&);
+        void addToGenerateRule(const aspc::Rule& r, std::vector<int>& generatorRuleLabel);
         void rewriteGroundedAggregate(const aspc::Rule& r, Analyzer& analyzer, GroundedAggrData& data);
         void addDomainRule(std::vector<int>&);
         void addSubSetSumRule(std::vector<int>&);

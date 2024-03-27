@@ -21,7 +21,7 @@ class ProgramReader{
         void rewriteGroundingPredicate(aspc::Program& program, std::vector<bool>& currenLabel,std::vector<std::string>& idToPredicate,std::unordered_map<std::string,unsigned>& predicateToId);
         const aspc::Program& getInputProgram(){ return rewrittenProgram;}
         const aspc::Program& getPosCycleProgram(){ return specialListener.getProgram();}
-        const aspc::Program& getPosCycleGeneratorProgram(){ return *posCycleProgram;}
+        const aspc::Program& getPosCycleGeneratorProgram(){ return posCycleRewriter.getGeneratorProgram();}
         const aspc::Program& getPosCyclePropagatorProgram(){ return *posCyclePropagatorProgram;}
         const std::vector<bool>& getInputProgramLabel(){ return rewrittenRuleLabel;}
         const std::unordered_set<std::string>& getOriginalPredicates(){ return originalPredicates;}

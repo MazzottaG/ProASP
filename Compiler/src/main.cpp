@@ -9,9 +9,11 @@
 int main(int argc, char *argv[])
 {
 	ProgramReader reader(argc,argv);
-	const aspc::Program* prgDatalogPosCycle = &reader.getPosCycleGeneratorProgram();
+	const aspc::Program* prgDatalogPosCycle = &reader.getPosCycleProgram();
+	const aspc::Program* prgGeneratorPosCycle = &reader.getPosCycleGeneratorProgram();
 	const aspc::Program* prgPropagatorPosCycle = &reader.getPosCyclePropagatorProgram();
 	std::set<std::string> predicatesDefinedByPosProgram = prgDatalogPosCycle->getHeadPredicates();
+	
 	Analyzer analyzer(reader.getInputProgram(),reader.getInputProgramLabel(),reader.isFullGrounding(), predicatesDefinedByPosProgram);
 	aspc::Program eagerProgram(analyzer.getEager());
 	std::vector<bool> eagerLabels(analyzer.getEagerLabel());
@@ -59,6 +61,9 @@ int main(int argc, char *argv[])
             if(!eagerProgram.getRule(ruleId).containsAggregate()) traceToGroundLabeledRule[generatorRuleLabel.size()]=ruleId;
 			r.addToGroundRule(eagerProgram.getRule(ruleId),generatorRuleLabel,analyzer);
 		}
+	}
+	for(unsigned i = 0; i < prgGeneratorPosCycle->getRulesSize(); ++i){
+		r.addToGenerateRule(prgGeneratorPosCycle->getRules().at(i), generatorRuleLabel);
 	}
 	r.addDomainRule(generatorRuleLabel);
 	r.addSubSetSumRule(generatorRuleLabel);

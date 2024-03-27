@@ -1,5 +1,5 @@
-#ifndef POSCYCLEPROGRAM_H
-#define POSCYCLEPROGRAM_H
+#ifndef POSCYCLEREWRITER_H
+#define POSCYCLEREWRITER_H
 
 #include "../language/Program.h"
 #include "../compilers/DependencyManager.h"
@@ -32,7 +32,7 @@ public:
     const std::unordered_map<std::string,unsigned> getPredicateToId() const;
     const std::vector<std::string> getIdToPredicate() const;
     std::set<std::string> getPredicatesDefinedInPosCycleProgram();
-    std::unordered_set<int> removePredicatesFromConstrID;
+    //std::unordered_set<int> removePredicatesFromConstrID;
 };
 
-#endif /*POSCYCLEPROGRAM*/
+#endif /*POSCYCLEREWRITER*/

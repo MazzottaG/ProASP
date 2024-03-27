@@ -220,6 +220,10 @@ void Rewriter::addDomainRule(std::vector<int>& generatorRuleLabel){
         generatorRuleLabel.push_back(DOMAIN_RULE);
     }
 }
+void Rewriter::addToGenerateRule(const aspc::Rule& r, std::vector<int>& generatorRuleLabel){
+        generatorProgram.addRule(r);
+        generatorRuleLabel.push_back(TO_GENERATE);
+}
 void Rewriter::addToGroundRule(const aspc::Rule& r,std::vector<int>& generatorRuleLabel, Analyzer& analyzer){
     if(r.containsAggregate()){
         GroundedAggrData data;
