@@ -692,6 +692,17 @@ void Analyzer::splitProgram(){
 }
 
 Analyzer::Analyzer(const aspc::Program& p,const std::vector<bool>& labels,bool fullgrounded, std::set<std::string>& predsDefinedByPosProgram):program(p),inputLabel(labels),fullGrounding(fullgrounded), predicatesDefinedInPosCycleProgram(predsDefinedByPosProgram){
+    for(const aspc::Rule& rule : p.getRules()){
+        //std::vector<std::string> predicate 
+        if(!rule.isConstraint()){
+            for(const aspc::Literal& lit : rule.getBodyLiterals()){
+                if(std::find(predicatesDefinedInPosCycleProgram.begin(), predicatesDefinedInPosCycleProgram.end(), lit.getPredicateName()) != predicatesDefinedInPosCycleProgram.end()){
+                    std::cout << "Predicates defined in positive program cannot appear inside the body of rules of to-compile or to-ground program.\nThink about moving the rule inside positive cycle program\n";
+                    exit(180);
+                }
+            }
+        }
+    }
     splitProgram();
 }
 const std::vector<bool>& Analyzer::getEagerLabel()const {return eagerLabel;}

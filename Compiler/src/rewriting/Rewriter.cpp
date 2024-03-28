@@ -14,6 +14,14 @@ void Rewriter::addOriginalConstraint(){
         }
     }
 }
+void Rewriter::addOriginalConstraintForProgram(const aspc::Program& prg){
+    for(unsigned i=0; i<prg.getRulesSize();i++){
+        auto rule = prg.getRule(i);
+        if(rule.isConstraint()){
+            propagatorsProgram.addRule(rule);
+        }
+    }
+}
 void Rewriter::rewriteGroundedAggregate(const aspc::Rule& r, Analyzer& analyzer, GroundedAggrData& data){
     
     // bodyVariables contains variables appearing in the body of r without the aggregate

@@ -91,6 +91,7 @@ class Rewriter{
         void rewriteAggregates();
         void computeCompletion();
         void addOriginalConstraint();
+        void addOriginalConstraintForProgram(const aspc::Program& prg);
         void computeGlobalPredicates();
         void addToGroundRule(const aspc::Rule&,std::vector<int>&,Analyzer&);
         void addToGenerateRule(const aspc::Rule& r, std::vector<int>& generatorRuleLabel);

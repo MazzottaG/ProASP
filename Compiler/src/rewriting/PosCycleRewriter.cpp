@@ -1,12 +1,16 @@
 #include "PosCycleRewriter.h"
 
 
-void PosCycleRewriter::rewrite(const aspc::Program* prg){
+void PosCycleRewriter::rewrite(const aspc::Program* prg, const aspc::Program* constraintsProgram){
     this->program = prg;
     if(!program->isStratified()){
         std::cout <<"Lazy propagator can only work with stratified programs\n";
         exit(180);
     }
+    for(const aspc::Rule& rule : constraintsProgram->getRules()){
+        assert(rule.isConstraint());
+    }
+
     dependencyManager.buildDependecyGraph(*program);
     sccs = dependencyManager.getSCC();
     
@@ -24,6 +28,15 @@ void PosCycleRewriter::rewrite(const aspc::Program* prg){
     // }
     predicatesDefinedInPosCycleProgram = program->getHeadPredicates();
     rewriteConstraintsAsGeneratorRules();
+    //rewrite constraints added from to-ground and to-compile program as generator rules
+    for(const aspc::Rule& rule : constraintsProgram->getRules()){
+        for(const aspc::Literal& lit : rule.getBodyLiterals()){
+            if(predicatesDefinedInPosCycleProgram.count(lit.getPredicateName())){
+                rewriteConstraintAsGeneratorsForPredicate(&rule, dependencyManager.getPredicateId(lit.getPredicateName()));
+            }
+        }
+    }
+
     //rewriteComponentRulesAsConstraint();
     buildPropagatorProgram();
 }

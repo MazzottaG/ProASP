@@ -26,7 +26,7 @@ class ProgramReader{
         const std::vector<bool>& getInputProgramLabel(){ return rewrittenRuleLabel;}
         const std::unordered_set<std::string>& getOriginalPredicates(){ return originalPredicates;}
         bool isFullGrounding()const {return fullGrounding;}
-        void rewriteRuleForComponent();
+        void rewriteRuleForComponent(std::set<std::string>);
         std::pair<std::unordered_map<std::string,std::string>,bool> getVariableMapping(const aspc::Rule* r1,const aspc::Rule* r2)const;
 private:
 
@@ -44,6 +44,7 @@ private:
 
         DependencyManager dependencyManager;
         aspc::Program rewrittenProgram;
+        aspc::Program constraintsPosP;
         const aspc::Program* posCycleProgram;
         const aspc::Program* posCyclePropagatorProgram;
         PosCycleRewriter posCycleRewriter;

@@ -71,7 +71,7 @@ int main(int argc, char *argv[])
 
 	r.getGeneratorProgram().print();
 	std::cout<<"-----\n";
-
+	r.addOriginalConstraintForProgram(*prgDatalogPosCycle);
 	std::cout<<"Propagator Program\n";
 	std::cout<<"-----\n";
 	r.getPropagatorsProgram().print();
@@ -208,14 +208,20 @@ int main(int argc, char *argv[])
 	lazyCompiler.compile();
 	PropagatorCompiler propCompiler (r.getPropagatorsProgram(),executablePath,&dc,predicateToStruct);
 	propCompiler.compile();
-	LazyPropagatorCompiler lazyPropCompiler(reader.getPosCycleProgram(), executablePath, &dc, predicateToStruct);
-	//lazyPropCompiler.compile();
+	LazyPropagatorCompiler lazyPropCompiler(*prgPropagatorPosCycle, executablePath, &dc, predicateToStruct);
+	lazyPropCompiler.compile();
 	
 	//add predicates of posCycle program to predicates in AuxMapHandler
 	std::vector<std::string> predicateNames = r.getPredicateNames();
-	for(auto& p : prgDatalogPosCycle->getPredicates()){
-		predicateNames.push_back(p.first);
+	for(auto& p : prgDatalogPosCycle->getHeadPredicates()){
+		if(std::find(predicateNames.begin(), predicateNames.end(), p) == predicateNames.end())
+			predicateNames.push_back(p);
 	}
+	for(auto& p : prgDatalogPosCycle->getBodyPredicates()){
+		if(std::find(predicateNames.begin(), predicateNames.end(), p) == predicateNames.end())
+			predicateNames.push_back(p);
+	}
+	
 	dc.buildAuxMapHandler(executablePath,predicateNames,predicateToStruct);
 }
 
