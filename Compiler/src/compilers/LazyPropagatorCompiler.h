@@ -1,5 +1,6 @@
 #ifndef LAZYPROPAGATORCOMPILER_H
 #define LAZYPROPAGATORCOMPILER_H
+#include<algorithm>
 #include "../language/Program.h"
 #include "DataStructureCompiler.h"
 #include "DependencyManager.h"
@@ -14,11 +15,14 @@ class LazyPropagatorCompiler{
         //path to executable
         std::string execPath;
         //defines the order in which propagators will be called by propagator
-        std::vector<unsigned> propagatorOrder;
+        //std::vector<unsigned> propagatorOrder;
         DependencyManager depManager;  
         std::ofstream outfile;
         Indentation ind;
-    
+        //ordering of rules for every predicate of the corresponding component
+        std::unordered_map<unsigned, std::vector<std::vector<unsigned>>> ruleOrderings;
+        std::vector<std::string> propagatorNames;
+        std::vector<unsigned> findNonExitRule(std::vector<int>, std::vector<unsigned>);
     public:
         LazyPropagatorCompiler(const aspc::Program&, std::string&, DataStructureCompiler*, const std::unordered_map<std::string, std::string>&);
         void compile();
@@ -31,6 +35,8 @@ class LazyPropagatorCompiler{
         void closePropagatorFile();
         void compileComponentWatched(std::vector<int> scc, unsigned index);
         void compileRuleWatcher(unsigned, std::unordered_map<std::string, int>&);
-
+        void compileFixPointComputation(std::vector<int> scc, std::vector<unsigned>);
+        void compileRuleByStarter(unsigned, const aspc::Rule&, unsigned, const std::set<std::string>&, bool);
+        void compileLazyPropClass();
 };
 #endif /*LAZYPROPAGATORCOMPILER*/

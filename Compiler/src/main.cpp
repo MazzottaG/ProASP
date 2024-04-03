@@ -147,7 +147,7 @@ int main(int argc, char *argv[])
 		}
 	}
 	
-	for(const aspc::Program* prg : {prgProp,prgLazy,prgDatalog})
+	for(const aspc::Program* prg : {prgProp,prgLazy,prgDatalog, prgPropagatorPosCycle})
 		for(unsigned ruleId = 0; ruleId<prg->getRulesSize(); ruleId++){
 			const aspc::Rule* rule = &prg->getRule(ruleId);
 			const std::vector<aspc::Atom>* head = &rule->getHead();
