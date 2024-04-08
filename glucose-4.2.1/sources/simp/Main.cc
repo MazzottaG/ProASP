@@ -65,6 +65,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "../simp/solver/InstanceExpansion.h"
 #include "../simp/solver/ModelExpansion.h"
 #include "../simp/solver/Propagator.h"
+#include "../simp/solver/LazyPropagator.h"
 #include "../simp/solver/AuxMapHandler.h"
 #include "../simp/solver/SatProgramBuilder.h"
 #include "../simp/utils/SharedFunctions.h"
@@ -488,6 +489,22 @@ int main(int argc, char** argv)
             TupleFactory::getInstance().initConstraintGen();
             std::vector<int> falseAtoms;
             Generator::getInstance().generate(&S,falseAtoms);
+            LazyPropagator lazyProp;
+            lazyProp.computeFixpoint();
+
+            unsigned lastTupleId = TupleFactory::getInstance().getLastId();
+            std::cout <<"GENERATED TUPLES:\n";
+            for(unsigned i = 0; i <= lastTupleId; ++i){
+                AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(i));
+                
+            }
+
+            for(unsigned i = 0; i <= lastTupleId; ++i){
+                //std::cout << "From gen " << TupleFactory::getInstance().isTupleFromGen(i) << "\n";
+                lazyProp.explainTrueLiteral(i);
+            }
+
+            exit(1);
             for(AggregatePropagator* prop : Generator::getInstance().collectAggregatePropagators()){
                 // prop->printCurrentStatus();
                 Propagator::getInstance().addPropagator(prop);

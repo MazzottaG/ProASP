@@ -77,7 +77,7 @@ class TupleFactory{
         std::unordered_map<int,std::set<int>> auxAtomsForLiteral;
         std::unordered_map<int,std::set<int>> atomsForLiteral;
         std::unordered_set<int> trackedForSupport;
-
+        std::unordered_set<int> tuplesFromGen;
         // std::vector<std::vector<AbstractPropagator*>> negativeWatcher;
         // std::vector<std::vector<AbstractPropagator*>> positiveWatcher;
         // static std::vector<AbstractPropagator*> EMPTY_WATCHER;
@@ -501,7 +501,13 @@ class TupleFactory{
                 return internalIDToTuple[id];
             return NULL;
         }
-
+        void addTupleFromPP(unsigned id){
+            tuplesFromGen.insert(id);
+        }
+        bool isTupleFromGen(unsigned id){
+            return std::find(tuplesFromGen.begin(), tuplesFromGen.end(), id) != tuplesFromGen.end();
+        
+        }
         void printModelAsConstraint()const {
             // std::cout<<"Tuple factory"<<std::endl;
             // for(auto tuple : storage){

@@ -30,8 +30,13 @@ void LazyPropagatorCompiler::compileSCC(std::vector<int> scc, unsigned index){
             rulesForComponent.push_back(rule);
         }
     }
-    compileFixPointComputation(scc,rulesForComponent);
-
+    std::set<std::string> componentPredicateNames;
+    for(unsigned predId : scc){
+        componentPredicateNames.insert(depManager.getPredicateName(predId));
+    }
+    std::vector<unsigned> nonExitRules = findNonExitRule(scc, rulesForComponent);
+    compileFixPointComputation(scc,rulesForComponent, componentPredicateNames, nonExitRules);
+    compileExplainTrue(scc, rulesForComponent, componentPredicateNames, nonExitRules);
     //starters:
     //a(X,Y) :- b(X), d(X), c(X,Y).
     //given that component is a, b, d
@@ -44,22 +49,23 @@ void LazyPropagatorCompiler::compileSCC(std::vector<int> scc, unsigned index){
     closePropagatorFile();
 }
 
-void LazyPropagatorCompiler::compileFixPointComputation(std::vector<int> scc, std::vector<unsigned> rules){
+void LazyPropagatorCompiler::compileFixPointComputation(std::vector<int>& scc, std::vector<unsigned>& rules, std::set<std::string>& componentPredicateNames, std::vector<unsigned>& nonExitRules){
     outfile << ind++ << "void computeFixpoint(){\n";
     outfile << ind++ << "{\n";
-    std::set<std::string> componentPredicateNames;
-    for(unsigned predId : scc){
-        componentPredicateNames.insert(depManager.getPredicateName(predId));
-    }
-
-
+    //std::cout <<"Orderings: \n";
     for(unsigned ruleID : rules){
         const aspc::Rule& rule = program.getRule(ruleID);
         auto res = auxMapCompiler->declareGeneratorDataStructure(rule, componentPredicateNames);
         ruleOrderings.emplace(ruleID, res.first);
-
+        //std::cout <<"Rule ID: " << ruleID << "\n";
+        // for(int i = 0; i< res.first.size(); ++i){
+        //     std::cout <<"Starter: " << i << "\n\t";
+        //     for(int j = 0; j< res.first.at(i).size(); ++j){
+        //         std::cout << res.first.at(i).at(j)<< " ";
+        //     }
+        //     std::cout <<std::endl;
+        // }
     }
-    std::vector<unsigned> nonExitRules = findNonExitRule(scc, rules);
     bool isRecursive = nonExitRules.size() > 0;
     //print stack
     if(isRecursive){
@@ -68,7 +74,7 @@ void LazyPropagatorCompiler::compileFixPointComputation(std::vector<int> scc, st
     //compile exit and non exit rule to be executed once with default starter
     for(unsigned ruleID : rules){
         const aspc::Rule& rule = program.getRule(ruleID);
-        compileRuleByStarter(ruleID, rule, rule.getFormulas().size(), componentPredicateNames, isRecursive);
+        compileRuleByStarter(ruleID, rule, rule.getFormulas().size(), componentPredicateNames, isRecursive, true);
     }
     if(isRecursive){
         outfile << ind++ << "while(!stack.empty()){\n";
@@ -84,7 +90,9 @@ void LazyPropagatorCompiler::compileFixPointComputation(std::vector<int> scc, st
             if(f->isLiteral() && f->isPositiveLiteral()){
                 const aspc::Literal* lit = (const aspc::Literal*)f;
                 if(std::find(componentPredicateNames.begin(), componentPredicateNames.end(), lit->getPredicateName()) != componentPredicateNames.end()){
-                    compileRuleByStarter(ruleID, rule, formulaID, componentPredicateNames, isRecursive);
+                    outfile << ind++ <<"if(tuple_0->getPredicateName() == AuxMapHandler::getInstance().get_" << lit->getPredicateName() <<"()){\n";
+                    compileRuleByStarter(ruleID, rule, formulaID, componentPredicateNames, isRecursive, true);
+                    outfile << --ind <<"}\n";
                 }
             }
             formulaID++;
@@ -96,6 +104,33 @@ void LazyPropagatorCompiler::compileFixPointComputation(std::vector<int> scc, st
     //scc scope
     outfile << --ind << "}\n";
 
+    outfile << --ind << "}\n";
+}
+
+void LazyPropagatorCompiler::compileExplainTrue(std::vector<int>& scc, std::vector<unsigned>& rules, std::set<std::string>& componentPredicateNames, std::vector<unsigned>& nonExitRules){
+    
+    for(unsigned ruleID : rules){
+        const aspc::Rule& rule = program.getRule(ruleID);
+       // rule.print();
+        //std::cout <<"\n";
+        auto res = auxMapCompiler->declareLazyPropagatorDataStructure(rule);
+        ruleOrderingsByHead.emplace(ruleID, res);
+
+    }
+    outfile << ind++ << "void explainTrueLiteral(int id){\n";
+    outfile << ind << "std::vector<int> toExplain;\n";
+    outfile << ind << "std::unordered_set<int> tupleReasons;\n";
+    outfile << ind << "toExplain.push_back(id);\n";
+    outfile << ind++ << "while(!toExplain.empty()){\n";
+    outfile << ind << "Tuple* tuple_0 = TupleFactory::getInstance().getTupleFromInternalID(toExplain.back());\n";
+    outfile << ind << "toExplain.pop_back();\n"; 
+    for(unsigned ruleID : rules){
+        const aspc::Rule& rule = program.getRule(ruleID);
+        outfile << ind++ <<"if(tuple_0->getPredicateName() == AuxMapHandler::getInstance().get_" << rule.getHead().at(0).getPredicateName() <<"()){\n";
+        compileRuleByStarter(ruleID, rule, -1, componentPredicateNames, nonExitRules.size() > 0, false);
+        outfile << --ind <<"}\n";
+    }
+    outfile << --ind << "}\n"; 
     outfile << --ind << "}\n";
 }
 
@@ -116,48 +151,100 @@ std::vector<unsigned> LazyPropagatorCompiler::findNonExitRule(std::vector<int> s
     return nonExit;
 }
 
-void LazyPropagatorCompiler::compileRuleByStarter(unsigned id, const aspc::Rule& rule, unsigned starter, const std::set<std::string>& componentPreds, bool isRecursive){
-    //std::cout <<"compiling rule: ";
+void LazyPropagatorCompiler::compileRuleByStarter(unsigned id, const aspc::Rule& rule, int starter, const std::set<std::string>& componentPreds, bool isRecursive, bool fixpointCompilation){
+    std::cout <<"compiling rule: ";
     rule.print();
     std::cout <<"\n";
     int closingPars = 0;
     outfile << ind++ << "{\n";
     const std::vector<const aspc::Formula*> formulas = rule.getFormulas();
     std::unordered_set<std::string> boundVars;
-
-    outfile << ind << "std::vector<std::pair<std::pair<const Tuple *, bool>, int>> insertResults;\n";
+    std::vector<int> declaredTuples;
+    //when evaluating rule by started the zero tuple has been declared outside the compileRule
+    if(starter == -1 || starter == formulas.size())
+        declaredTuples.push_back(0);
+    if(fixpointCompilation)
+        outfile << ind << "std::vector<std::pair<std::pair<const Tuple *, bool>, int>> insertResults;\n";
     //when starter is a body literal that literal is not in the ordered body formulas
-    int numberOfFormulas = starter == rule.getFormulas().size() ? ruleOrderings[id][starter].size() : ruleOrderings[id][starter].size() +1;
-    for(unsigned i = 0; i < numberOfFormulas; ++i){
-        const aspc::Formula* formula = formulas[numberOfFormulas == rule.getFormulas().size() ? i : i-1];
+    //-1 is intended as head starter
+    int numberOfFormulas;
+    if(starter != -1){
+        numberOfFormulas = rule.getFormulas().size();
+    }
+    else{
+        numberOfFormulas = rule.getFormulas().size() +1; 
+    }
+    //std::cout <<"number of formulas is " << numberOfFormulas << std::endl;
+    for(int i = 0; i < numberOfFormulas; ++i){
+        const aspc::Formula* formula = nullptr;
+        if(starter == -1){
+            //assuming only one head is used
+            if(i > 0){
+                formula = formulas[ruleOrderingsByHead[id][0][i-1]];
+                //std::cout <<"Formula: "<< ruleOrderingsByHead[id][0][i-1] << std::endl;
+            }
+        }else if(starter == rule.getFormulas().size()){
+            formula = formulas[ruleOrderings[id][starter][i]];
+            //std::cout <<"Formula: "<< ruleOrderings[id][starter][i] << std::endl;
+        }else{
+            if(i > 0){
+                formula = formulas[ruleOrderings[id][starter][i-1]];
+                //std::cout <<"Formula: "<< ruleOrderings[id][starter][i-1] << std::endl;
+            }else{
+                formula = formulas[starter];
+            }
+        }
         
-        if(formula->isLiteral()){
+        if(formula == nullptr || formula->isLiteral()){
             if(i == 0){
-                outfile << ind << "bool undefTuple_" << i << " = false;\n";
+                outfile << ind << "bool undefTuple_0 = false;\n";
             }
             else{
-                outfile << ind << "bool undefTuple_" << i << " = undefTuple_" << i-1 << ";\n";
+                outfile << ind << "bool undefTuple_" << i << " = undefTuple_" << declaredTuples.back() << ";\n";
             }
         }
         //compile starter literal
-        if(starter != formulas.size() && i == 0){
-            const aspc::Literal* lit = (const aspc::Literal*)formula;
-            for (unsigned k = 0; k < lit->getAriety(); k++)
-            {
-                //declare vars
-                if(lit->isVariableTermAt(k)){
-                    outfile << ind << "int "<< lit->getTermAt(k)<< " = tuple_"<<i<<"->at("<<k<<");\n";
-                    boundVars.insert(lit->getTermAt(k));
+        if(starter != formulas.size() && i == 0){     
+            //head starter
+            if(starter == -1){
+                const aspc::Atom& head = rule.getHead().at(0);
+                for (unsigned k = 0; k < head.getAriety(); k++)
+                {
+                    //declare vars
+                    if(head.isVariableTermAt(k)){
+                        outfile << ind << "int "<< head.getTermAt(k)<< " = tuple_"<<i<<"->at("<<k<<");\n";
+                        boundVars.insert(head.getTermAt(k));
+                    }
                 }
             }
+            else{
+                //std::cout <<"Compiling body starter\n";
+                //declared tuple for starter literal in body (tuple_0 is declared outside except for body starter)
+                declaredTuples.push_back(i);
+                const aspc::Literal* lit;
+                lit = (const aspc::Literal*)formula;
+                for (unsigned k = 0; k < lit->getAriety(); k++)
+                {
+                    //declare vars
+                    if(lit->isVariableTermAt(k)){
+                        outfile << ind << "int "<< lit->getTermAt(k)<< " = tuple_"<<i<<"->at("<<k<<");\n";
+                        boundVars.insert(lit->getTermAt(k));
+                    }
+                }
+                
+            }
+            
             outfile << ind << "undefTuple_" << i << " = tuple_0->isUndef();\n";
             outfile << ind++ << "if(tuple_"<<i<<" != NULL){\n";
             closingPars++;
+            if(starter == -1)
+                continue;
         }else{
             if(formula->isLiteral()){
                 const aspc::Literal* lit = (const aspc::Literal*)formula;
                 if(lit->isBoundedLiteral(boundVars)){
                     //bound lit
+                    declaredTuples.push_back(i);
                     outfile << ind << "Tuple* tuple_" << i << " = TupleFactory::getInstance().find({";
                     for (unsigned k = 0; k < lit->getAriety(); k++)
                     {
@@ -204,8 +291,8 @@ void LazyPropagatorCompiler::compileRuleByStarter(unsigned id, const aspc::Rule&
                     closingPars++;
                     outfile << ind << "if(i == tuples_"<<i<<"->end()) i=tuplesU_"<<i<<"->begin();\n";
                     outfile << ind << "if(i == tuplesU_"<<i<<"->end()) break;\n";
+                    declaredTuples.push_back(i);
                     outfile << ind << "Tuple* tuple_"<<i<<" = TupleFactory::getInstance().getTupleFromInternalID(*i);\n";
-
                     outfile << ind++ << "if(tuple_"<<i<<" != NULL){\n";
                     closingPars++;
                     for(unsigned k=0; k<lit->getAriety(); k++){
@@ -232,42 +319,58 @@ void LazyPropagatorCompiler::compileRuleByStarter(unsigned id, const aspc::Rule&
                 }
             }
         }
-        if(i == formulas.size() -1){
+        if(i == numberOfFormulas -1){
             outfile << ind << "//Rule is firing;\n";
         }
     }
     std::vector<aspc::Atom> head = rule.getHead();
-    for(int index=0;index<head.size();index++){
+    for(int index = 0; index < head.size(); index++){
         aspc::Atom* atom = &head[index];
-        outfile << ind << "Tuple* head_"<<index<<"=TupleFactory::getInstance().addNewInternalTuple({";
-        for(unsigned k=0; k<atom->getAriety(); k++){
-            if(k>0) outfile << ",";
-            outfile << (atom->isVariableTermAt(k) || isInteger(atom->getTermAt(k)) ? atom->getTermAt(k) : "ConstantsManager::getInstance().mapConstant(\""+atom->getTermAt(k)+"\")");
-        }
-        outfile << "}, AuxMapHandler::getInstance().get_"<<atom->getPredicateName()<<"(),false);\n";
-        outfile << ind << "std::pair<const Tuple *, bool> insertResult;\n";
-        outfile << ind++ << "if(!TupleFactory::getInstance().isFact(head_"<<index<<"->getId()) && head_" << index << "->isUnknown()){\n";
-        if(isRecursive){
-            if(std::find(componentPreds.begin(), componentPreds.end(), atom->getPredicateName()) != componentPreds.end()){
-                outfile << ind << "stack.push_back(head_" << index << "->getId());\n";
+        if(fixpointCompilation){
+            outfile << ind << "Tuple* head_"<<index<<"=TupleFactory::getInstance().addNewInternalTuple({";
+            
+            for(unsigned k=0; k<atom->getAriety(); k++){
+                if(k>0) outfile << ",";
+                outfile << (atom->isVariableTermAt(k) || isInteger(atom->getTermAt(k)) ? atom->getTermAt(k) : "ConstantsManager::getInstance().mapConstant(\""+atom->getTermAt(k)+"\")");
+            }
+            outfile << "}, AuxMapHandler::getInstance().get_"<<atom->getPredicateName()<<"(),false);\n";
+            outfile << ind << "std::pair<const Tuple *, bool> insertResult;\n";
+            outfile << ind++ << "if(!TupleFactory::getInstance().isFact(head_"<<index<<"->getId()) && head_" << index << "->isUnknown()){\n";
+            outfile << ind << "TupleFactory::getInstance().addTupleFromPP(head_"<<index<<"->getId());\n";
+            if(isRecursive){
+                if(std::find(componentPreds.begin(), componentPreds.end(), atom->getPredicateName()) != componentPreds.end()){
+                    outfile << ind << "stack.push_back(head_" << index << "->getId());\n";
+                }
+
+            }
+            outfile << ind << "AuxMapHandler::getInstance().initTuple(head_" << index << ");\n";
+            outfile << ind++ << "if(undefTuple_" << declaredTuples.back() << "){\n";
+            outfile << ind << "insertResult = head_" << index <<"->setStatus(TruthStatus::Undef);\n";
+            outfile << ind << "insertResults.push_back(std::make_pair(insertResult, LazyPropagator::INSERT_AS_UNDEF));\n";
+            outfile << --ind << "}\n";
+            outfile << ind++ << "else{\n";
+            outfile << ind << "insertResult = head_" << index <<"->setStatus(TruthStatus::True);\n";
+            outfile << ind << "insertResults.push_back(std::make_pair(insertResult, LazyPropagator::INSERT_AS_TRUE));\n";
+            outfile << --ind << "}\n";
+                
+            outfile << --ind << "}\n"; 
+        }else{
+            if(starter == -1){
+                //skip head starter (otherwise tuple will be reason of itself)
+                for(unsigned t = 1; t < declaredTuples.size(); ++t){
+                    outfile << ind++ << "if(!TupleFactory::getInstance().isTupleFromGen(tuple_" << declaredTuples[t] << "->getId()))\n";
+                    outfile << ind << "tupleReasons.insert(tuple_" << declaredTuples[t] << "->getId());\n";
+                    --ind;
+                    outfile << ind << "else toExplain.push_back(tuple_" << declaredTuples[t] << "->getId());\n";
+                }
             }
         }
-        outfile << ind << "AuxMapHandler::getInstance().initTuple(head_" << index << ");\n";
-        outfile << ind++ << "if(undefTuple_" << formulas.size() -1 << "){\n";
-        outfile << ind << "insertResult = head_" << index <<"->setStatus(TruthStatus::Undef);\n";
-        outfile << ind << "insertResults.push_back(std::make_pair(insertResult, LazyPropagator::INSERT_AS_UNDEF));\n";
-        outfile << --ind << "}\n";
-        outfile << ind++ << "else{\n";
-        outfile << ind << "insertResult = head_" << index <<"->setStatus(TruthStatus::True);\n";
-        outfile << ind << "insertResults.push_back(std::make_pair(insertResult, LazyPropagator::INSERT_AS_TRUE));\n";
-        outfile << --ind << "}\n";
-             
-        outfile << --ind << "}\n";                              
+                             
     }
     for (int i = closingPars; i > 0; --i) {
         outfile << --ind << "}//close par\n";
         //just before closing rule scope
-        if(i == 1){
+        if(i == 1 && fixpointCompilation){
             outfile << ind++ << "for(unsigned i = 0; i < insertResults.size(); ++i){\n";
             outfile << ind << "if(insertResults[i].second == LazyPropagator::INSERT_AS_TRUE) AuxMapHandler::getInstance().insertTrue(insertResults[i].first);\n";
             outfile << ind << "else if(insertResults[i].second == LazyPropagator::INSERT_AS_UNDEF) AuxMapHandler::getInstance().insertUndef(insertResults[i].first);\n";

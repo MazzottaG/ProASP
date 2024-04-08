@@ -21,6 +21,7 @@ class LazyPropagatorCompiler{
         Indentation ind;
         //ordering of rules for every predicate of the corresponding component
         std::unordered_map<unsigned, std::vector<std::vector<unsigned>>> ruleOrderings;
+        std::unordered_map<unsigned, std::vector<std::vector<unsigned>>> ruleOrderingsByHead;
         std::vector<std::string> propagatorNames;
         std::vector<unsigned> findNonExitRule(std::vector<int>, std::vector<unsigned>);
     public:
@@ -33,10 +34,11 @@ class LazyPropagatorCompiler{
         //void computePropagatorOrder();
         void openPropagatorFile(unsigned);
         void closePropagatorFile();
-        void compileComponentWatched(std::vector<int> scc, unsigned index);
+        void compileComponentWatched(std::vector<int> , unsigned);
         void compileRuleWatcher(unsigned, std::unordered_map<std::string, int>&);
-        void compileFixPointComputation(std::vector<int> scc, std::vector<unsigned>);
-        void compileRuleByStarter(unsigned, const aspc::Rule&, unsigned, const std::set<std::string>&, bool);
+        void compileFixPointComputation(std::vector<int>& , std::vector<unsigned>&, std::set<std::string>&, std::vector<unsigned>&);
+        void compileExplainTrue(std::vector<int>& , std::vector<unsigned>&, std::set<std::string>&, std::vector<unsigned>&);
+        void compileRuleByStarter(unsigned, const aspc::Rule&, int, const std::set<std::string>&, bool, bool);
         void compileLazyPropClass();
 };
 #endif /*LAZYPROPAGATORCOMPILER*/

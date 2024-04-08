@@ -14,6 +14,11 @@ class LazyPropagator{
                 propagators[i]->computeFixpoint();
             }
         }
+        void explainTrueLiteral(unsigned id){
+            for(int i = 0; i < propagators.size(); ++i){
+                propagators[i]->explainTrueLiteral(id);
+            }
+        }
     static int INSERT_AS_UNDEF;
     static int INSERT_AS_TRUE;
     static int REMOVE_FROM_UNDEF;
