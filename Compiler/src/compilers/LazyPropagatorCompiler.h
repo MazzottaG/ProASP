@@ -37,8 +37,9 @@ class LazyPropagatorCompiler{
         void compileComponentWatched(std::vector<int> , unsigned);
         void compileRuleWatcher(unsigned, std::unordered_map<std::string, int>&);
         void compileFixPointComputation(std::vector<int>& , std::vector<unsigned>&, std::set<std::string>&, std::vector<unsigned>&);
+        void compileCheckLiteralStatus(std::vector<int>&, std::vector<unsigned>&, std::set<std::string>&, std::vector<unsigned>&);
         void compileExplainTrue(std::vector<int>& , std::vector<unsigned>&, std::set<std::string>&, std::vector<unsigned>&);
-        void compileRuleByStarter(unsigned, const aspc::Rule&, int, const std::set<std::string>&, bool, bool);
+        void compileRuleByStarter(unsigned, const aspc::Rule&, int, const std::set<std::string>&, bool, bool, bool);
         void compileLazyPropClass();
 };
 #endif /*LAZYPROPAGATORCOMPILER*/

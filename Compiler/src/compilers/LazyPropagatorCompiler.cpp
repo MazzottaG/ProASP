@@ -35,8 +35,35 @@ void LazyPropagatorCompiler::compileSCC(std::vector<int> scc, unsigned index){
         componentPredicateNames.insert(depManager.getPredicateName(predId));
     }
     std::vector<unsigned> nonExitRules = findNonExitRule(scc, rulesForComponent);
+    
+    for(unsigned ruleID : rulesForComponent){
+        const aspc::Rule& rule = program.getRule(ruleID);
+        auto res = auxMapCompiler->declareGeneratorDataStructure(rule, componentPredicateNames);
+        ruleOrderings.emplace(ruleID, res.first);
+        //std::cout <<"Rule ID: " << ruleID << "\n";
+        // for(int i = 0; i< res.first.size(); ++i){
+        //     std::cout <<"Starter: " << i << "\n\t";
+        //     for(int j = 0; j< res.first.at(i).size(); ++j){
+        //         std::cout << res.first.at(i).at(j)<< " ";
+        //     }
+        //     std::cout <<std::endl;
+        // }
+    }
+
+    for(unsigned ruleID : rulesForComponent){
+        const aspc::Rule& rule = program.getRule(ruleID);
+        //rule.print();
+        //std::cout <<"\n";
+        auto res = auxMapCompiler->declareLazyPropagatorDataStructure(rule);
+        ruleOrderingsByHead.emplace(ruleID, res);
+
+    }
+
     compileFixPointComputation(scc,rulesForComponent, componentPredicateNames, nonExitRules);
+    
+
     compileExplainTrue(scc, rulesForComponent, componentPredicateNames, nonExitRules);
+    compileCheckLiteralStatus(scc, rulesForComponent, componentPredicateNames, nonExitRules);
     //starters:
     //a(X,Y) :- b(X), d(X), c(X,Y).
     //given that component is a, b, d
@@ -53,19 +80,6 @@ void LazyPropagatorCompiler::compileFixPointComputation(std::vector<int>& scc, s
     outfile << ind++ << "void computeFixpoint(){\n";
     outfile << ind++ << "{\n";
     //std::cout <<"Orderings: \n";
-    for(unsigned ruleID : rules){
-        const aspc::Rule& rule = program.getRule(ruleID);
-        auto res = auxMapCompiler->declareGeneratorDataStructure(rule, componentPredicateNames);
-        ruleOrderings.emplace(ruleID, res.first);
-        //std::cout <<"Rule ID: " << ruleID << "\n";
-        // for(int i = 0; i< res.first.size(); ++i){
-        //     std::cout <<"Starter: " << i << "\n\t";
-        //     for(int j = 0; j< res.first.at(i).size(); ++j){
-        //         std::cout << res.first.at(i).at(j)<< " ";
-        //     }
-        //     std::cout <<std::endl;
-        // }
-    }
     bool isRecursive = nonExitRules.size() > 0;
     //print stack
     if(isRecursive){
@@ -74,7 +88,7 @@ void LazyPropagatorCompiler::compileFixPointComputation(std::vector<int>& scc, s
     //compile exit and non exit rule to be executed once with default starter
     for(unsigned ruleID : rules){
         const aspc::Rule& rule = program.getRule(ruleID);
-        compileRuleByStarter(ruleID, rule, rule.getFormulas().size(), componentPredicateNames, isRecursive, true);
+        compileRuleByStarter(ruleID, rule, rule.getFormulas().size(), componentPredicateNames, isRecursive, true, false);
     }
     if(isRecursive){
         outfile << ind++ << "while(!stack.empty()){\n";
@@ -91,7 +105,7 @@ void LazyPropagatorCompiler::compileFixPointComputation(std::vector<int>& scc, s
                 const aspc::Literal* lit = (const aspc::Literal*)f;
                 if(std::find(componentPredicateNames.begin(), componentPredicateNames.end(), lit->getPredicateName()) != componentPredicateNames.end()){
                     outfile << ind++ <<"if(tuple_0->getPredicateName() == AuxMapHandler::getInstance().get_" << lit->getPredicateName() <<"()){\n";
-                    compileRuleByStarter(ruleID, rule, formulaID, componentPredicateNames, isRecursive, true);
+                    compileRuleByStarter(ruleID, rule, formulaID, componentPredicateNames, isRecursive, true, false);
                     outfile << --ind <<"}\n";
                 }
             }
@@ -107,16 +121,33 @@ void LazyPropagatorCompiler::compileFixPointComputation(std::vector<int>& scc, s
     outfile << --ind << "}\n";
 }
 
-void LazyPropagatorCompiler::compileExplainTrue(std::vector<int>& scc, std::vector<unsigned>& rules, std::set<std::string>& componentPredicateNames, std::vector<unsigned>& nonExitRules){
-    
+void LazyPropagatorCompiler::compileCheckLiteralStatus(std::vector<int>& scc, std::vector<unsigned>& rules, std::set<std::string>& componentPredicateNames, std::vector<unsigned>& nonExitRules){
+    outfile << ind++ << "void checkLiteralStatus(std::vector<std::pair<int, bool>> literals){\n";
+    outfile << ind++ <<"while(!literals.empty()){\n";
+    outfile << ind << "std::pair<int, bool> lit = literals.back();\n";
+    outfile << ind << "literals.pop_back();\n";
+    outfile << ind << "Tuple* tuple_0 = TupleFactory::getInstance().getTupleFromInternalID(lit.first);\n";
+    outfile << ind << "bool generated = false;\n";
     for(unsigned ruleID : rules){
         const aspc::Rule& rule = program.getRule(ruleID);
-       // rule.print();
-        //std::cout <<"\n";
-        auto res = auxMapCompiler->declareLazyPropagatorDataStructure(rule);
-        ruleOrderingsByHead.emplace(ruleID, res);
-
+        outfile << ind++ <<"if(tuple_0->getPredicateName() == AuxMapHandler::getInstance().get_" << rule.getHead().at(0).getPredicateName() <<"() && !generated){\n";
+        //compile rule with head as starter. Only check for firing of the rule is needed, no generation, nor reasons
+        compileRuleByStarter(ruleID, rule, -1, componentPredicateNames, nonExitRules.size() > 0, false, true);
+        outfile << --ind <<"}\n";
     }
+    outfile << ind++ << "if(generated && !lit.second){\n";
+    outfile << ind << "//call expain false\n";
+    outfile << --ind <<"}\n";
+    outfile << ind++ << "if(!generated && lit.second){\n";
+    outfile << ind << "//call expain true\n";
+    outfile << --ind <<"}\n";
+    
+    outfile << --ind <<"}\n";
+    outfile << --ind << "}\n";
+}
+
+void LazyPropagatorCompiler::compileExplainTrue(std::vector<int>& scc, std::vector<unsigned>& rules, std::set<std::string>& componentPredicateNames, std::vector<unsigned>& nonExitRules){
+    
     outfile << ind++ << "void explainTrueLiteral(int id){\n";
     outfile << ind << "std::vector<int> toExplain;\n";
     outfile << ind << "std::unordered_set<int> tupleReasons;\n";
@@ -127,7 +158,7 @@ void LazyPropagatorCompiler::compileExplainTrue(std::vector<int>& scc, std::vect
     for(unsigned ruleID : rules){
         const aspc::Rule& rule = program.getRule(ruleID);
         outfile << ind++ <<"if(tuple_0->getPredicateName() == AuxMapHandler::getInstance().get_" << rule.getHead().at(0).getPredicateName() <<"()){\n";
-        compileRuleByStarter(ruleID, rule, -1, componentPredicateNames, nonExitRules.size() > 0, false);
+        compileRuleByStarter(ruleID, rule, -1, componentPredicateNames, nonExitRules.size() > 0, false, false);
         outfile << --ind <<"}\n";
     }
     outfile << --ind << "}\n"; 
@@ -151,7 +182,7 @@ std::vector<unsigned> LazyPropagatorCompiler::findNonExitRule(std::vector<int> s
     return nonExit;
 }
 
-void LazyPropagatorCompiler::compileRuleByStarter(unsigned id, const aspc::Rule& rule, int starter, const std::set<std::string>& componentPreds, bool isRecursive, bool fixpointCompilation){
+void LazyPropagatorCompiler::compileRuleByStarter(unsigned id, const aspc::Rule& rule, int starter, const std::set<std::string>& componentPreds, bool isRecursive, bool fixpointCompilation, bool checkGenerationOnly){
     std::cout <<"compiling rule: ";
     rule.print();
     std::cout <<"\n";
@@ -336,7 +367,6 @@ void LazyPropagatorCompiler::compileRuleByStarter(unsigned id, const aspc::Rule&
             outfile << "}, AuxMapHandler::getInstance().get_"<<atom->getPredicateName()<<"(),false);\n";
             outfile << ind << "std::pair<const Tuple *, bool> insertResult;\n";
             outfile << ind++ << "if(!TupleFactory::getInstance().isFact(head_"<<index<<"->getId()) && head_" << index << "->isUnknown()){\n";
-            outfile << ind << "TupleFactory::getInstance().addTupleFromPP(head_"<<index<<"->getId());\n";
             if(isRecursive){
                 if(std::find(componentPreds.begin(), componentPreds.end(), atom->getPredicateName()) != componentPreds.end()){
                     outfile << ind << "stack.push_back(head_" << index << "->getId());\n";
@@ -355,15 +385,31 @@ void LazyPropagatorCompiler::compileRuleByStarter(unsigned id, const aspc::Rule&
                 
             outfile << --ind << "}\n"; 
         }else{
-            if(starter == -1){
+            if(starter == -1 && !checkGenerationOnly){
                 //skip head starter (otherwise tuple will be reason of itself)
                 for(unsigned t = 1; t < declaredTuples.size(); ++t){
-                    outfile << ind++ << "if(!TupleFactory::getInstance().isTupleFromGen(tuple_" << declaredTuples[t] << "->getId()))\n";
-                    outfile << ind << "tupleReasons.insert(tuple_" << declaredTuples[t] << "->getId());\n";
+                    bool negatedTuple = !formulas[ruleOrderingsByHead[id][0][t-1]]->isPositiveLiteral();
+                    //negated tuples become reasons and should eventually be explained iff they were generated at some point 
+                    if(negatedTuple){
+                        outfile << ind++ << "if(tuple_" << declaredTuples[t] << " != NULL){\n";
+                    }
+                    //if(formulas[ruleOrderingsByHead[id][0][i-1]]->isPositiveLiteral())
+                    outfile << ind++ << "if(TupleFactory::getInstance().isTupleFromGen(tuple_" << declaredTuples[t] << "->getId()))\n";
+                    
+                    if(!negatedTuple)
+                        outfile << ind << "tupleReasons.insert(tuple_" << declaredTuples[t] << "->getId());\n";
+                    else
+                        outfile << ind << "tupleReasons.insert(tuple_" << declaredTuples[t] << "->getId() * -1);\n";
                     --ind;
                     outfile << ind << "else toExplain.push_back(tuple_" << declaredTuples[t] << "->getId());\n";
+                    if(negatedTuple){
+                        outfile << --ind << "}\n";
+                    }
                 }
             }
+        }
+        if(checkGenerationOnly){
+            outfile << ind << "generated = true;\n";
         }
                              
     }
