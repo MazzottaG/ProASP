@@ -363,9 +363,9 @@ private:
 
     // mutable std::vector<std::pair< std::variant< std::vector<int>, IndexedSet >*,unsigned>> collisionsLists;
     // mutable std::unordered_map<std::vector<unsigned>*, unsigned> collisionsLists;
-    //#ifdef PURE_PROP
+    #ifdef PURE_PROP
     Glucose::vec<Glucose::Lit> reason;
-    //#endif
+    #endif
 };
 
 struct TupleLightHash {

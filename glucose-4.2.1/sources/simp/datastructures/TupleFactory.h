@@ -504,9 +504,6 @@ class TupleFactory{
         void setLastTupleFromGen(){
             lastTupleFromGen = internalIDToTuple.size()-1;
         }
-        bool isTupleFromGen(unsigned id){
-            return  id <= lastTupleFromGen;    
-        }
         void printModelAsConstraint()const {
             // std::cout<<"Tuple factory"<<std::endl;
             // for(auto tuple : storage){

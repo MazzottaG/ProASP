@@ -24,6 +24,7 @@ class LazyPropagatorCompiler{
         std::unordered_map<unsigned, std::vector<std::vector<unsigned>>> ruleOrderingsByHead;
         std::vector<std::string> propagatorNames;
         std::vector<unsigned> findNonExitRule(std::vector<int>, std::vector<unsigned>);
+        void compileReasonSaving(std::vector<std::pair<int, bool>>&);
     public:
         LazyPropagatorCompiler(const aspc::Program&, std::string&, DataStructureCompiler*, const std::unordered_map<std::string, std::string>&);
         void compile();
@@ -37,9 +38,10 @@ class LazyPropagatorCompiler{
         void compileComponentWatched(std::vector<int> , unsigned);
         void compileRuleWatcher(unsigned, std::unordered_map<std::string, int>&);
         void compileFixPointComputation(std::vector<int>& , std::vector<unsigned>&, std::set<std::string>&, std::vector<unsigned>&);
+        void compileFixPointComputationFromStarters(std::vector<int>& , std::vector<unsigned>&, std::set<std::string>&, std::vector<unsigned>&);
         void compileCheckLiteralStatus(std::vector<int>&, std::vector<unsigned>&, std::set<std::string>&, std::vector<unsigned>&);
         void compileExplainTrue(std::vector<int>& , std::vector<unsigned>&, std::set<std::string>&, std::vector<unsigned>&);
-        void compileRuleByStarter(unsigned, const aspc::Rule&, int, const std::set<std::string>&, bool, bool, bool);
+        void compileRuleByStarter(unsigned, const aspc::Rule&, int, const std::set<std::string>&, bool, bool, bool, bool);
         void compileLazyPropClass();
 };
 #endif /*LAZYPROPAGATORCOMPILER*/

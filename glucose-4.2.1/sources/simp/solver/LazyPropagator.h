@@ -9,14 +9,14 @@ class LazyPropagator{
 
     public:
         LazyPropagator();
-        void computeFixpoint(){
+        void computeFixpoint(Glucose::Solver* s){
             for(int i = 0; i < propagators.size(); ++i){
-                propagators[i]->computeFixpoint();
+                propagators[i]->computeFixpoint(s);
             }
         }
-        void explainTrueLiteral(unsigned id){
+        void explainTrueLiteral(Glucose::Solver* s, Glucose::Lit& lit ){
             for(int i = 0; i < propagators.size(); ++i){
-                propagators[i]->explainTrueLiteral(id);
+                propagators[i]->explainTrueLiteral(s, lit);
             }
         }
     static int INSERT_AS_UNDEF;
