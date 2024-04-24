@@ -37,11 +37,11 @@ class LazyPropagatorCompiler{
         void closePropagatorFile();
         void compileComponentWatched(std::vector<int> , unsigned);
         void compileRuleWatcher(unsigned, std::unordered_map<std::string, int>&);
-        void compileFixPointComputation(std::vector<int>& , std::vector<unsigned>&, std::set<std::string>&, std::vector<unsigned>&);
-        void compileFixPointComputationFromStarters(std::vector<int>& , std::vector<unsigned>&, std::set<std::string>&, std::vector<unsigned>&);
+        void compileFixPointComputation(std::vector<int>&, std::vector<unsigned>&, std::set<std::string>&, std::vector<unsigned>&);
         void compileCheckLiteralStatus(std::vector<int>&, std::vector<unsigned>&, std::set<std::string>&, std::vector<unsigned>&);
-        void compileExplainTrue(std::vector<int>& , std::vector<unsigned>&, std::set<std::string>&, std::vector<unsigned>&);
-        void compileRuleByStarter(unsigned, const aspc::Rule&, int, const std::set<std::string>&, bool, bool, bool, bool);
+        void compileExplainTrue(std::vector<int>&, std::vector<unsigned>&, std::set<std::string>&, std::vector<unsigned>&);
+        void compileExplainFalse(std::vector<int>&, std::vector<unsigned>&, std::set<std::string>&, std::vector<unsigned>& );
+        void compileRuleByStarter(unsigned, const aspc::Rule&, int, const std::set<std::string>&, bool, bool, bool, bool, bool);
         void compileLazyPropClass();
 };
 #endif /*LAZYPROPAGATORCOMPILER*/

@@ -8,24 +8,35 @@
 typedef TupleLight Tuple;
 class AbstractLazyPropagator{
     public:
-        virtual void computeFixpoint(Glucose::Solver* s) = 0;
+        virtual void computeFixpoint(Glucose::Solver* s, std::vector<int>&) = 0;
         virtual void explainTrueLiteral(Glucose::Solver* s, Glucose::Lit& lit){
-            int tupleId = Glucose::toInt(lit);
-            Tuple* tuple = TupleFactory::getInstance().getTupleFromInternalID(tupleId);
-            Glucose::vec<Glucose::Lit>& propagationReason =  !s->isAssigned(tupleId) ? tuple->getReasonLits() : s->getReasonClause();
-            propagationReason.clear();
-            propagationReason.push(Glucose::mkLit(tupleId, true));
+            int tupleId = TupleFactory::getInstance().glucoseReasonToTupleId(lit);
+            Tuple* t = TupleFactory::getInstance().getTupleFromInternalID(tupleId);
+            Glucose::vec<Glucose::Lit> propagationReason;
             std::vector<int> toExplain;
-            do{
+            toExplain.push_back(tupleId);
+            while(!toExplain.empty()){
+                Tuple* tuple = TupleFactory::getInstance().getTupleFromInternalID(toExplain.back());
+                toExplain.pop_back();
                 Glucose::vec<Glucose::Lit>&  tupleReason = tuple->getReasonLits();
-                for(unsigned i = 0 ; i < tupleReason.size(); ++i){
-                    int var = Glucose::toInt(tupleReason[i]);
-                    tupleId = std::abs(var);
-                    propagationReason.push(Glucose::mkLit(tupleId,  var > 0));
-                    toExplain.push_back(tupleId);
+                for(unsigned i = 0; i < tupleReason.size(); ++i){
+                    bool sign = Glucose::sign(tupleReason[i]);
+                    tupleId = TupleFactory::getInstance().glucoseReasonToTupleId(tupleReason[i]);
+                    if(PositiveProgramFactory::getInstance().isTupleFromGen(tupleId))
+                        propagationReason.push(Glucose::mkLit(tupleId,  sign));
+                    else
+                        toExplain.push_back(tupleId);
                 }
-            }while(!toExplain.empty());
+            }
+
+            std::cout <<"Reason: " ;
+            for(unsigned i = 0; i < propagationReason.size(); ++i){
+                //AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(TupleFactory::getInstance().glucoseReasonToTupleId(propagationReason[i])));
+                std::cout << propagationReason[i].x << " ";
+            }
+            std::cout<< std::endl;
         }
+        virtual void explainFalseLiteral(int, std::unordered_set<int>&) = 0;
         virtual void checkLiteralStatus(std::vector<std::pair<int, bool>>) = 0;
 };
 

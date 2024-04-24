@@ -219,7 +219,9 @@ class TupleFactory{
             assert(var<internalIDToTuple.size());
             return internalIDToTuple[var]->getReasonLits();
         }
-
+        int glucoseReasonToTupleId(Glucose::Lit l){
+            return !Glucose::sign(l)? int(l.x / 2) :int((l.x * -1 +1) /2);
+        }
         static TupleFactory& getInstance() {
             static TupleFactory instance;
             return instance;
