@@ -394,7 +394,7 @@ void HybridGenerator::compile(){
                 std::cout << "   cleaning predicate "<<predicate<<"\n";
     }
     outfile << ind++ << "void "<<name<<"::generate(Glucose::SimpSolver* s,std::vector<int>& falseAtoms){\n";
-        outfile << ind << "std::cout << \"Generating ... \"<<std::endl;\n";
+        // outfile << ind << "std::cout << \"Generating ... \"<<std::endl;\n";
         outfile << ind << "unsigned size=generators.size()-1;\n";
         outfile << ind++ << "for(unsigned genId = 0; genId < generators.size(); genId++) {\n";
             bool printElse = false;
@@ -412,12 +412,12 @@ void HybridGenerator::compile(){
             }
             outfile << ind << "AbstractGenerator* gen = generators[genId];\n";
             outfile << ind << "//std::cout << \"Generator \"<<size--<<std::endl;\n";
-            outfile << ind << "gen->printName();\n";
+            outfile << ind << "//gen->printName();\n";
             outfile << ind << "gen->generate(s);\n";
-            outfile << ind << "std::cout << \"Generator consumed\"<<std::endl;\n";
+            outfile << ind << "//std::cout << \"Generator consumed\"<<std::endl;\n";
             outfile << ind << "gen->propagateTrackedLiteral(s,falseAtoms);\n";
         outfile << --ind << "}\n";
-        outfile << ind << "std::cout << \"Generated --------------\"<<std::endl;\n";
+        outfile << ind << "//std::cout << \"Generated --------------\"<<std::endl;\n";
         outfile << ind << "reorderAggregateSets();\n";
         outfile << ind++ << "for(AbstractGenerator* gen : generators) {\n";
             outfile << ind << "gen->remapLiterals();\n";
@@ -531,7 +531,7 @@ void HybridGenerator::compile(){
                 outfile << ind++ << "{\n";
                     outfile << ind << "TupleFactory::getInstance().setIndexForAggregateSet("<<predicateToAggrIndex[pair.first]<<",AuxMapHandler::getInstance().get_"<<pair.first<<"());\n";
                     // TODO: check what happens if two aggregate with one literal sums over two different terms
-                    outfile<<ind<<"std::cout<<\"Ordering\"<<std::endl;\n";
+                    // outfile<<ind<<"std::cout<<\"Ordering\"<<std::endl;\n";
                     auxMapCompiler->addAuxMap(pair.first,{});
                     outfile << ind << "IndexedSet* tuples = &AuxMapHandler::getInstance().get_u"<<pair.first<<"_()->getValuesSet({});\n"; 
                     outfile << ind << "ordered_ids.reserve(tuples->size());\n";

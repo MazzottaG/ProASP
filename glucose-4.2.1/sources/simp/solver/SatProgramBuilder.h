@@ -62,7 +62,7 @@ class SatProgramBuilder{
             return ok;
         }
         bool auxCompletion(std::unordered_map<unsigned,unsigned>& auxRemapping,Glucose::SimpSolver* solver){
-            std::cout << "%%%%%%%%%%%%%%%%%%%%%%% Aux Completion %%%%%%%%%%%%%%%%%%%%%%%"<<std::endl;
+            //std::cout << "%%%%%%%%%%%%%%%%%%%%%%% Aux Completion %%%%%%%%%%%%%%%%%%%%%%%"<<std::endl;
 
             Glucose::vec<Glucose::Lit> binClause;
             Glucose::vec<Glucose::Lit> clause;
@@ -101,11 +101,11 @@ class SatProgramBuilder{
                 delete clauseData.first;
                 clauseData = TupleFactory::getInstance().popClause();
             }
-            std::cout << "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%"<<std::endl;
+            //std::cout << "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%"<<std::endl;
             return true;
         }
         bool headAtomCompletion(std::unordered_map<unsigned,unsigned>& auxRemapping,Glucose::SimpSolver* solver){
-            std::cout << "%%%%%%%%%%%%%%%%%%%%%%% Head Completion %%%%%%%%%%%%%%%%%%%%%%%"<<std::endl;
+            //std::cout << "%%%%%%%%%%%%%%%%%%%%%%% Head Completion %%%%%%%%%%%%%%%%%%%%%%%"<<std::endl;
             Glucose::vec<Glucose::Lit> binClause;
             Glucose::vec<Glucose::Lit> clause;
             
@@ -166,7 +166,7 @@ class SatProgramBuilder{
                 // printClause(clause);
                 if(!solver->addClause_(clause)) return false;
             }
-            std::cout << "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%"<<std::endl;
+            //std::cout << "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%"<<std::endl;
 
             return true;
         }

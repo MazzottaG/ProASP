@@ -1637,7 +1637,6 @@ lbool Solver::search(int nof_conflicts) {
         //std::cout << "Solver::search() -> propagate()" <<std::endl;
         CRef confl = propagate();
         //std::cout << "propagate() -> Solver::search()" <<std::endl;
-
         if(confl != CRef_Undef) {
 
             #if defined(DEBUG_PROP) || defined(TRACE_SOLVER)

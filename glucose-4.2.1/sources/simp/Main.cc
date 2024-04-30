@@ -365,7 +365,8 @@ void read_asp(Solver* solver,std::string filename,std::vector<unsigned>& facts){
 int main(int argc, char** argv)
 {
     try {
-        printf("c\nc This is glucose 4.2.1 --  based on MiniSAT (Many thanks to MiniSAT team)\nc\n");
+        //printf("c\nc This is glucose 4.2.1 --  based on MiniSAT (Many thanks to MiniSAT team)\nc\n");
+        printf("c\nc This is ProASP solver --  based on glucose 4.2.1 (Many thanks to Glucose team)\nc\n");
 
 
         setUsageHelp("c USAGE: %s [options] <input-file> <result-output-file>\n\n  where input may be either in plain or gzipped DIMACS.\n");
@@ -524,8 +525,8 @@ int main(int argc, char** argv)
                     break;
             }
             std::vector<std::vector<int>> constraints;
-            read_model_constraints("constraints.lp",constraints);
-            std::cout << "Found "<<constraints.size()<<" constraints"<<std::endl;
+            //read_model_constraints("constraints.lp",constraints);
+            //std::cout << "Found "<<constraints.size()<<" constraints"<<std::endl;
             for(std::vector<int> constraint : constraints){
                 lits.clear();
                 for(int literal : constraint){
@@ -543,14 +544,15 @@ int main(int argc, char** argv)
                 Propagator::getInstance().propagateAtLevel0(&S,lits);
             if(S.okay()){
                 SatProgramBuilder::getInstance().computeCompletion(&S);
+
                 // std::cout << "Exiting ..."<<std::endl;
                 // exit(180);
                 // std::cout << "p cnf "<<TupleFactory::getInstance().size()-1<<" " << S.nClauses()+facts.size()<<std::endl;
-                // for(int i=1;i<TupleFactory::getInstance().size(); i++){
-                //     std::cout << "c "<<i<<" ";
-                //     AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(i));
-                //     std::cout << std::endl;
-                // }
+                 /*for(int i=1;i<TupleFactory::getInstance().size(); i++){
+                     std::cout << "c "<<i<<" ";
+                     AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(i));
+                     std::cout << std::endl;
+                 }*/
                 // // S.printGeneratedClauses();
                 // for(unsigned id : facts){
                 //     std::cout << id << " 0"<<std::endl;
@@ -560,9 +562,9 @@ int main(int argc, char** argv)
                 // std::cout << "End cnf"<<std::endl;
                 TupleFactory::getInstance().destroyClauses();
                 TupleFactory::getInstance().destroyConstraints();
-                std::cout << "Found "<<S.nVars()<<" glucose variables"<<std::endl;
+                //std::cout << "Found "<<S.nVars()<<" glucose variables"<<std::endl;
                 int lastVar = TupleFactory::getInstance().getLastId();
-                std::cout << "Generated "<<lastVar<<" symbols"<<std::endl;
+                //std::cout << "Generated "<<lastVar<<" symbols"<<std::endl;
             }
         }
         if (S.verbosity > 0){
@@ -613,7 +615,7 @@ int main(int argc, char** argv)
                 printStats(S);
             exit(0);
         }else{
-            std::cout << "no dimacs"<<std::endl;
+            //std::cout << "no dimacs"<<std::endl;
         }
         Generator::getInstance().destroyRemapping();
         // TupleFactory::getInstance().printUsedMemory();

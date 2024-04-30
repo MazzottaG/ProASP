@@ -5,6 +5,7 @@ CXXFLAGS := -std=c++17 -Wall -Wextra
 
 LIB		:= Compiler/lib
 ANTLR	:= libantlr4-runtime.a
+COMPILER_SRC	:= Compiler
 GLUCOSE_GEN_SRC	:= glucose-4.2.1/sources/simp/generators
 GLUCOSE_PROP_SRC	:= glucose-4.2.1/sources/simp/propagators
 OUTPUT	:= dist
@@ -31,6 +32,8 @@ compile:
     fi
 
 	cp $(REQUIRED_LIB) $(LIB)/$(ANTLR)
+	$(MAKE) -C $(COMPILER_SRC) clean
+	$(MAKE) -C $(COMPILER_SRC) -j
 	
 	$(CXX) $(CXXFLAGS) $(SRC)/ProAsp.cpp -o $(OUTPUT)/proasp
 

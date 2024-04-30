@@ -383,7 +383,7 @@ class TupleFactory{
             }
         }
         void destroyConstraints(){
-            std::cout << "Destroying"<<std::endl;
+            //std::cout << "Destroying"<<std::endl;
             assert(constraintIDToTuple!=NULL && constraintIDToTuple->size() == 0);
             delete constraintIDToTuple;
             delete constraintIDToLength;
@@ -442,7 +442,7 @@ class TupleFactory{
             }
         }
         void destroyClauses(){
-            std::cout << "Destroying Clauses"<<std::endl;
+            //std::cout << "Destroying Clauses"<<std::endl;
             assert(clauseIDToTuple!=NULL && clauseIDToTuple->size() == 0);
             delete clauseIDToTuple;
             delete clauseIDToLength;
