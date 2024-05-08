@@ -35,11 +35,14 @@ void LazyPropagatorCompiler::compileSCC(std::vector<int> scc, unsigned index){
         componentPredicateNames.insert(depManager.getPredicateName(predId));
     }
     std::vector<unsigned> nonExitRules = findNonExitRule(scc, rulesForComponent);
+    std::set<std::string> positiveProgramHeadPredicates = program.getHeadPredicates();
     for(unsigned ruleID : rulesForComponent){
         const aspc::Rule& rule = program.getRule(ruleID);
         auto res = auxMapCompiler->declarePropagatorDataStructure(rule);
         ruleOrderings.emplace(ruleID, res.first);
         ruleOrderingsByHead.emplace(ruleID, res.second);
+        auto res1 = auxMapCompiler->declareExplainFalseDataStructure(rule, positiveProgramHeadPredicates);
+        ruleOrderingsExplainFalse.emplace(ruleID, res1);
         // std::cout <<"Rule ID: " << ruleID << " ORDERINGS\n";
         // for(int i = 0; i< res.first.size(); ++i){
         //     std::cout <<"Starter: " << i << "\n\t";
@@ -133,12 +136,12 @@ void LazyPropagatorCompiler::compileCheckLiteralStatus(std::vector<int>& scc, st
     outfile << ind << "//call explain true\n";
     outfile << ind << "std::cout <<\"Tuple  \";\n";
     outfile << ind << "AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(lit.first));\n";
-    outfile << ind << "std::cout << \" was supposed to be false, but it was generated\";\n";
+    outfile << ind << "std::cout << \" was supposed to be false, but it was generated\\n\";\n";
     outfile << --ind <<"}\n";
     outfile << ind++ << "if(!generated && lit.second){\n";
     outfile << ind << "std::cout <<\"Tuple  \";\n";
     outfile << ind << "AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(lit.first));\n";
-    outfile << ind << "std::cout<< \" was supposed to be true, but it was not generated\";\n";
+    outfile << ind << "std::cout<< \" was supposed to be true, but it was not generated\\n\";\n";
     outfile << ind << "//call explain false\n";
     outfile << --ind <<"}\n";
     
@@ -186,10 +189,6 @@ void LazyPropagatorCompiler::compileExplainFalse(std::vector<int>& scc, std::vec
         compileRuleByStarter(ruleID, rule, -1, componentPredicateNames, nonExitRules.size() > 0, false, false, false, true);
         outfile << --ind <<"}\n";
     }
-    //find all rules that could generate the tuple (a compilation that goes )
-    //go inside the compilation without starter - bind whatever is possible with true 
-    //tuples. What remains non bound is in some vector used inside the for loops
-    //or is some if on find
     outfile << --ind << "}\n";
     outfile << --ind << "}\n";
 }
@@ -245,7 +244,10 @@ void LazyPropagatorCompiler::compileRuleByStarter(unsigned id, const aspc::Rule&
         if(starter == -1){
             //assuming only one head is used
             if(i > 0){
-                formula = formulas[ruleOrderingsByHead[id][0][i-1]];
+                if(explainFalse)
+                    formula = formulas[ruleOrderingsExplainFalse[id][0][i-1]];
+                else
+                    formula = formulas[ruleOrderingsByHead[id][0][i-1]];
                 //std::cout <<"Formula: "<< ruleOrderingsByHead[id][0][i-1] << std::endl;
             }
         }else if(starter == rule.getFormulas().size()){
@@ -329,10 +331,13 @@ void LazyPropagatorCompiler::compileRuleByStarter(unsigned id, const aspc::Rule&
                             //outfile << ind  << "foundReason = true;\n";
                             //outfile << ind << "undefFoundInReason = true;\n";
                             outfile << --ind <<"}\n";
-                            outfile << ind++ << "else if(tuple_" << i <<" != NULL && tuple_" << i << "->isTrue()){\n";
+                            outfile << ind++ << "if(tuple_" << i <<" != NULL && tuple_" << i << "->isTrue()){\n";
                             //outfile << ind <<"foundReason = true;\n";
                             outfile << ind << "toExplain.push_back(tuple_" << i << "->getId());\n";
                             outfile << --ind <<"}\n";
+                            //bound literal is true
+                            outfile << ind++ <<"else{\n";
+                            closingPars++;
                         }
                         std::string continueOnlyWithTrueBody = !explainFalse ? " || tuple_" + std::to_string(i) + "->isFalse()" : "";
                         outfile << ind++ << "if(tuple_" << i <<" == NULL" << continueOnlyWithTrueBody << "){\n";
@@ -350,6 +355,9 @@ void LazyPropagatorCompiler::compileRuleByStarter(unsigned id, const aspc::Rule&
                             //outfile << ind << "foundReason = true;\n";
                             outfile << ind << "toExplain.push_back(tuple_" << i << "->getId());\n";
                             outfile << --ind <<"}\n";
+                            //bound literal is true
+                            outfile << ind++ <<"else{\n";
+                            closingPars++;
                         }
                     }
                     closingPars++;
@@ -447,10 +455,17 @@ void LazyPropagatorCompiler::compileRuleByStarter(unsigned id, const aspc::Rule&
             }
             outfile << "}, AuxMapHandler::getInstance().get_"<<atom->getPredicateName()<<"(),false);\n";
             outfile << ind << "std::pair<const Tuple *, bool> insertResult;\n";
-            outfile << ind++ << "if(!TupleFactory::getInstance().isFact(head_"<<index<<"->getId()) && head_" << index << "->isUnknown()){\n";
-            outfile << ind << "AuxMapHandler::getInstance().initTuple(head_" << index << ");\n";
+            outfile << ind++ << "if(!TupleFactory::getInstance().isFact(head_"<<index<<"->getId())){\n";
+            outfile << ind++ << "if(!head_" << index << "->isTrue()){\n";
             outfile << ind << "Glucose::vec<Glucose::Lit>& propagationReason = head_" << index << "->getReasonLits();\n";
-            compileReasonSaving(reasonTupleWithSign);
+            outfile << ind << "propagationReason.clear();\n";
+            compileReasonAndSupportSaving(reasonTupleWithSign, index);
+            outfile << --ind << "}\n";
+            outfile << ind++ << "if(head_" << index << "->isUnknown()){\n";
+            outfile << ind << "AuxMapHandler::getInstance().initTuple(head_" << index << ");\n";
+            //outfile << ind << "if(PositiveProgramFactory::getInstance().isTupleFromGen())\n";
+            //outfile << ind << "Glucose::vec<Glucose::Lit>& propagationReason = head_" << index << "->getReasonLits();\n";
+            //compileReasonAndSupportSaving(reasonTupleWithSign, index);
             if(isRecursive){
                 if(std::find(componentPreds.begin(), componentPreds.end(), atom->getPredicateName()) != componentPreds.end()){
                     outfile << ind << "stack.push_back(head_" << index << "->getId());\n";
@@ -460,6 +475,18 @@ void LazyPropagatorCompiler::compileRuleByStarter(unsigned id, const aspc::Rule&
             outfile << ind << "insertResult = head_" << index <<"->setStatus(TruthStatus::True);\n";
             outfile << ind << "insertResults.push_back(std::make_pair(insertResult, LazyPropagator::INSERT_AS_TRUE));\n";    
             outfile << ind << "PositiveProgramFactory::getInstance().addCheckedTuple(head_" << index << "->getId());\n";
+            outfile << --ind << "}\n";
+            outfile << ind++ <<"else if(head_" << index << "->isUndef()){\n";
+            outfile << ind << "insertResult = head_" << index <<"->setStatus(TruthStatus::True);\n";
+            outfile << ind << "insertResults.push_back(std::make_pair(insertResult, LazyPropagator::UPDATE_TO_TRUE));\n";
+            //it could be either true or false
+            //if it is from interface it could even be undef
+            outfile << --ind << "}\n";
+            outfile << ind++ << "else if(head_" << index << "->isFalse()){\n";
+            outfile << ind << "insertResult = head_" << index <<"->setStatus(TruthStatus::True);\n";
+            outfile << ind << "insertResults.push_back(std::make_pair(insertResult, LazyPropagator::UPDATE_TO_TRUE));\n";
+            outfile << --ind << "}\n";
+
             outfile << --ind << "}\n"; 
         }else{
             //head starter and explaining literal. Either true of false
@@ -499,23 +526,27 @@ void LazyPropagatorCompiler::compileRuleByStarter(unsigned id, const aspc::Rule&
     if(fixpointCompilation){
         outfile << ind++ << "for(unsigned i = 0; i < insertResults.size(); ++i){\n";
         outfile << ind << "if(insertResults[i].second == LazyPropagator::INSERT_AS_TRUE) AuxMapHandler::getInstance().insertTrue(insertResults[i].first);\n";
-        // outfile << ind << "else if(insertResults[i].second == LazyPropagator::INSERT_AS_UNDEF) AuxMapHandler::getInstance().insertUndef(insertResults[i].first);\n";
-        // outfile << ind++ << "else if(insertResults[i].second == LazyPropagator::REMOVE_FROM_UNDEF){\n";
-        // outfile << ind << "TupleFactory::getInstance().removeFromCollisionsList(insertResults[i].first.first->getId());\n";
-        // outfile << ind << "AuxMapHandler::getInstance().initTuple(TupleFactory::getInstance().getTupleFromInternalID(insertResults[i].first.first->getId()));\n";
-        // outfile << ind << "AuxMapHandler::getInstance().insertTrue(insertResults[i].first);\n";
-        //outfile << --ind <<"}\n";
+        //outfile << ind << "else if(insertResults[i].second == LazyPropagator::INSERT_AS_UNDEF) AuxMapHandler::getInstance().insertUndef(insertResults[i].first);\n";
+        outfile << ind++ << "else if(insertResults[i].second == LazyPropagator::UPDATE_TO_TRUE){\n";
+        outfile << ind << "TupleFactory::getInstance().removeFromCollisionsList(insertResults[i].first.first->getId());\n";
+        outfile << ind << "AuxMapHandler::getInstance().initTuple(TupleFactory::getInstance().getTupleFromInternalID(insertResults[i].first.first->getId()));\n";
+        outfile << ind << "AuxMapHandler::getInstance().insertTrue(insertResults[i].first);\n";
+        outfile << --ind <<"}\n";
         outfile << --ind <<"}\n";           
     }
     outfile << --ind << "}\n";
 }
 
-void LazyPropagatorCompiler::compileReasonSaving(std::vector<std::pair<int, bool>>& declaredTuples){
+void LazyPropagatorCompiler::compileReasonAndSupportSaving(std::vector<std::pair<int, bool>>& declaredTuples, int index){
+    //double for is just to separate reason and support saving
     for(unsigned i = 0; i < declaredTuples.size(); ++i){
         if(declaredTuples.at(i).second)
             outfile << ind << "propagationReason.push(Glucose::mkLit(tuple_" << declaredTuples.at(i).first <<"->getId(), false));\n";
         else
             outfile << ind << "propagationReason.push(Glucose::mkLit(-tuple_" << declaredTuples.at(i).first <<"->getId(), true));\n";
+    }
+    for(unsigned i = 0; i < declaredTuples.size(); ++i){
+        outfile << ind << "PositiveProgramFactory::getInstance().addSupported(tuple_" << declaredTuples.at(i).first << "->getId(), head_" << index << "->getId());\n";
     }
 }
 
@@ -679,7 +710,7 @@ void LazyPropagatorCompiler::compileLazyPropClass(){
     }
     outfile << ind << "int LazyPropagator::INSERT_AS_UNDEF = 0;\n";
     outfile << ind << "int LazyPropagator::INSERT_AS_TRUE = 1;\n";
-    outfile << ind << "int LazyPropagator::REMOVE_FROM_UNDEF = 2;\n";
+    outfile << ind << "int LazyPropagator::UPDATE_TO_TRUE = 2;\n";
     outfile << ind++ << "LazyPropagator::LazyPropagator(){\n";
     //int propagatorId = 0;
     for(unsigned i = 0; i < propagatorNames.size(); ++i){

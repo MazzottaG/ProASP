@@ -199,6 +199,94 @@ void DataStructureCompiler::buildAuxMapHandler(std::string executablePath,const 
     outfile << ind << "#endif\n";
     outfile.close();
 }
+
+std::vector<std::vector<unsigned>> DataStructureCompiler::declareExplainFalseDataStructure(const aspc::Rule& rule, std::set<std::string>& positiveProgramPreds){
+    // one order for every atom in head with the constraint that predicates defined in positive
+    // program are compiled only after the others are all compiled - this is needed since
+    // the predicate set of literals coming from P.P. might not be entirely generated 
+    std::cout << "Declaring explainFalse data structures for ";rule.print();
+    auto body = rule.getFormulas();
+    auto head = rule.getHead();
+
+    std::vector<std::vector<unsigned>> orderByStartersHead;
+    for(unsigned starter = 0; starter < head.size(); starter++){
+        orderByStartersHead.push_back({});
+        std::vector<bool> visitedFormulas(body.size(),false);
+        std::unordered_set<std::string> boundVars;
+
+        aspc::Literal lit(false,head[starter]);
+        lit.addVariablesToSet(boundVars);
+        auxMapNameForPredicate[lit.getPredicateName()].insert(std::vector<unsigned>({}));
+        unsigned selectedFormula=0;
+        std::vector<unsigned>* currentOrdering=&orderByStartersHead.back();
+        while (selectedFormula < body.size()){
+            selectedFormula = body.size();
+            unsigned selectedExternalFormula = body.size();
+            bool notVisited = false;
+            for(unsigned i = 0; i < body.size(); i++){
+                if(!visitedFormulas[i]){
+                    notVisited=true;
+                    if(body[i]->isBoundedLiteral(boundVars) || body[i]->isBoundedRelation(boundVars) || body[i]->isBoundedValueAssignment(boundVars)){
+                        selectedFormula = i;
+                        if(!body[i]->isLiteral()){
+                            selectedExternalFormula = i;
+                            break;
+                        }else{
+                            std::string predicateName = ((const aspc::Literal*) body[i])->getPredicateName();        
+                            if(!positiveProgramPreds.count(predicateName)){
+                                selectedExternalFormula = i;
+                                break;
+                            }
+                        }
+                        
+                    }
+                    if(body[i]->isPositiveLiteral()){
+                        std::string predicateName = ((const aspc::Literal*) body[i])->getPredicateName();        
+                        if(!positiveProgramPreds.count(predicateName))
+                                selectedExternalFormula = i;
+                    }
+                    if(body[i]->isPositiveLiteral() && selectedFormula == body.size()) selectedFormula=i;
+
+                }
+            }
+            std::cout <<"Outside formula selection - externalFormula: " << selectedExternalFormula << "selectedFormula: "<< selectedFormula << "\n";
+            if(selectedFormula != body.size()){
+                const aspc::Formula* currentFormula;
+                if(selectedExternalFormula != body.size()){
+                    visitedFormulas[selectedExternalFormula]=true;
+                    currentFormula = body[selectedExternalFormula];
+                    currentOrdering->push_back(selectedExternalFormula);
+                }else{
+                    visitedFormulas[selectedFormula]=true;
+                    currentFormula = body[selectedFormula];
+                    currentOrdering->push_back(selectedFormula);
+                }
+                
+                if(currentFormula->isLiteral() && !currentFormula->isBoundedLiteral(boundVars)){
+                    const aspc::Literal* literal = (const aspc::Literal*) currentFormula;
+                    std::vector<unsigned> boundIndices;
+                    for(unsigned k = 0; k<literal->getAriety(); k++){
+                        if(!literal->isVariableTermAt(k) || boundVars.count(literal->getTermAt(k))){
+                            boundIndices.push_back(k);
+                        }
+                    }
+                    auxMapNameForPredicate[literal->getPredicateName()].insert(boundIndices);
+                    literal->addVariablesToSet(boundVars);
+                }else{
+                    if(currentFormula->isBoundedValueAssignment(boundVars)){
+                        const aspc::ArithmeticRelation* ineq = (const aspc::ArithmeticRelation*) currentFormula;
+                        boundVars.insert(ineq->getAssignedVariable(boundVars));
+                    }
+                }
+            }else if(notVisited){
+                std::cout << "Error ordering rule ";rule.print();
+                exit(180);
+            }
+        }
+    }
+    return orderByStartersHead;
+}
+
 std::pair<std::vector<std::vector<unsigned>>,std::vector<std::vector<unsigned>>> DataStructureCompiler::declarePropagatorDataStructure(const aspc::Rule& rule){
     std::cout << "Declaring structure for ";rule.print();
     // std::cout << "----------------------- Before watcher -----------------------"<<std::endl;

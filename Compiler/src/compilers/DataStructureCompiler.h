@@ -4,7 +4,7 @@
 #include "../utils/Indentation.h"
 #include <limits.h>
 #include <fstream>
-
+#include <set>
 #include <unordered_map>
 
 class DataStructureCompiler{
@@ -13,7 +13,8 @@ class DataStructureCompiler{
         std::vector<unsigned> reorderSimpleBody(const std::vector<const aspc::Formula*>& body, std::unordered_set<std::string>& boundVars, int starter=-1);
 
         std::pair<std::vector<std::vector<unsigned>>,std::vector<std::vector<unsigned>>> declarePropagatorDataStructure(const aspc::Rule& rule);
-        std::vector<std::vector<unsigned>> declareLazyPropagatorDataStructure(const aspc::Rule&);
+        std::vector<std::vector<unsigned>> declareExplainFalseDataStructure(const aspc::Rule&, std::set<std::string>& );
+        //std::vector<std::vector<unsigned>> declareLazyPropagatorDataStructure(const aspc::Rule&);
         void printAuxMap()const;
         const std::unordered_map<std::string,std::set<std::vector<unsigned>>>& getAuxMapNameForPredicate()const{return auxMapNameForPredicate;}
         void buildAuxMapHandler(std::string,const std::vector<std::string>&,const std::unordered_map<std::string,std::string>&);

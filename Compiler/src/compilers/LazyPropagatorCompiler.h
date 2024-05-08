@@ -22,9 +22,10 @@ class LazyPropagatorCompiler{
         //ordering of rules for every predicate of the corresponding component
         std::unordered_map<unsigned, std::vector<std::vector<unsigned>>> ruleOrderings;
         std::unordered_map<unsigned, std::vector<std::vector<unsigned>>> ruleOrderingsByHead;
+        std::unordered_map<unsigned, std::vector<std::vector<unsigned>>> ruleOrderingsExplainFalse;
         std::vector<std::string> propagatorNames;
         std::vector<unsigned> findNonExitRule(std::vector<int>, std::vector<unsigned>);
-        void compileReasonSaving(std::vector<std::pair<int, bool>>&);
+        void compileReasonAndSupportSaving(std::vector<std::pair<int, bool>>&, int);
     public:
         LazyPropagatorCompiler(const aspc::Program&, std::string&, DataStructureCompiler*, const std::unordered_map<std::string, std::string>&);
         void compile();

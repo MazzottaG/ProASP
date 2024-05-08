@@ -21,6 +21,7 @@ class AbstractLazyPropagator{
                 Glucose::vec<Glucose::Lit>&  tupleReason = tuple->getReasonLits();
                 for(unsigned i = 0; i < tupleReason.size(); ++i){
                     bool sign = Glucose::sign(tupleReason[i]);
+                    //use var - change method
                     tupleId = TupleFactory::getInstance().glucoseReasonToTupleId(tupleReason[i]);
                     if(PositiveProgramFactory::getInstance().isTupleFromGen(tupleId))
                         propagationReason.push(Glucose::mkLit(tupleId,  sign));

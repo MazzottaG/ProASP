@@ -33,6 +33,6 @@ class LazyPropagator{
         }
     static int INSERT_AS_UNDEF;
     static int INSERT_AS_TRUE;
-    static int REMOVE_FROM_UNDEF;
+    static int UPDATE_TO_TRUE;
 };
 #endif/*LAZYPROPAGATOR_H*/
