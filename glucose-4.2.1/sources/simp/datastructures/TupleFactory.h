@@ -60,7 +60,9 @@ class TupleFactory{
     private:
         TupleFactory(/* args */):generatorClauseSet(NULL),clauseIDToTuple(NULL),clauseIDToLength(NULL){
             //storage.push_back(TupleLight());
+            nextTupleId = 0;
             addExtraSymbol();
+            lastTupleFromGen = 0;
             generated=false;
         }
         std::unordered_set<TupleLight*,TuplePointerHash,TuplePointerEq>* generatorClauseSet;
@@ -78,6 +80,11 @@ class TupleFactory{
         std::unordered_map<int,std::set<int>> atomsForLiteral;
         std::unordered_set<int> trackedForSupport;
         unsigned lastTupleFromGen;
+        unsigned nextTupleId;
+        std::vector<int> decisionLevelToUnrollIndex;
+        std::unordered_set<int> propagatedByLazyPropTuples;
+        //used to be filled by LazyPropagator explain true and to be returned by the explain method
+        Glucose::vec<Glucose::Lit> trueTupleReasons;
         // std::vector<std::vector<AbstractPropagator*>> negativeWatcher;
         // std::vector<std::vector<AbstractPropagator*>> positiveWatcher;
         // static std::vector<AbstractPropagator*> EMPTY_WATCHER;
@@ -119,8 +126,9 @@ class TupleFactory{
         }
         int addExtraSymbol(){
             internalIDToTuple.push_back(new TupleLight());
-            internalIDToTuple.back()->setId(internalIDToTuple.size()-1);
-            return internalIDToTuple.size()-1;
+            internalIDToTuple.back()->setId(nextTupleId);
+            ++nextTupleId;
+            return nextTupleId-1;
         }
         void trackLiteral(int lit){
             trackedForSupport.insert(lit);
@@ -215,13 +223,12 @@ class TupleFactory{
         std::unordered_map<int,int>& possibleSums(){
             return possibleSum;
         }
-        Glucose::vec<Glucose::Lit>& explain(unsigned var){
-            assert(var<internalIDToTuple.size());
-            return internalIDToTuple[var]->getReasonLits();
-        }
-        int glucoseReasonToTupleId(Glucose::Lit l){
-            return !Glucose::sign(l)? int(l.x / 2) :int((l.x * -1 +1) /2);
-        }
+        //Move in cc. Include AuxMapHandler and call explain based on predicate name (lazy for P.P. - defined)
+        Glucose::vec<Glucose::Lit>& explain(unsigned var);
+        // {
+        //     assert(var<internalIDToTuple.size());
+        //     return internalIDToTuple[var]->getReasonLits();
+        // }
         static TupleFactory& getInstance() {
             static TupleFactory instance;
             return instance;
@@ -238,13 +245,27 @@ class TupleFactory{
         std::vector<unsigned>& getVisibleAtoms(){return visibleTuple;}
         
         ~TupleFactory(){
-            for(TupleLight* tuple : internalIDToTuple) delete tuple;
+            for(unsigned i = 1; i < nextTupleId; ++i){
+                delete internalIDToTuple[i];
+            }
             bufferTuple.clearContent();
         }
         
-        void destroyTuples(){
-            for(TupleLight* tuple : internalIDToTuple) delete tuple;
-        }
+        // void destroyTuples(){
+        //     for(TupleLight* tuple : internalIDToTuple){
+        //         if(tuple->getId() < nextTupleId)
+        //             delete tuple;
+        //     }
+        // }
+
+        //WARING call this method only inside the undo of the fixpoint
+        //in that case tuples are destroyed not in order w.r.t. internalIDToTuple
+        //but there is the warranty that at the end of the undo, the last chunk of
+        //the vector has been deleted and the nextTupleId is consistent
+        // void destroyTuple(TupleLight* t){
+        //     delete t;
+        //     --nextTupleId;
+        // }
         void printAvgWatcherSize(int term){
             // TupleLight* t = find({1,term},4);
             // int id = t->getId();
@@ -273,9 +294,48 @@ class TupleFactory{
             else
                 return var < positiveWatcher.size() ? positiveWatcher[var] : EMPTY_WATCHER;
         }
+        bool isTupleFromInputInterface(int tupleId){
+            return !(tupleId < factSize || tupleId >= lastTupleFromGen);
+        }
+        int getNextTupleId(){
+            return nextTupleId;
+        }
+        int getUndoFixpointUpToDecisionLevelIndex(int solverDecisionLevel){
+            return decisionLevelToUnrollIndex[solverDecisionLevel];
+        }
+        void undoFixpointUpToDecisionLevel(int solverDecisionLevel){
+            for(int i = nextTupleId -1; i >= decisionLevelToUnrollIndex[solverDecisionLevel]; --i){
+                deleteLastTuple(i);
+            }
+        }
+        //unroll up to level x is intended ax unrolling literals up to level x+1
+        void addDecisionLevel(int decisionLevel){
+            //std::cout <<"Added decision level: "<< decisionLevel << "\n";
+            if(decisionLevel <= decisionLevelToUnrollIndex.size())
+                decisionLevelToUnrollIndex.push_back(nextTupleId);
+            //std::cout <<"Added decision level\n";
+            decisionLevelToUnrollIndex[decisionLevel] = nextTupleId;
+            //std::cout <<"Unrolling up to level "<< decisionLevel <<"will cause to go back up to " << nextTupleId << "\n";
+        }
+        void addPropagationFromLazyProp(int tupleId){
+            //std::cout <<"Added propagation from lazy prop " <<tupleId<<"\n";
+            propagatedByLazyPropTuples.insert(tupleId);
+        }
+        //a propagation from lazy propagator is removed once the propagated
+        //tuple is either destroyed due to a rollback(if from out. interface)
+        //or reset to undef(if from input interface)
+        void removePropagationFromLazyProp(int tupleId){
+            //std::cout <<"Remove propagation from lazy prop " <<tupleId<<"\n";
+            propagatedByLazyPropTuples.erase(tupleId);
+        }
+        bool isPropagationFromLazyProp(int tupleId){
+            return propagatedByLazyPropTuples.count(tupleId);
+        }
+
 
         bool isFact(unsigned id){return id < factSize;}
         void storeFactSize(){factSize = internalIDToTuple.size();}
+        int getFactSize(){return factSize;}
         void removeFromCollisionsList(int id){
             if(id < internalIDToTuple.size()){
                 TupleLight* tupleToRemove = internalIDToTuple[id];
@@ -308,6 +368,7 @@ class TupleFactory{
                 }
             }
         }
+        //TODO refactor to work with nextTupleId
         //store new wasp tuple and return a smart reference to it
         TupleLight* addNewTuple(std::vector<int> terms,int predName, unsigned id){
             bufferTuple.setContent(terms.data(),terms.size(),predName);
@@ -441,14 +502,17 @@ class TupleFactory{
             auto& tupleToInternalVar=tupleToInternalVarSets[predName];
             auto it = tupleToInternalVar.find(&bufferTuple);
             if(it==tupleToInternalVar.end()){
-                
                 // storage.push_back(bufferTuple);
                 // TupleLight* trueReference = &storage.back();
                 TupleLight* trueReference = new TupleLight(bufferTuple);
-                tupleToInternalVar.insert(trueReference);
-                internalIDToTuple.push_back(trueReference);
+                tupleToInternalVar.insert(trueReference);   
+                if(nextTupleId == internalIDToTuple.size())
+                    internalIDToTuple.push_back(trueReference);
+                else
+                    internalIDToTuple[nextTupleId] = trueReference;
+                trueReference->setId(nextTupleId);
+                ++nextTupleId;
                 // trueReference->setId(storage.size()-1);
-                trueReference->setId(internalIDToTuple.size()-1);
                 if(!hidden) visibleTuple.push_back(trueReference->getId());
                 bufferTuple.clearContent();
                 return trueReference;
@@ -458,6 +522,19 @@ class TupleFactory{
             // assert(it->second == -1);
             return *it;
         }
+        //delete tuple and keep nextTupleId up to date 
+        void deleteLastTuple(int t){
+            //get predicate and erarse from (tupleToInternalVarSet[pred].erase)
+            assert(nextTupleId -1 == t);
+            TupleLight* to_delete = internalIDToTuple[t];
+            visibleTuple.pop_back();
+            removeFromCollisionsList(t);
+            tupleToInternalVarSets[internalIDToTuple[t]->getPredicateName()].erase(internalIDToTuple[t]);
+            --nextTupleId;
+            delete internalIDToTuple[t];
+            internalIDToTuple[t] = NULL;
+        }
+
         TupleLight* findNoSet(std::vector<int> terms,int predName){
             if(!TupleFactory::usedFindNoSet) std::cout << "WARNING: FindNoSet should be used only for debug"<<std::endl;
             TupleFactory::usedFindNoSet=true;
@@ -504,8 +581,16 @@ class TupleFactory{
             return NULL;
         }
         void setLastTupleFromGen(){
+            assert(lastTupleFromGen == 0);
             lastTupleFromGen = internalIDToTuple.size()-1;
         }
+        bool isTupleFromGen(int id){
+            return id <= lastTupleFromGen;
+        }
+        int getLastTupleFromGen(){
+            return lastTupleFromGen;
+        }
+
         void printModelAsConstraint()const {
             // std::cout<<"Tuple factory"<<std::endl;
             // for(auto tuple : storage){

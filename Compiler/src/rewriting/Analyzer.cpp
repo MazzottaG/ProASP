@@ -90,13 +90,35 @@ void Analyzer::labelLazyness(const std::vector<std::vector<int>>& scc, std::unor
             if(!labelBody){
                 for(unsigned hId = 0; hId < head->size(); hId++){
                     int component = predToComponent[head->at(hId).getPredicateName()];
-                    if(sccLabel[component] == NOT_LAZY){
+                    if(sccLabel[component] == NOT_LAZY || predsAppearingInPosProgram.count(head->at(hId).getPredicateName())){
                         labelBody = true;
                         break;
                     }
+                    if(hId== 0){
+                        const std::vector<aspc::Literal>* body = &rule->getBodyLiterals();
+                        for(unsigned bId = 0; bId < body->size(); ++bId){
+                            int component = predToComponent[body->at(bId).getPredicateName()];
+                            if(predsAppearingInPosProgram.count(body->at(bId).getPredicateName())){
+                                if(sccLabel[component] == NOT_LAZY){
+                                    labelBody = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
                 }
+
             }
             if(labelBody){
+
+                const std::vector<aspc::Atom>* head = &rule->getHead();
+                for(unsigned hId = 0; hId < head->size(); hId++){
+                    int component = predToComponent[head->at(hId).getPredicateName()];
+                    if(sccLabel[component] == UNK_LAZY){
+                            sccLabel[component]=NOT_LAZY;
+                            labeledComponent=true;
+                    }
+                }
                 for(const aspc::Formula* f: rule->getFormulas()){
                     if(f->isLiteral()){
                         const aspc::Literal* lit = (const aspc::Literal*)f;
@@ -679,11 +701,14 @@ void Analyzer::splitProgram(){
             sccLazyLabel[i] = NOT_LAZY;
     }
 
+    // for(std::string pred : predsAppearingInPosProgram){
+    //     std::cout <<"pred " <<pred <<" appears in pos program\n";
+    // }
     labelLazyness(scc,predicateToComponent,sccLazyLabel);
-    // std::cout << "--------- LAZYNESS ---------"<<std::endl;
-    // printProgramBySCC(scc,sccLazyLabel,LAZY);
-    // std::cout << "--------- NOT LAZYNESS ---------"<<std::endl;
-    // printProgramBySCC(scc,sccLazyLabel,NOT_LAZY);
+    std::cout << "--------- LAZYNESS ---------"<<std::endl;
+    printProgramBySCC(scc,sccLazyLabel,LAZY);
+    std::cout << "--------- NOT LAZYNESS ---------"<<std::endl;
+    printProgramBySCC(scc,sccLazyLabel,NOT_LAZY);
     
     sccTypeLabel=std::vector<int>(scc.size(),UNK_TYPE);
     labelType(sccTypeLabel,sccStratLabel,sccLazyLabel,scc);
@@ -691,7 +716,7 @@ void Analyzer::splitProgram(){
     buildPrograms(scc,sccTypeLabel,predicateToComponent);        
 }
 
-Analyzer::Analyzer(const aspc::Program& p,const std::vector<bool>& labels,bool fullgrounded, std::set<std::string>& predsDefinedByPosProgram):program(p),inputLabel(labels),fullGrounding(fullgrounded), predicatesDefinedInPosCycleProgram(predsDefinedByPosProgram){
+Analyzer::Analyzer(const aspc::Program& p,const std::vector<bool>& labels,bool fullgrounded, std::set<std::string>& predsDefinedByPosProgram, std::set<std::string>& predsAppearingInPosProgram):program(p),inputLabel(labels),fullGrounding(fullgrounded), predicatesDefinedInPosCycleProgram(predsDefinedByPosProgram), predsAppearingInPosProgram(predsAppearingInPosProgram){
     for(const aspc::Rule& rule : p.getRules()){
         //std::vector<std::string> predicate 
         if(!rule.isConstraint()){

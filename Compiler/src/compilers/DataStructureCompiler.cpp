@@ -249,7 +249,7 @@ std::vector<std::vector<unsigned>> DataStructureCompiler::declareExplainFalseDat
 
                 }
             }
-            std::cout <<"Outside formula selection - externalFormula: " << selectedExternalFormula << "selectedFormula: "<< selectedFormula << "\n";
+            //std::cout <<"Outside formula selection - externalFormula: " << selectedExternalFormula << "selectedFormula: "<< selectedFormula << "\n";
             if(selectedFormula != body.size()){
                 const aspc::Formula* currentFormula;
                 if(selectedExternalFormula != body.size()){

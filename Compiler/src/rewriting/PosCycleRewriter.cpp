@@ -174,23 +174,23 @@ void PosCycleRewriter::rewriteConstraintAsGeneratorsForPredicate(const aspc::Rul
     for(unsigned i = 0; i < rule->getArithmeticRelationsWithAggregate().size();i++){     
         aggregates.push_back(rule->getArithmeticRelationsWithAggregate().at(i));
     }
-    if(!genRulesBodyPredicates.empty()){
-        for(aspc::Literal lit : genRulesHeadPredicates){
-            for(const std::string& headVar : lit.getVariables()){
-                if(!posBodyVars.count(headVar)){
-                    std::cout << "head variables of generator rules for lazy propragator must be bound by positive body vars\n";
-                    exit(1);
-                }
+    //if(!genRulesBodyPredicates.empty()){
+    for(aspc::Literal lit : genRulesHeadPredicates){
+        for(const std::string& headVar : lit.getVariables()){
+            if(!posBodyVars.count(headVar)){
+                std::cout << "head variables of generator rules for lazy propragator must be bound by positive body vars\n";
+                exit(1);
             }
-            const aspc::Atom a(lit.getPredicateName(), lit.getTerms());
-            std::vector<aspc::Atom> head;
-            head.push_back(a);
-            aspc::Rule generatorRule(head, genRulesBodyPredicates, ineqs, aggregates, false, false); 
-            generatorRule.print();
-            generatorProgram.addRule(generatorRule);
-            
         }
-    }//else constraint contains only P.P.-defined predicates (no generation of symbols is needed)
+        const aspc::Atom a(lit.getPredicateName(), lit.getTerms());
+        std::vector<aspc::Atom> head;
+        head.push_back(a);
+        aspc::Rule generatorRule(head, genRulesBodyPredicates, ineqs, aggregates, false, false); 
+        generatorRule.print();
+        generatorProgram.addRule(generatorRule);
+        
+    }
+    //}//else constraint contains only P.P.-defined predicates (no generation of symbols is needed)
     std::cout<<"-----\n";
 }
 

@@ -5,7 +5,8 @@
 #include <vector>
 #include "AuxMapHandler.h"
 #include "ModelExpansion.h"
-
+#include "PositiveProgramFactory.h"
+#include "LazyPropagator.h"
 class Propagator{
     public:
 
@@ -77,13 +78,22 @@ class Propagator{
                 }
             }
             if(starter->isUndef()){
+                //std::cout <<"PROP "<< starter->getId() <<"\n";
                 const auto& insertResult = starter->setStatus(literal > 0 ? True : False);
                 if(insertResult.second){
                     TupleFactory::getInstance().removeFromCollisionsList(starter->getId());
-                    if(literal > 0) AuxMapHandler::getInstance().insertTrue(insertResult);
-                    else AuxMapHandler::getInstance().insertFalse(insertResult);
+                    PositiveProgramFactory::getInstance().removePossibleSupportForTuple(starter->getId());
+                    if(literal > 0)
+                        AuxMapHandler::getInstance().insertTrue(insertResult);
+                    else
+                        AuxMapHandler::getInstance().insertFalse(insertResult);
                     updateSumForTrueLit(starter);
                     updateSumForTrueLitGroundAggregate(literal);
+                    
+                    if(TupleFactory::getInstance().isPropagationFromLazyProp(starter->getId())){
+                        PositiveProgramFactory::getInstance().updateToCheckDueToTuple(starter->getId());
+                    }
+                    LazyPropagator::getInstance().attachWatched(starter->getId());
                 }
             }
             else{
@@ -118,6 +128,9 @@ class Propagator{
             // for(int i = 0 ; i< nested_calls;i++) std::cout << "   ";
             // std::cout << "------------"<<std::endl;
             // nested_calls--;
+            if(literal < 0 ){
+                PositiveProgramFactory::getInstance().removeTrueSolverChoice(starter->getId());
+            }
             return Glucose::CRef_Undef;
         }
         void init(){
@@ -140,8 +153,25 @@ class Propagator{
                     #ifdef DEBUG_PROP
                     std::cout << "Unrolling ";AuxMapHandler::getInstance().printTuple(starter);
                     #endif
+                    
+                    if(TupleFactory::getInstance().isPropagationFromLazyProp(starter->getId())){
+                        //std::cout <<"Unrolling lazy\n";
+                        //set all tuples supported by starter as toCheck
+                        PositiveProgramFactory::getInstance().updateToCheckDueToTuple(starter->getId());
+                        PositiveProgramFactory::getInstance().removeSupported(starter->getId());
+                    }
                     TupleFactory::getInstance().removeFromCollisionsList(starter->getId());
                     AuxMapHandler::getInstance().insertUndef(insertResult);
+
+                    //if tuple was a true solver choice, remove such that it will not be checked anymore
+                    //at the end of each decision level
+                    if(sign == 1 && LazyPropagator::getInstance().isPredicateDefinedInPositiveProgram(starter->getPredicateName())){
+                        PositiveProgramFactory::getInstance().removeTrueSolverChoice(starter->getId());
+                    
+                    TupleFactory::getInstance().removePropagationFromLazyProp(starter->getId());
+                    //starter might have been propagated by lazy propagators
+                    PositiveProgramFactory::getInstance().removeToCheckTuple(starter->getId());
+                }
                 }
             }
             else{

@@ -69,12 +69,10 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "../simp/solver/AuxMapHandler.h"
 #include "../simp/solver/SatProgramBuilder.h"
 #include "../simp/utils/SharedFunctions.h"
-
 #include <fstream>
 #include <stdlib.h>
 
 using namespace Glucose;
-
 //=================================================================================================
 
 static const char* _certified = "CORE -- CERTIFIED UNSAT";
@@ -366,7 +364,8 @@ void read_asp(Solver* solver,std::string filename,std::vector<unsigned>& facts){
 int main(int argc, char** argv)
 {
     try {
-        printf("c\nc This is glucose 4.2.1 --  based on MiniSAT (Many thanks to MiniSAT team)\nc\n");
+        //printf("c\nc This is glucose 4.2.1 --  based on MiniSAT (Many thanks to MiniSAT team)\nc\n");
+        printf("c\nc This is ProASP solver --  based on glucose 4.2.1 (Many thanks to Glucose team)\nc\n");
 
 
         setUsageHelp("c USAGE: %s [options] <input-file> <result-output-file>\n\n  where input may be either in plain or gzipped DIMACS.\n");
@@ -489,22 +488,6 @@ int main(int argc, char** argv)
             TupleFactory::getInstance().initConstraintGen();
             std::vector<int> falseAtoms;
             Generator::getInstance().generate(&S,falseAtoms);
-            LazyPropagator lazyProp;
-            lazyProp.computeFixpoint();
-
-            unsigned lastTupleId = TupleFactory::getInstance().getLastId();
-            std::cout <<"GENERATED TUPLES:\n";
-            for(unsigned i = 0; i <= lastTupleId; ++i){
-                AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(i));
-                
-            }
-
-            for(unsigned i = 0; i <= lastTupleId; ++i){
-                //std::cout << "From gen " << TupleFactory::getInstance().isTupleFromGen(i) << "\n";
-                lazyProp.explainTrueLiteral(i);
-            }
-
-            exit(1);
             for(AggregatePropagator* prop : Generator::getInstance().collectAggregatePropagators()){
                 // prop->printCurrentStatus();
                 Propagator::getInstance().addPropagator(prop);
@@ -522,7 +505,6 @@ int main(int argc, char** argv)
                 lits.push( mkLit(id));
                 solver->addClause_(lits);
                 Propagator::getInstance().updateSumForTrueLitGroundAggregate(id);
-                // std::cout << "Addeded "<<var(mkLit(id))<<" at level "<<solver->getLiteralLevel(var(mkLit(id)))<<std::endl;
                 if(!solver->okay())
                     break;
             }
@@ -555,19 +537,40 @@ int main(int argc, char** argv)
                 if(!solver->okay())
                     break;
             }
+            TupleFactory::getInstance().setLastTupleFromGen();
+            PositiveProgramFactory::getInstance().setLastTupleFromGen(TupleFactory::getInstance().getLastTupleFromGen());
             Propagator::getInstance().activate();
-            if(S.okay())  
-                Propagator::getInstance().propagateAtLevel0(&S,lits);
             if(S.okay()){
+                Glucose::vec<Glucose::Lit> lits;
+                //get id of last tuple before fixpoint level 0, generate and then add generated tuples as facts
+                int lastTupleBeforeFixpoint = TupleFactory::getInstance().getLastId();
+                bool generated = LazyPropagator::getInstance().computeFixpointLevelZero(&S, lits);
+
+                Propagator::getInstance().propagateAtLevel0(&S,lits);
+                
+            }
+            if(S.okay()){
+                // std::cout <<"Printing factory\n";
+                // for(unsigned i = 0; i <= TupleFactory::getInstance().getLastId(); ++i){
+                //     std::cout <<"["<< i <<", ";
+                //     AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(i));
+                //     std::cout <<"] ";
+                // }
+                // std::cout <<"Tuple Factory size before completion " << TupleFactory::getInstance().getLastId()+1;
                 SatProgramBuilder::getInstance().computeCompletion(&S);
+                // std::cout <<"Tuple Factory size after completion " << TupleFactory::getInstance().getLastId()+1;
+                // std::cout <<"Printing factory\n";
+                // for(unsigned i = 0; i <= TupleFactory::getInstance().getLastId(); ++i){
+                //     AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(i));
+                // }
                 // std::cout << "Exiting ..."<<std::endl;
                 // exit(180);
                 // std::cout << "p cnf "<<TupleFactory::getInstance().size()-1<<" " << S.nClauses()+facts.size()<<std::endl;
-                // for(int i=1;i<TupleFactory::getInstance().size(); i++){
-                //     std::cout << "c "<<i<<" ";
-                //     AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(i));
-                //     std::cout << std::endl;
-                // }
+                 /*for(int i=1;i<TupleFactory::getInstance().size(); i++){
+                     std::cout << "c "<<i<<" ";
+                     AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(i));
+                     std::cout << std::endl;
+                 }*/
                 // // S.printGeneratedClauses();
                 // for(unsigned id : facts){
                 //     std::cout << id << " 0"<<std::endl;
@@ -577,10 +580,11 @@ int main(int argc, char** argv)
                 // std::cout << "End cnf"<<std::endl;
                 TupleFactory::getInstance().destroyClauses();
                 TupleFactory::getInstance().destroyConstraints();
-                std::cout << "Found "<<S.nVars()<<" glucose variables"<<std::endl;
+                //std::cout << "Found "<<S.nVars()<<" glucose variables"<<std::endl;
                 int lastVar = TupleFactory::getInstance().getLastId();
-                std::cout << "Generated "<<lastVar<<" symbols"<<std::endl;
+                //std::cout << "Generated "<<lastVar<<" symbols"<<std::endl;
             }
+            
         }
         if (S.verbosity > 0){
             printf("c |  Number of variables:  %12d                                                                   |\n", S.nVars());
@@ -630,7 +634,7 @@ int main(int argc, char** argv)
                 printStats(S);
             exit(0);
         }else{
-            std::cout << "no dimacs"<<std::endl;
+            //std::cout << "no dimacs"<<std::endl;
         }
         Generator::getInstance().destroyRemapping();
         // TupleFactory::getInstance().printUsedMemory();
@@ -638,6 +642,28 @@ int main(int argc, char** argv)
         // analyzePenalty();
         std::cout << "Start solving"<<std::endl;
         vec<Lit> dummy;
+        int lastTupleFromGen = TupleFactory::getInstance().getLastTupleFromGen();
+        #ifdef DEBUG_PROP
+                std::cout <<"Add to check tuples at level zero: \n";
+        #endif
+        for(int i = TupleFactory::getInstance().getFactSize(); i <= lastTupleFromGen; ++i){
+            //some tuples might have been set to true by level zero propagations
+            //such tuples need not to be checked
+            Tuple* t = TupleFactory::getInstance().getTupleFromInternalID(i);
+            if(t->isUndef()){
+                // #ifdef DEBUG_PROP
+                //     std::cout <<"\t";
+                //     AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(i));
+                //     std::cout <<"\n";
+                // #endif
+                //if(t->size() != 0){
+                if(LazyPropagator::getInstance().isPredicateDefinedInPositiveProgram(t->getPredicateName())){
+                    //std::cout <<"Added to check for predicate "<< t->getPredicateName()<<"\n";
+                    PositiveProgramFactory::getInstance().addToCheckTuple(i);
+                }
+                //}
+            }
+        }
         lbool ret = S.solveLimited(dummy);
 
         if (S.verbosity > 0){
@@ -677,7 +703,7 @@ int main(int argc, char** argv)
                 }
             }
         }
-
+        
         exit(exit_code);
         #ifdef NDEBUG
             exit(ret == l_True ? 10 : ret == l_False ? 20 : 0);     // (faster than "return", which will invoke the destructor for 'Solver')

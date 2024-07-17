@@ -19,16 +19,20 @@ class LazyPropagatorCompiler{
         DependencyManager depManager;  
         std::ofstream outfile;
         Indentation ind;
+        std::set<std::string> positiveProgramHeadPredicates;
+        int totalNumOfPredicates;
         //ordering of rules for every predicate of the corresponding component
         std::unordered_map<unsigned, std::vector<std::vector<unsigned>>> ruleOrderings;
         std::unordered_map<unsigned, std::vector<std::vector<unsigned>>> ruleOrderingsByHead;
         std::unordered_map<unsigned, std::vector<std::vector<unsigned>>> ruleOrderingsExplainFalse;
         std::vector<std::string> propagatorNames;
         std::vector<unsigned> findNonExitRule(std::vector<int>, std::vector<unsigned>);
-        void compileReasonAndSupportSaving(std::vector<std::pair<int, bool>>&, int);
+        void compileReasonAndSupportSaving(std::vector<std::pair<int, bool>>&, int, std::string tuplePrefix);
+        void compileAddTupleToFactoryForExplainFalse(unsigned, const aspc::Literal*, const std::set<std::string>& componentPreds);
     public:
         LazyPropagatorCompiler(const aspc::Program&, std::string&, DataStructureCompiler*, const std::unordered_map<std::string, std::string>&);
         void compile();
+        void compileTupleFactoryCC();
         //compile scc of pos Cycle program
         void compileSCC(std::vector<int>, unsigned);
         //compile propagators for constraints is pos cycle Program
@@ -36,8 +40,10 @@ class LazyPropagatorCompiler{
         //void computePropagatorOrder();
         void openPropagatorFile(unsigned);
         void closePropagatorFile();
-        void compileComponentWatched(std::vector<int> , unsigned);
+        //void compileComponentWatched(std::vector<int> , unsigned);
+        void compileComponentWatched(std::vector<int>& , std::vector<unsigned>&);
         void compileRuleWatcher(unsigned, std::unordered_map<std::string, int>&);
+        void compileFixPointComputationLevelZero(std::vector<int>&, std::vector<unsigned>&, std::set<std::string>&, std::vector<unsigned>&);
         void compileFixPointComputation(std::vector<int>&, std::vector<unsigned>&, std::set<std::string>&, std::vector<unsigned>&);
         void compileCheckLiteralStatus(std::vector<int>&, std::vector<unsigned>&, std::set<std::string>&, std::vector<unsigned>&);
         void compileExplainTrue(std::vector<int>&, std::vector<unsigned>&, std::set<std::string>&, std::vector<unsigned>&);

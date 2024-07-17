@@ -64,7 +64,7 @@ Glucose::CRef AggregatePropagator::propagateAggregateAsFalse(Glucose::Solver* so
                         //     AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(var(lit)));
                         // }
                         // std::cout << std::endl;
-                        Glucose::CRef clause = solver->externalPropagation(varL,negated,this);
+                        Glucose::CRef clause = solver->externalPropagation(varL,negated);
                         if(clause != Glucose::CRef_Undef)
                             return clause;
                     }else{
@@ -129,7 +129,7 @@ Glucose::CRef AggregatePropagator::propagateAggregateAsTrue(Glucose::Solver* sol
                         //     AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(var(lit)));
                         // }
                         // std::cout << std::endl;
-                        Glucose::CRef clause = solver->externalPropagation(varL,negated,this);
+                        Glucose::CRef clause = solver->externalPropagation(varL,negated);
                         if(clause != Glucose::CRef_Undef)
                             return clause;
                     }else{
@@ -273,7 +273,7 @@ Glucose::CRef AggregatePropagator::propagate(Glucose::Solver* solver,Glucose::ve
                                 // }
                                 // std::cout << std::endl;
                                 // -------------
-                                Glucose::CRef clause = solver->externalPropagation(varL,negated,this);
+                                Glucose::CRef clause = solver->externalPropagation(varL,negated);
                                 if(clause != Glucose::CRef_Undef)
                                     return clause;
                             }else{
@@ -322,7 +322,7 @@ Glucose::CRef AggregatePropagator::propagate(Glucose::Solver* solver,Glucose::ve
                                 // std::cout << std::endl;
                                 // --------------
 
-                                Glucose::CRef clause = solver->externalPropagation(varL,negated,this);
+                                Glucose::CRef clause = solver->externalPropagation(varL,negated);
                                 if(clause != Glucose::CRef_Undef)
                                     return clause;
                             }else{

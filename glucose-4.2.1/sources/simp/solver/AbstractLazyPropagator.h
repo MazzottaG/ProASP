@@ -8,37 +8,29 @@
 typedef TupleLight Tuple;
 class AbstractLazyPropagator{
     public:
-        virtual void computeFixpoint(Glucose::Solver* s, std::vector<int>&) = 0;
-        virtual void explainTrueLiteral(Glucose::Solver* s, Glucose::Lit& lit){
-            int tupleId = TupleFactory::getInstance().glucoseReasonToTupleId(lit);
-            Tuple* t = TupleFactory::getInstance().getTupleFromInternalID(tupleId);
-            Glucose::vec<Glucose::Lit> propagationReason;
-            std::vector<int> toExplain;
-            toExplain.push_back(tupleId);
-            while(!toExplain.empty()){
-                Tuple* tuple = TupleFactory::getInstance().getTupleFromInternalID(toExplain.back());
-                toExplain.pop_back();
-                Glucose::vec<Glucose::Lit>&  tupleReason = tuple->getReasonLits();
-                for(unsigned i = 0; i < tupleReason.size(); ++i){
-                    bool sign = Glucose::sign(tupleReason[i]);
-                    //use var - change method
-                    tupleId = TupleFactory::getInstance().glucoseReasonToTupleId(tupleReason[i]);
-                    if(PositiveProgramFactory::getInstance().isTupleFromGen(tupleId))
-                        propagationReason.push(Glucose::mkLit(tupleId,  sign));
-                    else
-                        toExplain.push_back(tupleId);
-                }
-            }
-
-            std::cout <<"Reason: " ;
-            for(unsigned i = 0; i < propagationReason.size(); ++i){
-                //AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(TupleFactory::getInstance().glucoseReasonToTupleId(propagationReason[i])));
-                std::cout << propagationReason[i].x << " ";
-            }
-            std::cout<< std::endl;
+        virtual bool computeFixpointLevelZero(Glucose::Solver* s, Glucose::vec<Glucose::Lit>& lits) = 0;
+        virtual bool computeFixpoint(Glucose::Solver* s, std::vector<int>&, Glucose::CRef&, Glucose::vec<Glucose::Lit>& lits) = 0;
+        virtual bool propagateToFalse(Glucose::Solver* s, Tuple* tuple, Tuple* original, bool sign, Glucose::vec<Glucose::Lit>& tupleReasons, Glucose::vec<Glucose::Lit>& lits, Glucose::CRef& clause, bool makePropagation) = 0;
+        //virtual void checkLiteralStatus(Glucose::Solver* s, std::vector<std::pair<int, bool>>) = 0;
+        unsigned getId(){
+            return id;
         }
-        virtual void explainFalseLiteral(int, std::unordered_set<int>&) = 0;
-        virtual void checkLiteralStatus(std::vector<std::pair<int, bool>>) = 0;
+        void setId(unsigned id){
+            this->id = id;
+        }
+        std::vector<int> getWatchedPredicates(){
+            return watchedPredicates;
+        }
+        std::vector<int> getHeadPredicates(){
+            return headPredicates;
+        }
+        
+    protected:
+        unsigned id;
+        //predicates in the head or the body of some rule handled by the component prop.
+        std::vector<int> watchedPredicates;
+        //predicates in the head of some rule handled by the component propagator (a subset of watchedPredicates)
+        std::vector<int> headPredicates;
 };
 
 #endif /*ABSTRACTLAZYPROPAGATOR_H*/

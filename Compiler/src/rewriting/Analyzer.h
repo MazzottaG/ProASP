@@ -104,6 +104,7 @@ class Analyzer{
         std::unordered_map<int,int> remappingBodyLabeling;
 
         std::set<std::string> predicatesDefinedInPosCycleProgram;
+        std::set<std::string> predsAppearingInPosProgram;
         bool fullGrounding;
         
         bool findAggregateNegativeDependency(const std::vector<std::vector<int>>& scc, unsigned componentId,const aspc::ArithmeticRelationWithAggregate* aggrRelation);
@@ -153,7 +154,7 @@ class Analyzer{
         const int NON_DATALOG_FORMULA   = 2;
 
 
-        Analyzer(const aspc::Program& p,const std::vector<bool>& labels,bool fullGrounding, std::set<std::string>& predicatedDefinedByPosProgram);
+        Analyzer(const aspc::Program& p,const std::vector<bool>& labels,bool fullGrounding, std::set<std::string>& predicatedDefinedByPosProgram, std::set<std::string>& predsAppearingInPosProgram);
         const std::vector<bool>& getEagerLabel()const;
         const aspc::Program& getDatalog()const;
         const aspc::Program& getEager()const;

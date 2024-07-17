@@ -814,8 +814,11 @@ void PropagatorCompiler::compileRuleFromStarter(unsigned ruleId, std::ofstream& 
                     outfile << ind++ << "for(unsigned i = 0; i< propagations.size(); i++){\n";
                         outfile << ind << "bool foundConflict = solver->isConflictPropagation(var(propagations[i]), polarity[i]);\n";
                         outfile << ind << "bool assigned = solver->isAssigned(var(propagations[i]));\n";
-                        outfile << ind++ << "if(!assigned)\n";
-                            outfile << ind-- << "solver->assignFromPropagators(propagations[i]);\n";
+                        outfile << ind++ << "if(!assigned){\n";
+                            outfile << ind << "solver->assignFromPropagators(propagations[i]);\n";
+                            //propagating a true at level zero from a constraint is like making a true choice. 
+                            outfile << ind << "if(!polarity[i] && LazyPropagator::getInstance().isPredicateDefinedInPositiveProgram(TupleFactory::getInstance().getTupleFromInternalID(var(propagations[i]))->getPredicateName())) PositiveProgramFactory::getInstance().addTrueSolverChoice(var(propagations[i]));\n";
+                        outfile << --ind << "}\n";
                         outfile << ind++ << "else if(foundConflict){\n";
                             outfile << ind << "lits.clear();\n";
                             outfile << ind << "solver->addClause_(lits);\n";
@@ -857,7 +860,7 @@ void PropagatorCompiler::printTuplePropagation(std::ofstream& outfile,Indentatio
     }else{
         //  foundConflict -> violated clause is in solver
         outfile << ind++ << "if(solver->currentLevel() > 0){\n";
-            outfile << ind << "Glucose::CRef clause = solver->externalPropagation("<<tuplename<<"->getId(),var < 0,this);\n";
+            outfile << ind << "Glucose::CRef clause = solver->externalPropagation("<<tuplename<<"->getId(),var < 0);\n";
             outfile << ind++ << "if(clause != Glucose::CRef_Undef)\n";
                 outfile << ind-- << "return clause;\n";
         outfile << --ind << "}else{\n";
@@ -1647,8 +1650,10 @@ void PropagatorCompiler::compileRuleLevelZero(unsigned ruleId,std::ofstream& out
         outfile << ind++ << "for(unsigned i = 0; i< propagations.size(); i++){\n";
             outfile << ind << "bool foundConflict = solver->isConflictPropagation(var(propagations[i]), polarity[i]);\n";
             outfile << ind << "bool assigned = solver->isAssigned(var(propagations[i]));\n";
-            outfile << ind++ << "if(!assigned)\n";
-                outfile << ind-- << "solver->assignFromPropagators(propagations[i]);\n";
+            outfile << ind++ << "if(!assigned){\n";
+                outfile << ind << "solver->assignFromPropagators(propagations[i]);\n";
+                outfile << ind << "if(!polarity[i] && LazyPropagator::getInstance().isPredicateDefinedInPositiveProgram(TupleFactory::getInstance().getTupleFromInternalID(var(propagations[i]))->getPredicateName())) PositiveProgramFactory::getInstance().addTrueSolverChoice(var(propagations[i]));\n";
+            outfile << --ind << "}\n";
             outfile << ind++ << "else if(foundConflict){\n";
                 outfile << ind << "lits.clear();\n";
                 outfile << ind << "solver->addClause_(lits);\n";
@@ -1978,7 +1983,7 @@ void PropagatorCompiler::compileEagerRuleWithCount(unsigned ruleId, std::ofstrea
                                     outfile << ind << "propagationReason.copyFrom(shared_reason.get()->getData(),shared_reason.get()->size());\n";
                                     outfile << ind << "propagationReason[0]=Glucose::mkLit(itProp,true);\n";
 
-                                    outfile << ind << "Glucose::CRef clause = solver->externalPropagation(itProp,true,this);\n";
+                                    outfile << ind << "Glucose::CRef clause = solver->externalPropagation(itProp,true);\n";
                                     outfile << ind++ << "if(clause != Glucose::CRef_Undef)\n";
                                         outfile << ind-- << "return clause;\n";
                                 outfile << --ind << "}\n";
@@ -2039,7 +2044,7 @@ void PropagatorCompiler::compileEagerRuleWithCount(unsigned ruleId, std::ofstrea
                                     outfile << ind << "propagationReason.copyFrom(shared_reason.get()->getData(),shared_reason.get()->size());\n";
                                     outfile << ind << "propagationReason[0]=Glucose::mkLit(itProp);\n";
 
-                                    outfile << ind << "Glucose::CRef clause = solver->externalPropagation(itProp,false,this);\n";
+                                    outfile << ind << "Glucose::CRef clause = solver->externalPropagation(itProp,false);\n";
                                     outfile << ind++ << "if(clause != Glucose::CRef_Undef)\n";
                                         outfile << ind-- << "return clause;\n";
                                 outfile << --ind << "}\n";
@@ -2170,7 +2175,7 @@ void PropagatorCompiler::compileEagerRuleWithCount(unsigned ruleId, std::ofstrea
                                     outfile << ind << "propagationReason.copyFrom(shared_reason.get()->getData(),shared_reason.get()->size());\n";
                                     outfile << ind << "propagationReason[0]=Glucose::mkLit(itProp);\n";
 
-                                    outfile << ind << "Glucose::CRef clause = solver->externalPropagation(itProp,false,this);\n";
+                                    outfile << ind << "Glucose::CRef clause = solver->externalPropagation(itProp,false);\n";
                                     outfile << ind++ << "if(clause != Glucose::CRef_Undef)\n";
                                         outfile << ind-- << "return clause;\n";
                                 outfile << --ind << "}\n";
@@ -2275,7 +2280,7 @@ void PropagatorCompiler::compileEagerRuleWithCount(unsigned ruleId, std::ofstrea
                                     outfile << ind << "propagationReason.copyFrom(shared_reason.get()->getData(),shared_reason.get()->size());\n";
                                     outfile << ind << "propagationReason[0]=Glucose::mkLit(itProp,true);\n";
 
-                                    outfile << ind << "Glucose::CRef clause = solver->externalPropagation(itProp,true,this);\n";
+                                    outfile << ind << "Glucose::CRef clause = solver->externalPropagation(itProp,true);\n";
                                     outfile << ind++ << "if(clause != Glucose::CRef_Undef)\n";
                                         outfile << ind-- << "return clause;\n";
                                 outfile << --ind << "}\n";
@@ -2363,7 +2368,7 @@ void PropagatorCompiler::compileEagerRuleWithCount(unsigned ruleId, std::ofstrea
                                 outfile << ind << "propagationReason.copyFrom(shared_reason.get()->getData(),shared_reason.get()->size());\n";
                                 outfile << ind << "propagationReason[0]=Glucose::mkLit(aggrIdIt);\n";
 
-                                outfile << ind << "Glucose::CRef clause = solver->externalPropagation(aggrIdIt,false,this);\n";
+                                outfile << ind << "Glucose::CRef clause = solver->externalPropagation(aggrIdIt,false);\n";
                                 outfile << ind++ << "if(clause != Glucose::CRef_Undef)\n";
                                     outfile << ind-- << "return clause;\n";
                             outfile << --ind << "}\n";
@@ -2409,7 +2414,7 @@ void PropagatorCompiler::compileEagerRuleWithCount(unsigned ruleId, std::ofstrea
                                 outfile << ind << "propagationReason.copyFrom(shared_reason.get()->getData(),shared_reason.get()->size());\n";
                                 outfile << ind << "propagationReason[0]=Glucose::mkLit(aggrIdIt,true);\n";
 
-                                outfile << ind << "Glucose::CRef clause = solver->externalPropagation(aggrIdIt,true,this);\n";
+                                outfile << ind << "Glucose::CRef clause = solver->externalPropagation(aggrIdIt,true);\n";
                                 outfile << ind++ << "if(clause != Glucose::CRef_Undef)\n";
                                     outfile << ind-- << "return clause;\n";
                             outfile << --ind << "}\n";
@@ -2577,7 +2582,7 @@ void PropagatorCompiler::compileEagerRuleWithSum(unsigned ruleId, std::ofstream&
                                         outfile << ind << "propagationReason.copyFrom(shared_reason.get()->getData(),shared_reason.get()->size());\n";
                                         outfile << ind << "propagationReason[0]=Glucose::mkLit(itProp,true);\n";
 
-                                        outfile << ind << "Glucose::CRef clause = solver->externalPropagation(itProp,true,this);\n";
+                                        outfile << ind << "Glucose::CRef clause = solver->externalPropagation(itProp,true);\n";
                                         outfile << ind++ << "if(clause != Glucose::CRef_Undef)\n";
                                             outfile << ind-- << "return clause;\n";
                                     outfile << --ind << "}\n";
@@ -2645,7 +2650,7 @@ void PropagatorCompiler::compileEagerRuleWithSum(unsigned ruleId, std::ofstream&
                                         outfile << ind << "propagationReason.copyFrom(shared_reason.get()->getData(),shared_reason.get()->size());\n";
                                         outfile << ind << "propagationReason[0]=Glucose::mkLit(itProp);\n";
 
-                                        outfile << ind << "Glucose::CRef clause = solver->externalPropagation(itProp,false,this);\n";
+                                        outfile << ind << "Glucose::CRef clause = solver->externalPropagation(itProp,false);\n";
                                         outfile << ind++ << "if(clause != Glucose::CRef_Undef)\n";
                                             outfile << ind-- << "return clause;\n";
                                     outfile << --ind << "}\n";
@@ -2780,7 +2785,7 @@ void PropagatorCompiler::compileEagerRuleWithSum(unsigned ruleId, std::ofstream&
                                     outfile << ind << "propagationReason.copyFrom(shared_reason.get()->getData(),shared_reason.get()->size());\n";
                                     outfile << ind << "propagationReason[0]=Glucose::mkLit(itProp);\n";
 
-                                    outfile << ind << "Glucose::CRef clause = solver->externalPropagation(itProp,false,this);\n";
+                                    outfile << ind << "Glucose::CRef clause = solver->externalPropagation(itProp,false);\n";
                                     outfile << ind++ << "if(clause != Glucose::CRef_Undef)\n";
                                         outfile << ind-- << "return clause;\n";
                                 outfile << --ind << "}\n";
@@ -2892,7 +2897,7 @@ void PropagatorCompiler::compileEagerRuleWithSum(unsigned ruleId, std::ofstream&
                                     outfile << ind << "propagationReason.copyFrom(shared_reason.get()->getData(),shared_reason.get()->size());\n";
                                     outfile << ind << "propagationReason[0]=Glucose::mkLit(itProp,true);\n";
 
-                                    outfile << ind << "Glucose::CRef clause = solver->externalPropagation(itProp,true,this);\n";
+                                    outfile << ind << "Glucose::CRef clause = solver->externalPropagation(itProp,true);\n";
                                     outfile << ind++ << "if(clause != Glucose::CRef_Undef)\n";
                                         outfile << ind-- << "return clause;\n";
                                 outfile << --ind << "}\n";
@@ -2985,7 +2990,7 @@ void PropagatorCompiler::compileEagerRuleWithSum(unsigned ruleId, std::ofstream&
                             outfile << ind << "propagationReason.copyFrom(shared_reason.get()->getData(),shared_reason.get()->size());\n";
                             outfile << ind << "propagationReason[0]=Glucose::mkLit(aggrIdIt);\n";
 
-                            outfile << ind << "Glucose::CRef clause = solver->externalPropagation(aggrIdIt,false,this);\n";
+                            outfile << ind << "Glucose::CRef clause = solver->externalPropagation(aggrIdIt,false);\n";
                             outfile << ind++ << "if(clause != Glucose::CRef_Undef)\n";
                                 outfile << ind-- << "return clause;\n";
                         outfile << --ind << "}\n";
@@ -3036,7 +3041,7 @@ void PropagatorCompiler::compileEagerRuleWithSum(unsigned ruleId, std::ofstream&
                                 outfile << ind << "propagationReason.copyFrom(shared_reason.get()->getData(),shared_reason.get()->size());\n";
                                 outfile << ind << "propagationReason[0]=Glucose::mkLit(aggrIdIt,true);\n";
 
-                                outfile << ind << "Glucose::CRef clause = solver->externalPropagation(aggrIdIt,true,this);\n";
+                                outfile << ind << "Glucose::CRef clause = solver->externalPropagation(aggrIdIt,true);\n";
                                 outfile << ind++ << "if(clause != Glucose::CRef_Undef)\n";
                                     outfile << ind-- << "return clause;\n";
                             outfile << --ind << "}\n";

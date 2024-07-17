@@ -143,7 +143,7 @@ class Solver : public Clone {
     bool    okay         () const;                  // FALSE means solver is in a conflicting state
 
     // External Propagators
-    CRef externalPropagation(Var var, bool negated,AbstractPropagator* prop);
+    CRef externalPropagation(Var var, bool negated);
     void assignFromPropagators(Lit l){uncheckedEnqueue(l);}
     CRef storePropagatorReason(int literal);
     void addLiteralToReason(Var var, bool negated);
