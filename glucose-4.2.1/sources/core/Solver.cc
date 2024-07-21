@@ -1639,12 +1639,10 @@ lbool Solver::search(int nof_conflicts) {
         for(int tupleId : toCheck){
             Tuple* toCheckTuple = TupleFactory::getInstance().getTupleFromInternalID(tupleId);
             bool propagatedTuple = false;
-            //if(LazyPropagator::getInstance().isPredicateDefinedInPositiveProgram(toCheckTuple->getPredicateName())){
-            reasonClause.clear();
             //tuple might have been propagated by unit at level zero
             //this is necessary only here because tuples are added from main
             if(!toCheckTuple->isFalse())
-                propagatedTuple = LazyPropagator::getInstance().propagateToFalse(this, toCheckTuple, toCheckTuple, reasonClause, lits, confl);
+                propagatedTuple = LazyPropagator::getInstance().propagateToFalse(this, toCheckTuple, confl);
             #ifdef DEBUG_PROP
                 std::cout << "Result of propagate to false " << propagatedTuple << "\n";
             #endif
@@ -1692,11 +1690,9 @@ lbool Solver::search(int nof_conflicts) {
             //possibly propagate tuples that have lost their support to false and compute consequences
             std::unordered_set<int>& toCheck = PositiveProgramFactory::getInstance().getToCheck();
             if(confl == CRef_Undef){
-                //vec<Lit> reasonLits;
-                reasonClause.clear();
                 for(int tupleId : toCheck){
                     Tuple* toCheckTuple = TupleFactory::getInstance().getTupleFromInternalID(tupleId);
-                    bool propagatedTuple = LazyPropagator::getInstance().propagateToFalse(this, toCheckTuple, toCheckTuple, reasonClause, lits, confl);
+                    bool propagatedTuple = LazyPropagator::getInstance().propagateToFalse(this, toCheckTuple, confl);
                     #ifdef DEBUG_PROP
                         std::cout << "Result of propagate to false " << propagatedTuple << "\n";
                     #endif

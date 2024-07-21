@@ -177,16 +177,16 @@ void LazyPropagatorCompiler::compileFixPointComputation(std::vector<int>& scc, s
 
     outfile << ind << "std::vector<int> stack = std::vector<int>(propagatedTuples.begin(), propagatedTuples.end());\n";
     //make a pre-fill of the stack
-    if(isRecursive){
-       for(std::string predName : componentPredicateNames){
-            std::string prefix = "AuxMapHandler::getInstance().get_";
-            std::string mapName = predName+"_";
-            std::string predStruct = predicateToStruct[predName];
-            std::string structType = predStruct == "Vec" ? "std::vector<int>*" : "IndexedSet*";
-            outfile << ind << structType <<" tuples_"<<predName<<" = &"<<prefix<<"p"<<mapName<<"()->getValues"<<predStruct<<"({});\n";
-            outfile << ind << "for(auto i=tuples_"<<predName<<"->begin(); i != tuples_"<<predName<<"->end(); i++) stack.push_back(*i);\n";
-       }
-    }
+    // if(isRecursive){
+    //    for(std::string predName : componentPredicateNames){
+    //         std::string prefix = "AuxMapHandler::getInstance().get_";
+    //         std::string mapName = predName+"_";
+    //         std::string predStruct = predicateToStruct[predName];
+    //         std::string structType = predStruct == "Vec" ? "std::vector<int>*" : "IndexedSet*";
+    //         outfile << ind << structType <<" tuples_"<<predName<<" = &"<<prefix<<"p"<<mapName<<"()->getValues"<<predStruct<<"({});\n";
+    //         outfile << ind << "for(auto i=tuples_"<<predName<<"->begin(); i != tuples_"<<predName<<"->end(); i++) stack.push_back(*i);\n";
+    //    }
+    // }
     outfile << ind << "bool generated = false;\n";
 
     outfile << ind++ << "while(!stack.empty()){\n";
@@ -288,15 +288,18 @@ void LazyPropagatorCompiler::compileExplainTrue(std::vector<int>& scc, std::vect
 }
 
 void LazyPropagatorCompiler::compileExplainFalse(std::vector<int>& scc, std::vector<unsigned>& rules, std::set<std::string>& componentPredicateNames, std::vector<unsigned>& nonExitRules){
-    outfile << ind++ << "bool propagateToFalse(Glucose::Solver* s, Tuple* tuple, Tuple* original, bool sign, Glucose::vec<Glucose::Lit>& tupleReasons, Glucose::vec<Glucose::Lit>& lits, Glucose::CRef& confl, bool makePropagation){\n";
+    outfile << ind++ << "bool propagateToFalse(Glucose::Solver* s, Tuple* tuple, Tuple* original, bool sign, Glucose::vec<Glucose::Lit>& tupleReasons, std::unordered_set<int>& reasonSet, Glucose::CRef& confl, bool makePropagation){\n";
+    outfile << ind << "Glucose::vec<Glucose::Lit> lits;\n";
     outfile << ind << "std::vector<Tuple*> toExplain;\n";
     outfile << ind << "std::vector<int> toExplainSign;\n";
     outfile << ind << "toExplain.push_back(tuple);\n";
     outfile << ind << "toExplainSign.push_back(sign);\n";
     //add propagating tuple to reason
-    outfile << ind++ << "if(makePropagation)\n";
+    outfile << ind++ << "if(makePropagation){\n";
     outfile << ind << "tupleReasons.push(Glucose::mkLit(tuple->getId(), true));\n";
-    --ind;
+    outfile << ind <<"reasonSet.insert(tuple->getId());\n";
+    outfile << --ind <<"}\n";
+
     outfile << ind << "bool tupleIsDummy = false;\n";
     outfile << ind++ << "while(!toExplain.empty()){\n";
     outfile << ind << "bool tupleIsFromComp = false;\n";
@@ -310,18 +313,18 @@ void LazyPropagatorCompiler::compileExplainFalse(std::vector<int>& scc, std::vec
     outfile << ind <<"std::cout <<\"found tuple: \";\n";
     outfile << ind <<"AuxMapHandler::getInstance().printTuple(tuple_0);\n";
     outfile << ind <<"std::cout <<\" in to explain of propFalse \\n\";\n";
-    outfile << ind++ << "if(!tupleIsDummy && !TupleFactory::getInstance().isTupleFromGen(tuple_0->getId())){\n";
-    outfile << ind << "std::cout<< \"FROM fixpoint and true\\n\";\n";
-    //negative
-    // not a is false, then its reason is the reason why a is true.
-    outfile << ind++ << "if(tupleSign){\n";
-    outfile << ind << "Glucose::vec<Glucose::Lit> negatedFalseReasons;\n";
-    outfile << ind << "LazyPropagator::getInstance().explainTrueLiteral(tuple_0->getId(), negatedFalseReasons);\n";
-    outfile << ind << "for(unsigned l = 1; l < negatedFalseReasons.size(); ++l) tupleReasons.push(Glucose::mkLit(var(negatedFalseReasons[l]), Glucose::sign(negatedFalseReasons[l])));\n";
-    outfile << --ind <<"}\n";
-    outfile << ind << "else tupleReasons.push(Glucose::mkLit(tuple_0->getId(), tupleSign));\n";
-    outfile << ind << "continue;\n";
-    outfile << --ind <<"}\n";
+    // outfile << ind++ << "if(!tupleIsDummy && !TupleFactory::getInstance().isTupleFromGen(tuple_0->getId())){\n";
+    // outfile << ind << "std::cout<< \"FROM fixpoint and true\\n\";\n";
+    // //negative
+    // // not a is false, then its reason is the reason why a is true.
+    // outfile << ind++ << "if(tupleSign){\n";
+    // outfile << ind << "Glucose::vec<Glucose::Lit> negatedFalseReasons;\n";
+    // outfile << ind << "LazyPropagator::getInstance().explainTrueLiteral(tuple_0->getId(), negatedFalseReasons);\n";
+    // outfile << ind << "for(unsigned l = 1; l < negatedFalseReasons.size(); ++l) tupleReasons.push(Glucose::mkLit(var(negatedFalseReasons[l]), Glucose::sign(negatedFalseReasons[l])));\n";
+    // outfile << --ind <<"}\n";
+    // outfile << ind << "else tupleReasons.push(Glucose::mkLit(tuple_0->getId(), tupleSign));\n";
+    // outfile << ind << "continue;\n";
+    // outfile << --ind <<"}\n";
     for(unsigned ruleID : rules){
         const aspc::Rule& rule = program.getRule(ruleID);
         outfile << ind++ <<"if(tuple_0->getPredicateName() == AuxMapHandler::getInstance().get_" << rule.getHead().at(0).getPredicateName() <<"()){\n";
@@ -555,7 +558,10 @@ void LazyPropagatorCompiler::compileRuleByStarter(unsigned id, const aspc::Rule&
                             outfile << ind << "return false;\n";
                             outfile << --ind <<"}\n";
                             outfile << ind++ << "if(tuple_" << i <<" != NULL && tuple_" << i << "->isTrue()){\n";
-                            outfile << ind << "if(TupleFactory::getInstance().isTupleFromGen(tuple_" << i << "->getId())) tupleReasons.push(Glucose::mkLit(tuple_" << i << "->getId(), false));\n";
+                            outfile << ind++ << "if(TupleFactory::getInstance().isTupleFromGen(tuple_" << i << "->getId()) && !reasonSet.count(tuple_" << i << "->getId())){\n";
+                            outfile << ind << "tupleReasons.push(Glucose::mkLit(tuple_" << i << "->getId(), false));\n";
+                            outfile << ind << "reasonSet.insert(tuple_" << i << "->getId());\n";
+                            outfile << --ind <<"}\n";
                             //TODO CHECK WHEN P.P. PREDICATES CAN APPEAR NEGATED IN P.P.
                             // outfile << ind++ << "else{\n";
                             // outfile << ind << "toExplain.push_back(Glucose::mkLit(tuple_" << i << "->getId(), true));\n";
@@ -585,7 +591,12 @@ void LazyPropagatorCompiler::compileRuleByStarter(unsigned id, const aspc::Rule&
                             outfile << ind << "return false;\n";
                             outfile << --ind <<"}\n";
                             outfile << ind++ << "if(tuple_" << i << "->isFalse()){\n";
-                            outfile << ind << "if(TupleFactory::getInstance().isTupleFromGen(tuple_" << i << "->getId())) tupleReasons.push(Glucose::mkLit(tuple_" << i << "->getId(), true));\n";
+                            outfile << ind++ << "if(TupleFactory::getInstance().isTupleFromGen(tuple_" << i << "->getId())){\n";
+                            outfile << ind++ <<"if(!reasonSet.count(tuple_" << i << "->getId())){\n";
+                            outfile << ind << "tupleReasons.push(Glucose::mkLit(tuple_" << i << "->getId(), true));\n";
+                            outfile << ind << "reasonSet.insert(tuple_" << i << "->getId());\n";
+                            outfile << --ind <<"}\n";
+                            outfile << --ind <<"}\n";
                             outfile << ind++ << "else{\n";
                             outfile << ind << "toExplain.push_back(tuple_" << i << ");\n";
                             outfile << ind << "toExplainSign.push_back(false);\n";
@@ -630,7 +641,12 @@ void LazyPropagatorCompiler::compileRuleByStarter(unsigned id, const aspc::Rule&
 
                         outfile << ind << structType << " tuplesF_"<<i<<" = &"<<prefix<<"f"<<mapName<<"()->getValues"<<predStruct<<"({"<<terms<<"});\n";
                         outfile << ind++ << "for(auto i=tuplesF_"<<i<<"->begin(); i != tuplesF_"<<i<<"->end(); i++){\n";
-                        outfile << ind << "if(TupleFactory::getInstance().isTupleFromGen(*i)) tupleReasons.push(Glucose::mkLit(*i, true));\n";
+                        outfile << ind++ << "if(TupleFactory::getInstance().isTupleFromGen(*i)){\n";
+                        outfile << ind++ <<"if(!reasonSet.count(*i)){\n";
+                        outfile << ind << "tupleReasons.push(Glucose::mkLit(*i, true));\n";
+                        outfile << ind << "reasonSet.insert(*i);\n";
+                        outfile << --ind <<"}\n";
+                        outfile << --ind <<"}\n";
                         outfile << ind++ << "else{\n";
                         outfile << ind << "toExplain.push_back(TupleFactory::getInstance().getTupleFromInternalID(*i));\n";
                         outfile << ind <<"toExplainSign.push_back(false);\n";
@@ -836,7 +852,7 @@ void LazyPropagatorCompiler::compileAddTupleToFactoryForExplainFalse(unsigned i,
         }
         else{
             outfile << ind << "int predicateId = tuple_" << i << "->getPredicateName();\n";
-            outfile << ind << "bool canPropagate = LazyPropagator::getInstance().getPropagatorFromPredicateId(predicateId)->propagateToFalse(s, tuple_" << i << ", original, tupleSign, tupleReasons, lits, confl, false);\n";
+            outfile << ind << "bool canPropagate = LazyPropagator::getInstance().getPropagatorFromPredicateId(predicateId)->propagateToFalse(s, tuple_" << i << ", original, tupleSign, tupleReasons, reasonSet, confl, false);\n";
             //outfile << ind <<"delete tuple_" << i << ";\n";
             outfile << ind << "if(!canPropagate) return false;\n";
         }

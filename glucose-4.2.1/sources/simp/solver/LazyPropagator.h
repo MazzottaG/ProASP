@@ -217,7 +217,7 @@ public:
         // std::cout<< std::endl;
     }
 
-    bool propagateToFalse(Glucose::Solver *s, Tuple* tuple, Tuple* original, Glucose::vec<Glucose::Lit> &tupleReasons, Glucose::vec<Glucose::Lit> &lits, Glucose::CRef &clause){
+    bool propagateToFalse(Glucose::Solver *s, Tuple* tuple, Glucose::CRef &clause){
         #ifdef DEBUG_PROP
             std::cout <<"Propagate to false of lazy propagator for tuple: ";
             AuxMapHandler::getInstance().printTuple(tuple);
@@ -226,7 +226,10 @@ public:
         // tupleReasons.clear();
         int predicateId = tuple->getPredicateName();
         if(predicateToPropagator.count(predicateId)){
-            bool propagated =  propagators[predicateToPropagator[predicateId]]->propagateToFalse(s, tuple, tuple, true, tupleReasons, lits, clause, true);
+            Glucose::vec<Glucose::Lit>& tupleReasons =  TupleFactory::getInstance().isTupleFromInputInterface(tuple->getId()) && !s->isAssigned(tuple->getId()) ? tuple->getReasonLits() : s->getReasonClause();
+            tupleReasons.clear();
+            std::unordered_set<int> reasonSet;
+            bool propagated =  propagators[predicateToPropagator[predicateId]]->propagateToFalse(s, tuple, tuple, true, tupleReasons, reasonSet, clause, true);
             //not propagated due to undef in some body or propagation failed due to a conflict
             if(!propagated || clause == Glucose::CRef_Undef){
                 std::cout <<"Removed from true solver choice";
@@ -236,7 +239,7 @@ public:
             //true and has to be checked in the next level
             if(propagated && clause != Glucose::CRef_Undef){
                 PositiveProgramFactory::getInstance().addTrueSolverChoice(tuple->getId());
-                std::cout <<"Propagated " << original->getId() << "to false";
+                std::cout <<"Propagated " << tuple->getId() << "to false";
             }
             return propagated;
         }

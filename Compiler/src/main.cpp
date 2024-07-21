@@ -13,8 +13,9 @@ int main(int argc, char *argv[])
 	const aspc::Program* prgGeneratorPosCycle = &reader.getPosCycleGeneratorProgram();
 	const aspc::Program* prgPropagatorPosCycle = &reader.getPosCyclePropagatorProgram();
 	std::set<std::string> predicatesDefinedByPosProgram = prgDatalogPosCycle->getHeadPredicates();
-	
-	Analyzer analyzer(reader.getInputProgram(),reader.getInputProgramLabel(),reader.isFullGrounding(), predicatesDefinedByPosProgram);
+	std::set<std::string> predicatesInBodyOfPosProgram = prgDatalogPosCycle->getBodyPredicates();
+
+	Analyzer analyzer(reader.getInputProgram(),reader.getInputProgramLabel(),reader.isFullGrounding(), predicatesDefinedByPosProgram, predicatesInBodyOfPosProgram);
 	aspc::Program eagerProgram(analyzer.getEager());
 	std::vector<bool> eagerLabels(analyzer.getEagerLabel());
 	std::vector<std::string> idToPredicate(analyzer.getIdToPredicate());
