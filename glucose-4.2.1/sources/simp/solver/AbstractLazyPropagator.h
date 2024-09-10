@@ -10,7 +10,7 @@ class AbstractLazyPropagator{
     public:
         virtual bool computeFixpointLevelZero(Glucose::Solver* s, Glucose::vec<Glucose::Lit>& lits) = 0;
         virtual bool computeFixpoint(Glucose::Solver* s, std::vector<int>&, Glucose::CRef&, Glucose::vec<Glucose::Lit>& lits) = 0;
-        virtual bool propagateToFalse(Glucose::Solver* s, Tuple* tuple, Tuple* original, bool sign, Glucose::vec<Glucose::Lit>& tupleReasons, std::unordered_set<int>& reasonSet, Glucose::CRef& clause, bool makePropagation) = 0;
+        virtual bool propagateToFalse(Glucose::Solver* s, Tuple* tuple, Tuple* original,Glucose::vec<Glucose::Lit>& tupleReasons, std::unordered_set<int>& reasonSet, Glucose::CRef& clause, bool makePropagation) = 0;
         //virtual void checkLiteralStatus(Glucose::Solver* s, std::vector<std::pair<int, bool>>) = 0;
         unsigned getId(){
             return id;

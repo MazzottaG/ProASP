@@ -110,7 +110,7 @@ class TupleFactory{
         
     public:
         int getLastId() const{
-            return internalIDToTuple.size()-1;
+            return nextTupleId-1;
         }
         std::unordered_map<int,std::set<int>>& getAuxsForLiteral(){
             return auxAtomsForLiteral;

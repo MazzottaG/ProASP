@@ -14,7 +14,8 @@ class PositiveProgramFactory{
         std::unordered_map<int, std::unordered_set<int>> supportedTuples;
         
         //used to keep track of which tuples that are undef might propagate a tuple to false
-        std::unordered_map<int, int> tupleToPossibleSupport;
+        std::unordered_map<int, std::unordered_set<int>> tupleToPossibleSupport;
+        //std::unordered_map<int, int> tupleToPossibleSupport;
         std::unordered_map<int, std::unordered_set<int>> possibleSupportToTuples;
         std::vector<int> toRemovePossibleSupports;
     public:
@@ -85,13 +86,13 @@ class PositiveProgramFactory{
         //if no undef for tuple add, otherwise update
         void addPossibleSupportForTuple(int tupleId, int supportId){
             trueSolverChoicesForPPTuple.erase(tupleId);
-            std::cout <<"Saved possible support for tuple "<< tupleId <<"->support: "<<supportId << "\n";
+            //std::cout <<"Saved possible support for tuple "<< tupleId <<"->support: "<<supportId << "\n";
             if(!tupleToPossibleSupport.count(tupleId)){
-                std::pair<int, int> t = std::make_pair(tupleId, supportId);
+                std::pair<int, std::unordered_set<int>> t = std::make_pair(tupleId, std::unordered_set<int>());
                 tupleToPossibleSupport.emplace(t);
-            }else{
-                tupleToPossibleSupport[tupleId] = supportId;
             }
+            tupleToPossibleSupport[tupleId].insert(supportId);
+            
             if(!possibleSupportToTuples.count(supportId)){
                 std::pair<int, std::unordered_set<int>>t = std::make_pair(supportId, std::unordered_set<int>());
                 possibleSupportToTuples.emplace(t);

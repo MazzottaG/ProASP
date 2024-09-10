@@ -28,7 +28,7 @@ class LazyPropagatorCompiler{
         std::vector<std::string> propagatorNames;
         std::vector<unsigned> findNonExitRule(std::vector<int>, std::vector<unsigned>);
         void compileReasonAndSupportSaving(std::vector<std::pair<int, bool>>&, int, std::string tuplePrefix);
-        void compileAddTupleToFactoryForExplainFalse(unsigned, const aspc::Literal*, const std::set<std::string>& componentPreds);
+        bool compileAddTupleToFactoryForExplainFalse(unsigned, const aspc::Literal*, const std::set<std::string>& componentPreds);
     public:
         LazyPropagatorCompiler(const aspc::Program&, std::string&, DataStructureCompiler*, const std::unordered_map<std::string, std::string>&);
         void compile();
@@ -38,7 +38,7 @@ class LazyPropagatorCompiler{
         //compile propagators for constraints is pos cycle Program
         //void compileConstraints();
         //void computePropagatorOrder();
-        void openPropagatorFile(unsigned);
+        void openPropagatorFile(unsigned, std::set<std::string>&);
         void closePropagatorFile();
         //void compileComponentWatched(std::vector<int> , unsigned);
         void compileComponentWatched(std::vector<int>& , std::vector<unsigned>&);
@@ -48,7 +48,7 @@ class LazyPropagatorCompiler{
         void compileCheckLiteralStatus(std::vector<int>&, std::vector<unsigned>&, std::set<std::string>&, std::vector<unsigned>&);
         void compileExplainTrue(std::vector<int>&, std::vector<unsigned>&, std::set<std::string>&, std::vector<unsigned>&);
         void compileExplainFalse(std::vector<int>&, std::vector<unsigned>&, std::set<std::string>&, std::vector<unsigned>& );
-        void compileRuleByStarter(unsigned, const aspc::Rule&, int, const std::set<std::string>&, bool, bool, bool, bool, bool);
+        void compileRuleByStarter(unsigned, const aspc::Rule&, int, const std::set<std::string>&, bool, bool, bool, bool);
         void compileLazyPropClass();
 };
 #endif /*LAZYPROPAGATORCOMPILER*/

@@ -57,7 +57,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "simp/solver/Propagator.h"
 #include "simp/solver/LazyPropagator.h"
 using namespace Glucose;
-#define TRACE_SOLVER
+//#define TRACE_SOLVER
 //=================================================================================================
 // Statistics
 //=================================================================================================
@@ -1672,8 +1672,6 @@ lbool Solver::search(int nof_conflicts) {
         #endif
         PositiveProgramFactory::getInstance().clearToRemovePossibleSupports();
         //std::cout << "Solver::search() -> propagate()" <<std::endl;
-        //no conflict in lazy
-        LazyPropagator::getInstance().storeConflictualLiteral(-1);
         bool generated = false;
         bool propagatedToFalse = false;
         CRef confl;
@@ -1763,7 +1761,6 @@ lbool Solver::search(int nof_conflicts) {
 
             learnt_clause.clear();
             selectors.clear();
-            std::cout <<"Analyze\n";
             analyze(confl, learnt_clause, selectors, backtrack_level, nblevels, szWithoutSelectors);
             
             stats[sumSizes]+= learnt_clause.size();
@@ -1772,10 +1769,6 @@ lbool Solver::search(int nof_conflicts) {
             #ifdef TRACE_SOLVER
             std::cout << "      Backjumping to level "<<backtrack_level<<std::endl;
             #endif
-            if(LazyPropagator::getInstance().getConflictualLiteral() != -1){
-                PositiveProgramFactory::getInstance().removeSupported(LazyPropagator::getInstance().getConflictualLiteral());
-                TupleFactory::getInstance().removePropagationFromLazyProp(LazyPropagator::getInstance().getConflictualLiteral());
-            }
             cancelUntil(backtrack_level);
 
             if(certifiedUNSAT)
@@ -1890,7 +1883,6 @@ lbool Solver::search(int nof_conflicts) {
                 // New variable decision:
                 decisions++;
                 next = pickBranchLit();
-                std::cout <<"next choice "<< var(next) <<"\n";
                 if(next == lit_Undef) {
                     printf("c last restart ## conflicts  :  %d %d \n", conflictC, decisionLevel());
                     // Model found:
