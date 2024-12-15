@@ -174,6 +174,18 @@ class Analyzer{
             assert(rulesBodyLabeling.count(ruleId)!=0); 
             return rulesBodyLabeling[ruleId];
         }
+        void remapId(int ruleId, int newId, int bodyLength){
+            std::cout <<"RuleId "<<ruleId<<" newId "<<newId<<"\n";
+            assert(!remappingBodyLabeling.count(ruleId));
+            remappingBodyLabeling[ruleId] = newId;
+            assert(!rulesBodyLabeling.count(newId));
+            rulesBodyLabeling[newId] = std::vector<int>(bodyLength, NON_DATALOG_FORMULA);
+        }
+        void printRemappedRules(){
+            for(auto entry : remappingBodyLabeling){
+                std::cout <<"original rule " << entry.first << " maps to " << entry.second << "\n";
+            }
+        }
         bool isEDB(std::string predicate);
         bool isFullGrounding()const{return fullGrounding;}
         bool isJoinPredicate(std::string predicate){return joinRuleData.find(predicate)!=joinRuleData.end();}

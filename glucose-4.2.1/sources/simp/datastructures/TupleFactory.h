@@ -61,6 +61,7 @@ class TupleFactory{
         TupleFactory(/* args */):generatorClauseSet(NULL),clauseIDToTuple(NULL),clauseIDToLength(NULL){
             //storage.push_back(TupleLight());
             nextTupleId = 0;
+            nextDummyTupleId = -1;
             addExtraSymbol();
             lastTupleFromGen = 0;
             generated=false;
@@ -97,6 +98,18 @@ class TupleFactory{
         std::unordered_map<int,int> actualSum;
         std::unordered_map<int,int> possibleSum;
 
+        //std::unordered_set<TupleLight*,TuplePointerHash,TuplePointerEq> lazyFalseSet;
+        std::unordered_set<int> lazyFalseSetIds;
+
+        std::unordered_set<TupleLight*,TuplePointerHash,TuplePointerEq> dummyExplainFalseSet;
+        std::vector<TupleLight*> dummyExplainFalse;
+        int nextDummyTupleId;
+
+        //lazy tuples propagated by lazy propagators rules that require no other check
+        std::vector<int> lazyCheckedTuples;
+        std::unordered_set<int> lazyCheckedTuplesSet;
+        std::unordered_set<int> lazyPropLevelZero;
+        std::vector<int> decisionLevelToRemoveCheckedTuplesIndex;
         //TODO Remove
         std::unordered_map<int,TupleLight*> waspIDToTuple;
         //-----------
@@ -109,6 +122,7 @@ class TupleFactory{
         unsigned factSize;
         
     public:
+    
         int getLastId() const{
             return nextTupleId-1;
         }
@@ -229,6 +243,19 @@ class TupleFactory{
         //     assert(var<internalIDToTuple.size());
         //     return internalIDToTuple[var]->getReasonLits();
         // }
+        void explainNoAnalyze(unsigned var, Glucose::vec<Glucose::Lit>& tupleReasons, std::unordered_set<int>* reasonSet=nullptr);
+        
+        // bool isNewLazyFalseTuple(TupleLight* t){
+        //     return !lazyFalseSet.count(t);
+        // }
+
+        // void deleteLazyFalse(){
+        //     for(TupleLight* t : lazyFalseSet){
+        //         delete t;
+        //     }
+        //     lazyFalseSet.clear();
+        //     lazyFalseSetIds.clear();
+        // }
         static TupleFactory& getInstance() {
             static TupleFactory instance;
             return instance;
@@ -295,7 +322,7 @@ class TupleFactory{
                 return var < positiveWatcher.size() ? positiveWatcher[var] : EMPTY_WATCHER;
         }
         bool isTupleFromInputInterface(int tupleId){
-            return !(tupleId < factSize || tupleId >= lastTupleFromGen);
+            return !((tupleId < factSize && tupleId >= 0) || tupleId >= lastTupleFromGen);
         }
         int getNextTupleId(){
             return nextTupleId;
@@ -303,19 +330,61 @@ class TupleFactory{
         int getUndoFixpointUpToDecisionLevelIndex(int solverDecisionLevel){
             return decisionLevelToUnrollIndex[solverDecisionLevel];
         }
+        void deleteRemainingLazyTuples(){
+            //std::cout <<"Last from gen is " << lastTupleFromGen << " while nextTupleId is " << nextTupleId << "\n";
+            for(int i = nextTupleId -1; i > lastTupleFromGen; --i){
+                //std::cout <<"Deleting " << i << "from deleteLastTuple\n";
+                deleteLastTuple(i);
+            }
+        }
+
+        void addCheckedTuple(int tupleId){
+            if(!lazyCheckedTuplesSet.count(tupleId)){
+                //std::cout <<"Added checked tuple "<< tupleId<<"\n";
+                lazyCheckedTuples.push_back(tupleId);
+                lazyCheckedTuplesSet.insert(tupleId);
+                notifyAddedCheckedTuple(tupleId);
+            }
+        }
+
+        void addLazyPropLevelZero(int tupleId){
+            //std::cout <<"Added lazy prop level zero "<< tupleId<<"\n";
+            lazyPropLevelZero.insert(tupleId);
+        }
+
+        // void removeCheckedTuple(int tupleId){
+        //     checkedTuples.erase(tupleId);
+        // }
+        bool isTupleChecked(int tupleId){
+            return lazyCheckedTuplesSet.count(tupleId) > 0;
+            // if(std::find(lazyCheckedTuples.begin(), lazyCheckedTuples.end(), tupleId) != lazyCheckedTuples.end())
+            //     return true;
+            // return false;
+        }
+        bool isLazyPropLevelZero(int tupleId){
+            return lazyPropLevelZero.count(tupleId) > 0;
+        }
         void undoFixpointUpToDecisionLevel(int solverDecisionLevel){
+            for(int i = lazyCheckedTuples.size() -1; i >= decisionLevelToRemoveCheckedTuplesIndex[solverDecisionLevel]; --i){
+                lazyCheckedTuplesSet.erase(lazyCheckedTuples.back());
+                notifyTupleLostSupport(lazyCheckedTuples.back(), internalIDToTuple[lazyCheckedTuples.back()]->getPredicateName());
+                lazyCheckedTuples.pop_back();
+            }
             for(int i = nextTupleId -1; i >= decisionLevelToUnrollIndex[solverDecisionLevel]; --i){
                 deleteLastTuple(i);
             }
         }
         //unroll up to level x is intended ax unrolling literals up to level x+1
         void addDecisionLevel(int decisionLevel){
-            //std::cout <<"Added decision level: "<< decisionLevel << "\n";
-            if(decisionLevel <= decisionLevelToUnrollIndex.size())
+            //std::cout <<"Added decision level: "<< decisionLevel << "unroll index" << nextTupleId << "\n";
+            if(decisionLevel <= decisionLevelToUnrollIndex.size()){
                 decisionLevelToUnrollIndex.push_back(nextTupleId);
-            //std::cout <<"Added decision level\n";
+                decisionLevelToRemoveCheckedTuplesIndex.push_back(lazyCheckedTuples.size());
+            }
+            // std::cout <<"Added decision level\n";
             decisionLevelToUnrollIndex[decisionLevel] = nextTupleId;
-            //std::cout <<"Unrolling up to level "<< decisionLevel <<"will cause to go back up to " << nextTupleId << "\n";
+            decisionLevelToRemoveCheckedTuplesIndex[decisionLevel] = lazyCheckedTuples.size();
+            // std::cout <<"Unrolling up to level "<< decisionLevel <<"will cause to go back up to " << nextTupleId << "\n";
         }
         void addPropagationFromLazyProp(int tupleId){
             //std::cout <<"Added propagation from lazy prop " <<tupleId<<"\n";
@@ -511,6 +580,7 @@ class TupleFactory{
                 else
                     internalIDToTuple[nextTupleId] = trueReference;
                 trueReference->setId(nextTupleId);
+                //std::cout <<"Added new internal tuple with id " << nextTupleId << "\n";
                 ++nextTupleId;
                 // trueReference->setId(storage.size()-1);
                 if(!hidden) visibleTuple.push_back(trueReference->getId());
@@ -522,17 +592,89 @@ class TupleFactory{
             // assert(it->second == -1);
             return *it;
         }
+
+        std::pair<TupleLight*, bool> addNewLazyFalseTuple(std::vector<int> terms,int predName){
+            bufferTuple.setContent(terms.data(),terms.size(),predName);
+            auto& tupleToInternalVar=tupleToInternalVarSets[predName];
+            auto it = tupleToInternalVar.find(&bufferTuple);
+            if(it==tupleToInternalVar.end()){
+                TupleLight* trueReference = new TupleLight(bufferTuple);
+                tupleToInternalVar.insert(trueReference);
+                trueReference->setId(nextTupleId);
+                //std::cout <<"Added new lazy false tuple with id " << nextTupleId << "\n";
+                lazyFalseSetIds.insert(nextTupleId);
+                if(nextTupleId == internalIDToTuple.size())
+                    internalIDToTuple.push_back(trueReference);
+                else
+                    internalIDToTuple[nextTupleId] = trueReference;
+                ++nextTupleId;
+                bufferTuple.clearContent();
+                return std::make_pair(trueReference, true);
+            }
+            bufferTuple.clearContent();
+            return std::make_pair(*it, false);
+        }
+        TupleLight* addNewDummyPropFalseTuple(std::vector<int> terms,int predName){
+            bufferTuple.setContent(terms.data(),terms.size(),predName);
+            auto it = dummyExplainFalseSet.find(&bufferTuple);
+            if(it == dummyExplainFalseSet.end()){
+                TupleLight* trueReference = new TupleLight(bufferTuple);
+                dummyExplainFalseSet.insert(trueReference);
+                trueReference->setId(nextDummyTupleId);
+                //std::cout <<"Added new dummy with id " << nextDummyTupleId << "\n";
+                dummyExplainFalse.push_back(trueReference);
+                --nextDummyTupleId;
+                bufferTuple.clearContent();
+                return trueReference;
+            }
+            bufferTuple.clearContent();
+            return *it;
+        }
+        bool isTupleDummy(int id){
+            return id < 0;
+        }
+
+        void notifyTupleDeleted(int);
+        void notifyTupleLostSupport(int, int);
+        void notifyAddedCheckedTuple(int);     
         //delete tuple and keep nextTupleId up to date 
         void deleteLastTuple(int t){
-            //get predicate and erarse from (tupleToInternalVarSet[pred].erase)
+            //std::cout <<"Remove propagation from lazy prop " <<t<<"\n";
+            propagatedByLazyPropTuples.erase(t);
+            notifyTupleDeleted(t);
+            //std::cout <<"In deleteLastTuple with id "<<t<<"\n";
             assert(nextTupleId -1 == t);
             TupleLight* to_delete = internalIDToTuple[t];
-            visibleTuple.pop_back();
-            removeFromCollisionsList(t);
+            if(!lazyFalseSetIds.count(t)){
+                // std::cout <<"Is not lazy false\n";
+                visibleTuple.pop_back();
+                removeFromCollisionsList(t);
+            }
+            else{
+                // if(to_delete == NULL)
+                //     std::cout <<"To delete is null\n";
+                lazyFalseSetIds.erase(t);
+                //std::cout <<"Deleting lazy false in deleteLast tuple " << t << "\n";
+                // lazyFalseSet.erase(to_delete);
+            }
+            //get predicate and erarse from (tupleToInternalVarSet[pred].erase)
             tupleToInternalVarSets[internalIDToTuple[t]->getPredicateName()].erase(internalIDToTuple[t]);
             --nextTupleId;
+            // std::cout <<"before deleting\n";
             delete internalIDToTuple[t];
             internalIDToTuple[t] = NULL;
+            // std::cout <<"After Deleting last tuple\n";
+        }
+
+        void deleteDummies(){
+            // std::cout <<"Deleting dummies after propFalse: there are  " <<  dummyExplainFalse.size() <<"of them\n";
+            for(unsigned i = 0; i < dummyExplainFalse.size(); ++i){
+                // std::cout <<"deleting dummy with id: " << dummyExplainFalse[i]->getId() << "\n";
+                delete dummyExplainFalse[i];
+            }
+            nextDummyTupleId = -1;
+            dummyExplainFalse.clear();
+            dummyExplainFalseSet.clear();
         }
 
         TupleLight* findNoSet(std::vector<int> terms,int predName){
@@ -557,6 +699,17 @@ class TupleFactory{
             // assert(it->second == -1);
             return *it;
         }
+        // TupleLight* findLazyFalse(std::vector<int> terms,int predName){
+        //     bufferTuple.setContent(terms.data(),terms.size(),predName);
+        //     auto it = lazyFalseSet.find(&bufferTuple);
+        //     if(it==lazyFalseSet.end()){
+        //         bufferTuple.clearContent();
+        //         return NULL;
+        //     }
+        //     bufferTuple.clearContent();
+        //     // assert(it->second == -1);
+        //     return *it;
+        // }
         TupleLight* find(const TupleLight& t){
             TupleLight* tuple = const_cast<TupleLight *>(&t);
             auto& tupleToInternalVar=tupleToInternalVarSets[tuple->getPredicateName()];
@@ -580,12 +733,18 @@ class TupleFactory{
                 return internalIDToTuple[id];
             return NULL;
         }
+        bool isLazyNegatedTuple(int id){
+            return lazyFalseSetIds.count(id);
+        }
+        TupleLight* getDummyTupleFromInternalID(int id){
+           return dummyExplainFalse[std::abs(id) -1];
+        }
         void setLastTupleFromGen(){
-            assert(lastTupleFromGen == 0);
-            lastTupleFromGen = internalIDToTuple.size()-1;
+            //assert(lastTupleFromGen == 0);
+            lastTupleFromGen = nextTupleId -1;
         }
         bool isTupleFromGen(int id){
-            return id <= lastTupleFromGen;
+            return id >= 0 && id <= lastTupleFromGen;
         }
         int getLastTupleFromGen(){
             return lastTupleFromGen;

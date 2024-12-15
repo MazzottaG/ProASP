@@ -29,7 +29,7 @@ class AbstractGeneratorCompiler{
         virtual void printAddConstraintClause(std::vector<unsigned>,bool){}
         virtual void printAddSP(int index){}
         virtual bool leaveAggregateAtEnd()const{return true;}
-        virtual unsigned printAggregateInitialization(std::unordered_set<std::string>&){}
+        virtual unsigned printAggregateInitialization(std::unordered_set<std::string>&){return 0;}
         virtual void printUntrackLiteral(std::string tuplename){
             outfile << ind << "TupleFactory::getInstance().untrackLiteral("<<tuplename<<"->getId());\n";
         }

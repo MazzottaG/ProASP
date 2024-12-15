@@ -12,6 +12,7 @@ int main(int argc, char *argv[])
 	const aspc::Program* prgDatalogPosCycle = &reader.getPosCycleProgram();
 	const aspc::Program* prgGeneratorPosCycle = &reader.getPosCycleGeneratorProgram();
 	const aspc::Program* prgPropagatorPosCycle = &reader.getPosCyclePropagatorProgram();
+	const aspc::Program* prgDomainPosCycle = &reader.getPosCycleDomainProgram();
 	std::set<std::string> predicatesDefinedByPosProgram = prgDatalogPosCycle->getHeadPredicates();
 	std::set<std::string> predicatesInBodyOfPosProgram = prgDatalogPosCycle->getBodyPredicates();
 
@@ -20,7 +21,13 @@ int main(int argc, char *argv[])
 	std::vector<bool> eagerLabels(analyzer.getEagerLabel());
 	std::vector<std::string> idToPredicate(analyzer.getIdToPredicate());
 	std::unordered_map<std::string,unsigned> predicateToId(analyzer.getPredicateToId());
+	int eagerProgramSize = eagerProgram.getRulesSize();
 	reader.labelHybridRule(eagerProgram,eagerLabels,idToPredicate,predicateToId);
+	int extraRuleInc = 0;
+	for(int i = eagerProgramSize; i < eagerProgram.getRulesSize(); ++i){
+		analyzer.remapId(i, reader.getInputProgram().getRulesSize() + extraRuleInc, eagerProgram.getRule(i).getFormulas().size());
+		extraRuleInc++;
+	}
 	unsigned rulesSize=eagerProgram.getRulesSize();
 	aspc::Program propagatorProgram;
 	std::cout << "%%%%%%%%%%%% Compiled Propagator Program %%%%%%%%%%%%"<<std::endl;
@@ -52,20 +59,29 @@ int main(int argc, char *argv[])
 	r.rewriteAggregates();
     r.computeCompletion();
 	r.printSharedVars();
-
-	std::cout<<"Generator Program (after merge with generator for posCycle)\n";
+	std::vector<int> generatorRuleLabel(r.getGeneratorProgram().getRulesSize(), Rewriter::TO_GENERATE);
+	for(int i = 0; i < prgGeneratorPosCycle->getRulesSize() + prgDomainPosCycle->getRulesSize(); ++i){
+		
+		if(i < prgGeneratorPosCycle->getRulesSize()){
+			r.addToGenerateRule(prgGeneratorPosCycle->getRules().at(i), generatorRuleLabel, i);
+		}
+		else{
+			r.addDomainRuleFromLazy(prgDomainPosCycle->getRules().at(-prgGeneratorPosCycle->getRulesSize() +i), generatorRuleLabel, i);
+		}
+	}
+	std::cout<<"Generator Program (after merge with generator and domain for Lazy Prop)\n";
 	std::cout<<"-----\n";
-	std::vector<int> generatorRuleLabel(r.getGeneratorProgram().getRulesSize(),Rewriter::TO_GENERATE);
-    std::unordered_map<unsigned, unsigned > traceToGroundLabeledRule;
+	std::cout <<"Labelling genSize " << r.getGeneratorProgram().getRulesSize() << " genPosCycle "<< prgGeneratorPosCycle->getRulesSize() << " domain "<< prgDomainPosCycle->getRulesSize() << "\n";
+	std::unordered_map<unsigned, unsigned > traceToGroundLabeledRule;
 	for(unsigned ruleId=0; ruleId < eagerProgram.getRulesSize(); ruleId++){
 		if(eagerLabels[ruleId]){
             if(!eagerProgram.getRule(ruleId).containsAggregate()) traceToGroundLabeledRule[generatorRuleLabel.size()]=ruleId;
 			r.addToGroundRule(eagerProgram.getRule(ruleId),generatorRuleLabel,analyzer);
 		}
 	}
-	for(unsigned i = 0; i < prgGeneratorPosCycle->getRulesSize(); ++i){
-		r.addToGenerateRule(prgGeneratorPosCycle->getRules().at(i), generatorRuleLabel);
-	}
+	
+
+	//add domain rules here
 	r.addDomainRule(generatorRuleLabel);
 	r.addSubSetSumRule(generatorRuleLabel);
 	r.computeGlobalPredicates();
@@ -80,7 +96,10 @@ int main(int argc, char *argv[])
 	std::cout<<"-----\n";
 	std::cout<<"Positive Cycle propagator Program\n";
 	prgPropagatorPosCycle->print();
-	
+
+	std::cout<<"-----\n";
+	std::cout<<"Lazy program domain\n";
+	prgDomainPosCycle->print();
 	
 	const aspc::Program* prgProp = &r.getPropagatorsProgram();
 	const aspc::Program* prgGen = &r.getGeneratorProgram();
@@ -210,19 +229,27 @@ int main(int argc, char *argv[])
 	PropagatorCompiler propCompiler (r.getPropagatorsProgram(),executablePath,&dc,predicateToStruct);
 	propCompiler.compile();
 	LazyPropagatorCompiler lazyPropCompiler(*prgPropagatorPosCycle, executablePath, &dc, predicateToStruct);
+	lazyPropCompiler.setAlwaysToCheckPredicates(reader.getAlwaysToCheckPredicates());
 	lazyPropCompiler.compile();
 	
 	//add predicates of posCycle program to predicates in AuxMapHandler
 	std::vector<std::string> predicateNames = r.getPredicateNames();
-	for(auto& p : prgDatalogPosCycle->getHeadPredicates()){
+	for(auto& p : prgPropagatorPosCycle->getHeadPredicates()){
 		if(std::find(predicateNames.begin(), predicateNames.end(), p) == predicateNames.end())
 			predicateNames.push_back(p);
 	}
-	for(auto& p : prgDatalogPosCycle->getBodyPredicates()){
+	for(auto& p : prgPropagatorPosCycle->getBodyPredicates()){
 		if(std::find(predicateNames.begin(), predicateNames.end(), p) == predicateNames.end())
 			predicateNames.push_back(p);
 	}
-	
+	for(auto& p : prgDomainPosCycle->getHeadPredicates()){
+		if(std::find(predicateNames.begin(), predicateNames.end(), p) == predicateNames.end())
+			predicateNames.push_back(p);
+	}
+	for(auto& p : prgDomainPosCycle->getBodyPredicates()){
+		if(std::find(predicateNames.begin(), predicateNames.end(), p) == predicateNames.end())
+			predicateNames.push_back(p);
+	}
 	dc.buildAuxMapHandler(executablePath,predicateNames,predicateToStruct);
 }
 

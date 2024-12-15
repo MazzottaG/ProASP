@@ -486,6 +486,7 @@ int main(int argc, char** argv)
             TupleFactory::getInstance().storeFactSize();
             TupleFactory::getInstance().initClauseGen();
             TupleFactory::getInstance().initConstraintGen();
+            LazyPropagator::getInstance().setSolver(&S);
             std::vector<int> falseAtoms;
             Generator::getInstance().generate(&S,falseAtoms);
             for(AggregatePropagator* prop : Generator::getInstance().collectAggregatePropagators()){
@@ -494,7 +495,6 @@ int main(int argc, char** argv)
             }
             // std::vector<AggregatePropagator> propagators;
             // test_propagators(propagators);
-
             Propagator::getInstance().attachWatchers();
             for(unsigned id : facts){
                 #ifdef DEBUG_PROP
@@ -530,24 +530,18 @@ int main(int argc, char** argv)
                 for(int literal : constraint){
                     bool negated = literal<0;
                     lits.push( mkLit(negated ? -literal : literal, !negated));
-                    std::cout << -literal << " ";
+                    // std::cout << -literal << " ";
                 }
-                std::cout << "0"<<std::endl;
+                // std::cout << "0"<<std::endl;
                 solver->addClause_(lits);
                 if(!solver->okay())
                     break;
             }
-            TupleFactory::getInstance().setLastTupleFromGen();
-            PositiveProgramFactory::getInstance().setLastTupleFromGen(TupleFactory::getInstance().getLastTupleFromGen());
+            LazyPropagator::getInstance().findAlwaysToCheckTuples();
             Propagator::getInstance().activate();
             if(S.okay()){
                 Glucose::vec<Glucose::Lit> lits;
-                //get id of last tuple before fixpoint level 0, generate and then add generated tuples as facts
-                int lastTupleBeforeFixpoint = TupleFactory::getInstance().getLastId();
-                bool generated = LazyPropagator::getInstance().computeFixpointLevelZero(&S, lits);
-
                 Propagator::getInstance().propagateAtLevel0(&S,lits);
-                
             }
             if(S.okay()){
                 // std::cout <<"Printing factory\n";
@@ -557,14 +551,23 @@ int main(int argc, char** argv)
                 //     std::cout <<"] ";
                 // }
                 // std::cout <<"Tuple Factory size before completion " << TupleFactory::getInstance().getLastId()+1;
+                //std::cout <<"Before completion\n";
                 SatProgramBuilder::getInstance().computeCompletion(&S);
-                // std::cout <<"Tuple Factory size after completion " << TupleFactory::getInstance().getLastId()+1;
-                // std::cout <<"Printing factory\n";
-                // for(unsigned i = 0; i <= TupleFactory::getInstance().getLastId(); ++i){
-                //     AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(i));
-                // }
-                // std::cout << "Exiting ..."<<std::endl;
-                // exit(180);
+
+                TupleFactory::getInstance().setLastTupleFromGen();
+                PositiveProgramFactory::getInstance().setLastTupleFromGen(TupleFactory::getInstance().getLastTupleFromGen());
+                bool generated = false;
+                int numIterations = 0;
+                do{
+                    generated = false;
+                    if(numIterations == 0) generated = LazyPropagator::getInstance().computeFixpointLevelZero(lits).first;
+                    else{
+                        auto res = LazyPropagator::getInstance().computeFixpoint(lits);
+                        //assert(res.first == Glucose::CRef_Undef);
+                        generated = res.first;
+                    }
+                    ++numIterations;
+                }while(generated);
                 // std::cout << "p cnf "<<TupleFactory::getInstance().size()-1<<" " << S.nClauses()+facts.size()<<std::endl;
                  /*for(int i=1;i<TupleFactory::getInstance().size(); i++){
                      std::cout << "c "<<i<<" ";
@@ -651,19 +654,22 @@ int main(int argc, char** argv)
             //such tuples need not to be checked
             Tuple* t = TupleFactory::getInstance().getTupleFromInternalID(i);
             if(t->isUndef()){
-                // #ifdef DEBUG_PROP
-                //     std::cout <<"\t";
-                //     AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(i));
-                //     std::cout <<"\n";
-                // #endif
-                //if(t->size() != 0){
+                #ifdef DEBUG_LAZY_PROP
+                    AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(i));
+                    std::cout <<" ";
+                #endif
                 if(LazyPropagator::getInstance().isPredicateDefinedInPositiveProgram(t->getPredicateName())){
                     //std::cout <<"Added to check for predicate "<< t->getPredicateName()<<"\n";
-                    PositiveProgramFactory::getInstance().addToCheckTuple(i);
+                    if(TupleFactory::getInstance().isTupleFromInputInterface(i)){
+                        PositiveProgramFactory::getInstance().addToCheckTuple(i);
+                    }
                 }
-                //}
             }
         }
+        #ifdef DEBUG_LAZY_PROP
+            std::cout << std::endl;
+        #endif
+        
         lbool ret = S.solveLimited(dummy);
 
         if (S.verbosity > 0){

@@ -8,9 +8,10 @@
 typedef TupleLight Tuple;
 class AbstractLazyPropagator{
     public:
-        virtual bool computeFixpointLevelZero(Glucose::Solver* s, Glucose::vec<Glucose::Lit>& lits) = 0;
-        virtual bool computeFixpoint(Glucose::Solver* s, std::vector<int>&, Glucose::CRef&, Glucose::vec<Glucose::Lit>& lits) = 0;
-        virtual bool propagateToFalse(Glucose::Solver* s, Tuple* tuple, Tuple* original,Glucose::vec<Glucose::Lit>& tupleReasons, std::unordered_set<int>& reasonSet, Glucose::CRef& clause, bool makePropagation) = 0;
+        virtual std::pair<bool, Glucose::CRef> computeFixpointLevelZero(Glucose::Solver* s, Glucose::vec<Glucose::Lit>& lits) = 0;
+        virtual std::pair<bool, Glucose::CRef> computeFixpoint(Glucose::Solver* s, std::vector<int>&, Glucose::vec<Glucose::Lit>& lits) = 0;
+        virtual std::pair<bool, Glucose::CRef> propagateToFalse(Glucose::Solver* s, Tuple* tuple, Tuple* original,Glucose::vec<Glucose::Lit>& tupleReasons, std::unordered_set<int>& reasonSet, bool makePropagation, bool tupleNegated) = 0;
+        virtual void stopPropagateToFalse() = 0;
         //virtual void checkLiteralStatus(Glucose::Solver* s, std::vector<std::pair<int, bool>>) = 0;
         unsigned getId(){
             return id;
@@ -31,6 +32,7 @@ class AbstractLazyPropagator{
         std::vector<int> watchedPredicates;
         //predicates in the head of some rule handled by the component propagator (a subset of watchedPredicates)
         std::vector<int> headPredicates;
+        std::vector<Tuple*> toClearLazyFalseTuples;
 };
 
 #endif /*ABSTRACTLAZYPROPAGATOR_H*/

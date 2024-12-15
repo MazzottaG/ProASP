@@ -58,6 +58,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "simp/solver/LazyPropagator.h"
 using namespace Glucose;
 //#define TRACE_SOLVER
+//#define DEBUG_PROP
 //=================================================================================================
 // Statistics
 //=================================================================================================
@@ -722,8 +723,17 @@ void Solver::analyze(CRef confl, vec <Lit> &out_learnt, vec <Lit> &selectors, in
     bool startAnalyze=true;
     do {
         if(confl == CRef_Prop){
-            
+            // std::cout <<"Calling explain\n";
             vec<Lit> &c = startAnalyze ? reasonClause : TupleFactory::getInstance().explain(var(p));
+            // std::cout <<"Clause in analyze: ";
+            // std::cout << "Clause size: " << c.size() << "\n";
+            // for(unsigned i = 0; i < c.size(); ++i){
+            //     std::cout << "[ ";
+            //     AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(Glucose::var(c[i])));
+            //     std::cout << ", " << Glucose::sign(c[i]) << "] ";
+            //     //std::cout << "[ " << Glucose::var(c[i]) << ", " << Glucose::sign(c[i]) << "] ";
+            // }
+            // std::cout <<"\n";
             // Special case for binary clauses
             // The first one has to be SAT            
             
@@ -849,7 +859,6 @@ void Solver::analyze(CRef confl, vec <Lit> &out_learnt, vec <Lit> &selectors, in
         while (!seen[var(trail[index--])]);
         p = trail[index + 1];
         //stats[sumRes]++;
-        
         confl = reason(var(p));
         seen[var(p)] = 0;
         pathC--;
@@ -980,6 +989,7 @@ bool Solver::litRedundant(Lit p, uint32_t abstract_levels) {
         assert(reason(var(analyze_stack.last())) != CRef_Undef);
         CRef reas = reason(var(analyze_stack.last()));
         if(reas == CRef_Prop){
+            // std::cout <<"Calling explain from litRedundant for "<< var(analyze_stack.last()) <<"\n";
             vec<Lit>& c = TupleFactory::getInstance().explain(var(analyze_stack.last()));
             analyze_stack.pop(); //
             if(c.size() == 2 && value(c[0]) == l_False) {
@@ -1135,7 +1145,6 @@ CRef Solver::propagate() {
         else {AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(var(p)));}
         std::cout << " as "<<(value(p) == l_True ? "True" : "False")<<std::endl;
         #endif
-        
         int lit = !sign(p) ? var(p): -var(p); 
         bool noConflict = confl == CRef_Undef;
         
@@ -1151,6 +1160,7 @@ CRef Solver::propagate() {
             Lit imp = wbin[k].blocker;
 
             if(value(imp) == l_False) {
+                //TupleFactory::getInstance().removeCheckedTuple(Glucose::var(imp));
                 return wbin[k].cref;
             }
 
@@ -1263,6 +1273,7 @@ CRef Solver::propagate() {
         #endif
         if(confl != CRef_Undef){
             return confl;
+            //TupleFactory::getInstance().removeCheckedTuple(lit < 0 ? lit : -lit);
         }
         // else{
         //     //unit propagations have to be treated like solver choices
@@ -1612,7 +1623,6 @@ lbool Solver::search(int nof_conflicts) {
     unsigned int nblevels, szWithoutSelectors = 0;
     bool blocked = false;
     bool aDecisionWasMade = false;
-
     starts++;
 
     // simplify
@@ -1630,35 +1640,54 @@ lbool Solver::search(int nof_conflicts) {
     if(decisionLevel() == 0){
         #ifdef DEBUG_PROP
             std::cout <<"Calling propagate to false at level zero\n";
+            PositiveProgramFactory::getInstance().printStats();
+            PositiveProgramFactory::getInstance().printSupported();
         #endif
-        
-        std::unordered_set<int>& toCheck = PositiveProgramFactory::getInstance().getToCheck();
+        std::unordered_set<int> toCheck = PositiveProgramFactory::getInstance().getToCheck();
+        LazyPropagator::getInstance().getAlwaysToCheckTuples(toCheck);
         vec<Lit> lits;
         CRef confl = CRef_Undef;
-        bool propagated = false;
-        for(int tupleId : toCheck){
-            Tuple* toCheckTuple = TupleFactory::getInstance().getTupleFromInternalID(tupleId);
-            bool propagatedTuple = false;
-            //tuple might have been propagated by unit at level zero
-            //this is necessary only here because tuples are added from main
-            if(!toCheckTuple->isFalse())
-                propagatedTuple = LazyPropagator::getInstance().propagateToFalse(this, toCheckTuple, confl);
-            #ifdef DEBUG_PROP
-                std::cout << "Result of propagate to false " << propagatedTuple << "\n";
-            #endif
-            //}
-            propagated = propagated || propagatedTuple;
-            if(confl !=CRef_Undef){
-                std::cout << "Conflict at level zero in false propagation\n";
-                exit(20);
+        bool propagated;
+        //Propagate to false at level zero for finding possible supports for each interface tuple
+        //possibly finding false at level zero or inconsistencies at level zero
+        do{
+            propagated = false;
+            for(int tupleId : toCheck){
+                if(tupleId >= TupleFactory::getInstance().getNextTupleId()) continue;
+                Tuple* toCheckTuple = TupleFactory::getInstance().getTupleFromInternalID(tupleId);
+                bool propagatedTuple = false;
+                std::pair<bool, Glucose::CRef> generatedTupleAndReason;
+                generatedTupleAndReason = LazyPropagator::getInstance().propagateToFalse(toCheckTuple);
+                confl = generatedTupleAndReason.second;
+                #ifdef DEBUG_LAZY_PROP
+                    std::cout << "Result of propagate to false for tuple ";
+                    AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(tupleId));
+                    std::cout << ": " <<generatedTupleAndReason.first << "\n";
+                #endif
+                propagated = propagated || generatedTupleAndReason.first;
+                if(confl !=CRef_Undef){
+                    std::cout << "Conflict at level zero in false propagation\n";
+                    return l_False;
+                    //exit(20);
+                }
+                if(generatedTupleAndReason.first){
+                    confl = propagate();
+                    assert(confl == CRef_Undef);
+                }
             }
-        }
-        toCheck.clear();
+        }while(propagated);
+        PositiveProgramFactory::getInstance().clearToCheck();
+        PositiveProgramFactory::getInstance().closeDecisionLevelNoConflict();
+        PositiveProgramFactory::getInstance().newDecisionLevel();
     }
-
     TupleFactory::getInstance().addDecisionLevel(0);
+    int iterations = 0;
     for(; ;) {
-        
+        iterations+=1;
+        // if(iterations% 300 == 0){
+        //     std::cout <<"Total time propFalse loop: " << totalTimePropF << "\n";
+        //     std::cout <<"Total time fixpoints loop: " << totalTimeFixpoint << "\n";
+        // }
         if(decisionLevel() == 0) { // We import clauses FIXME: ensure that we will import clauses enventually (restart after some point)
             parallelImportUnaryClauses();
 
@@ -1667,48 +1696,91 @@ lbool Solver::search(int nof_conflicts) {
 
         }
         #ifdef DEBUG_PROP
-        std::cout << "PropagateFromSearch"<<std::endl;
-        std::cout <<"toCheck size for lazy propagator: " << PositiveProgramFactory::getInstance().getToCheck().size()<< "\n";
+            PositiveProgramFactory::getInstance().printSupported();
+            for(unsigned i = TupleFactory::getInstance().getFactSize(); i < TupleFactory::getInstance().getNextTupleId(); ++i){
+                if(TupleFactory::getInstance().getTupleFromInternalID(i)->isTrue()){
+                    AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(i));
+                    std::cout << " is true: \n";
+                        std::cout <<"With support: ";
+                        Glucose::vec<Glucose::Lit>& sp = TupleFactory::getInstance().getTupleFromInternalID(i)->getReasonLits();
+                        for(unsigned j = 0; j < sp.size(); ++j){
+                            AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(Glucose::var(sp[j])));
+                            std::cout << " ";
+                        }
+                        std::cout <<"\n";
+                }
+                else if(TupleFactory::getInstance().getTupleFromInternalID(i)->isFalse()){
+                    AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(i));
+                    std::cout << " is false: \n";
+                }
+            }
         #endif
-        PositiveProgramFactory::getInstance().clearToRemovePossibleSupports();
-        //std::cout << "Solver::search() -> propagate()" <<std::endl;
-        bool generated = false;
         bool propagatedToFalse = false;
         CRef confl;
         vec<Lit> lits;
+
         do{
+            // std::cout <<"Going up\n";
+            std::pair<bool, Glucose::CRef> generatedTupleAndReason;
             do{
                 confl = propagate();
+                #ifdef DEBUG_PROP
+                    if(confl != CRef_Undef) std::cout <<"Conflict in unit\n";
+                #endif
+                // std::cout <<"toCheck size for lazy propagator after propagate: " << PositiveProgramFactory::getInstance().getToCheck().size()<< "\n";
+                auto start = std::chrono::high_resolution_clock::now();
                 if(confl == CRef_Undef ){
-                    generated = LazyPropagator::getInstance().computeFixpoint(this, confl, lits);
-                }
-            }while(generated && confl == CRef_Undef);
-            
-            propagatedToFalse = false;
-            //possibly propagate tuples that have lost their support to false and compute consequences
-            std::unordered_set<int>& toCheck = PositiveProgramFactory::getInstance().getToCheck();
-            if(confl == CRef_Undef){
-                for(int tupleId : toCheck){
-                    Tuple* toCheckTuple = TupleFactory::getInstance().getTupleFromInternalID(tupleId);
-                    bool propagatedTuple = LazyPropagator::getInstance().propagateToFalse(this, toCheckTuple, confl);
-                    #ifdef DEBUG_PROP
-                        std::cout << "Result of propagate to false " << propagatedTuple << "\n";
+                    generatedTupleAndReason = LazyPropagator::getInstance().computeFixpoint(lits);
+                    confl = generatedTupleAndReason.second;
+                    #ifdef DEBUG_LAZY_PROP
+                        if(confl != CRef_Undef) std::cout << "Conflict in fixpoint of lazy prop\n";
                     #endif
-                    propagatedToFalse = propagatedToFalse || propagatedTuple;
-                    if(confl !=CRef_Undef){
+                }
+                auto end = std::chrono::high_resolution_clock::now();
+                auto duration = std::chrono::duration_cast<std::chrono::duration<double>>(end - start).count();
+                totalTimeFixpoint += duration;
+            }while(generatedTupleAndReason.first && confl == CRef_Undef);
+            LazyPropagator::getInstance().clearWatchers();
+            propagatedToFalse = false;
+            if(confl == CRef_Undef){
+                //possibly propagate tuples that have lost their support to false and compute consequences
+                std::unordered_set<int> toCheck = PositiveProgramFactory::getInstance().getToCheck();
+                LazyPropagator::getInstance().getAlwaysToCheckTuples(toCheck);
+                auto start = std::chrono::high_resolution_clock::now();
+                for(int tupleId : toCheck){
+                    if(tupleId >= TupleFactory::getInstance().getNextTupleId()) continue;
+                    Tuple* toCheckTuple = TupleFactory::getInstance().getTupleFromInternalID(tupleId);
+                    std::pair<bool, Glucose::CRef> propagatedTupleAndReason = LazyPropagator::getInstance().propagateToFalse(toCheckTuple);
+                    confl = propagatedTupleAndReason.second;
+                    #ifdef DEBUG_PROP
+                        std::cout << "Result of propagate to false for tuple ";
+                        AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(tupleId));
+                        std::cout << ": " <<propagatedTupleAndReason.first <<" status -> " << toCheckTuple->isFalse() <<"\n";
+                    #endif
+                    propagatedToFalse = propagatedToFalse || propagatedTupleAndReason.first;
+                    if(confl != CRef_Undef){
                         #ifdef DEBUG_PROP
                             std::cout << "Conflict in propagate to false\n";
                         #endif DEBUG_PROP
                         break;
-                    }
+                    }else
+                        PositiveProgramFactory::getInstance().removeToCheckTuple(tupleId);
                 }
+            
+                auto end = std::chrono::high_resolution_clock::now();
+                auto duration = std::chrono::duration_cast<std::chrono::duration<double>>(end - start).count();
+                totalTimePropF += duration;
+                if(confl == CRef_Undef)
+                    PositiveProgramFactory::getInstance().clearToCheck();
             }
-            toCheck.clear();
         }while(propagatedToFalse && confl == Glucose::CRef_Undef);
-
-        PositiveProgramFactory::getInstance().getToCheck().clear();
+        
+        if(confl == CRef_Undef)
+            PositiveProgramFactory::getInstance().clearToCheck();
         if(confl != CRef_Undef) {
-            LazyPropagator::getInstance().clearWatchersAfterConflict();
+            PositiveProgramFactory::getInstance().conflict();
+            LazyPropagator::getInstance().clearWatchers();
+            
             #if defined(DEBUG_PROP) || defined(TRACE_SOLVER)
             std::cout << "   Conflict detected" <<std::endl;
             #endif
@@ -1742,6 +1814,7 @@ lbool Solver::search(int nof_conflicts) {
             }
             if(adaptStrategies && conflicts == 100000) {
                 cancelUntil(0);
+                PositiveProgramFactory::getInstance().clearDueToRestart();
                 adaptSolver();
                 adaptStrategies = false;
                 return l_Undef;
@@ -1762,7 +1835,6 @@ lbool Solver::search(int nof_conflicts) {
             learnt_clause.clear();
             selectors.clear();
             analyze(confl, learnt_clause, selectors, backtrack_level, nblevels, szWithoutSelectors);
-            
             stats[sumSizes]+= learnt_clause.size();
             lbdQueue.push(nblevels);
             sumLBD += nblevels;
@@ -1839,8 +1911,11 @@ lbool Solver::search(int nof_conflicts) {
                 if(randomize_on_restarts || fixed_randomize_on_restarts) {
                     randomDescentAssignments = (uint32_t) drand(random_seed);
                 }
-
+                //close decision level before doing restart since current possible supports temp
+                //have to be kept
+                PositiveProgramFactory::getInstance().closeDecisionLevelNoConflict();
                 cancelUntil(bt);
+                PositiveProgramFactory::getInstance().clearDueToRestart();
                 return l_Undef;
             }
 
@@ -1868,8 +1943,9 @@ lbool Solver::search(int nof_conflicts) {
                 Lit p = assumptions[decisionLevel()];
                 if(value(p) == l_True) {
                     // Dummy decision level:
-                    newDecisionLevel();
                     TupleFactory::getInstance().addDecisionLevel(currentLevel());
+                    PositiveProgramFactory::getInstance().closeDecisionLevelNoConflict();
+                    newDecisionLevel();
                 } else if(value(p) == l_False) {
                     analyzeFinal(~p, conflict);
                     return l_False;
@@ -1884,12 +1960,12 @@ lbool Solver::search(int nof_conflicts) {
                 decisions++;
                 next = pickBranchLit();
                 if(next == lit_Undef) {
+                    PositiveProgramFactory::getInstance().closeDecisionLevelNoConflict();
                     printf("c last restart ## conflicts  :  %d %d \n", conflictC, decisionLevel());
-                    // Model found:
                     return l_True;
                 }
                 if(LazyPropagator::getInstance().isPredicateDefinedInPositiveProgram(TupleFactory::getInstance().getTupleFromInternalID(var(next))->getPredicateName())){
-                    if(var(next) > 0){
+                    if(sign(next) == 0 && TupleFactory::getInstance().isTupleFromInputInterface(var(next))){
                         PositiveProgramFactory::getInstance().addTrueSolverChoice(var(next));
                     }
                 }
@@ -1897,11 +1973,18 @@ lbool Solver::search(int nof_conflicts) {
 
             // Increase decision level and enqueue 'next'
             aDecisionWasMade = true;
-            newDecisionLevel();
             TupleFactory::getInstance().addDecisionLevel(currentLevel());
+            newDecisionLevel();
+            PositiveProgramFactory::getInstance().closeDecisionLevelNoConflict();
+            PositiveProgramFactory::getInstance().newDecisionLevel();
             #if defined(DEBUG_PROP) || defined(TRACE_SOLVER)
             std::cout << "Choice "<<decisionLevel()<<std::endl;
             #endif
+            //if(iterations % 100 == 0){
+                // std::cout <<"Next solver choice[ ";
+                // AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(var(next)));
+                // std::cout << ", " << sign(next) << "]\n";
+            //}
             uncheckedEnqueue(next);
         }
     }
@@ -2100,29 +2183,49 @@ lbool Solver::solve_(bool do_simp, bool turn_off_simp) // Parameters are useless
         if(true){
             Propagator::getInstance().expandModel();
             //std::cout << "Answer: ";
-            //std::cout << "START MODEL ";
+            std::cout << "START MODEL ";
             std::vector<unsigned>& visible=TupleFactory::getInstance().getVisibleAtoms();
             bool error = false;
-
+            
             for(unsigned id: visible){
                 //do not print ids of tuples that come from P.P.
-                //if(id <= TupleFactory::getInstance().getLastTupleFromGen()){
+                if(id <= TupleFactory::getInstance().getLastTupleFromGen()){
                     TupleLight* t = TupleFactory::getInstance().getTupleFromInternalID(id);
-                    if(t != NULL && t->isTrue()) {std::cout <<":- not ";AuxMapHandler::getInstance().printTuple(t);std::cout <<". ";}
-                    if(t != NULL && t->isFalse()) {std::cout <<":- ";AuxMapHandler::getInstance().printTuple(t);std::cout <<". ";}
-                    if(t != NULL && t->isUndef()) {std::cout<<"undefined";AuxMapHandler::getInstance().printTuple(t); error = true;}
+                    //ENUMERATION
+                    if(t != NULL && t->isTrue()) {AuxMapHandler::getInstance().printTuple(t);}
+                    if(t != NULL && t->isFalse()) {std::cout<<"-";AuxMapHandler::getInstance().printTuple(t);}
+                    
+                    //ENFORCE MODEL
+                    // if(t != NULL && t->isTrue()) {std::cout<<"-";AuxMapHandler::getInstance().printTuple(t);}
+                    // if(t != NULL && t->isFalse()) {/*std::cout<<"-";*/AuxMapHandler::getInstance().printTuple(t);}
+                    // std::cout << std::endl;
                     std::cout << " ";//endl
                     // if(t != NULL && t->isFalse()) {std::cout << ":-";AuxMapHandler::getInstance().printTuple(t);}
-                //}
+                }
             }
             assert(!error);
-            //std::cout << "END MODEL"<<std::endl;
+            std::cout << "END MODEL"<<std::endl;
             std::cout << std::endl;
+            std::cout <<"START FULL MODEL ";
+            for(unsigned id: visible){
+                TupleLight* t = TupleFactory::getInstance().getTupleFromInternalID(id);                
+                //PRINT MODEL AS CONSTRAINTS
+                if(t != NULL && t->isTrue()) {std::cout <<":- not ";AuxMapHandler::getInstance().printTuple(t);std::cout <<". ";}
+                if(t != NULL && t->isFalse()) {std::cout <<":- ";AuxMapHandler::getInstance().printTuple(t);std::cout <<". ";}
+                std::cout << " ";
+            }
+            std::cout <<"END FULL MODEL"<<std::endl;
+            #ifdef DEBUG_LAZY_PROP
+                std::cout <<"Total time propFalse loop: " << totalTimePropF << "\n";
+                std::cout <<"Total time fixpoints loop: " << totalTimeFixpoint << "\n";
+            #endif DEBUG_LAZY_PROP
         }
     } else if(status == l_False && conflict.size() == 0)
         ok = false;
     
     cancelUntil(0);
+    //delete tuples of possibly extended level zero
+    TupleFactory::getInstance().deleteRemainingLazyTuples();
 
     double finalTime = cpuTime();
     if(status == l_True) {

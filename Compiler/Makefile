@@ -74,7 +74,7 @@ CLEANPROP.compile =	$(RM) ../glucose-4.2.1/sources/simp/propagators/*
 CLEANPROP.run =	
 CLEANPROP = CLEANPROP.$(BUILD)
 
-CLEANAUX.compile =	$(RM) ../glucose-4.2.1/sources/simp/solver/AuxMapHandler.h
+CLEANAUX.compile =	$(RM) ../glucose-4.2.1/sources/simp/solver/AuxMapHandler.h ../glucose-4.2.1/sources/simp/solver/TupleFactory.cc
 CLEANAUX.run =	
 CLEANAUX = CLEANAUX.$(BUILD)
 

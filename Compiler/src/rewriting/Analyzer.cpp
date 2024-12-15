@@ -594,7 +594,7 @@ void Analyzer::buildPrograms(const std::vector<std::vector<int>>& scc,const std:
                                 projection=true;
                             }
                         }
-                        if(datalogAggr || projection || datalogLit > 1){
+                        if(false){//datalogAggr || projection || datalogLit > 1){
                             rewriteWithJoin(rule,ruleId,formulaLabeling,false);
                             remappingBodyLabeling[eagerLabel.size()-1]=ruleId;
                         }else{
@@ -647,7 +647,7 @@ void Analyzer::buildPrograms(const std::vector<std::vector<int>>& scc,const std:
 
             float estimate = joinRuleTerms[ruleId].size() > 0 ? (tmp_formula_variables.size()-joinRuleTerms[ruleId].size())/joinRuleTerms[ruleId].size() * datalogLit : 0;
             bool tooVariables = estimate>=1;
-            if(!tooVariables && (datalogAggr || datalogLit > 1)){
+            if(false){ //!tooVariables && (datalogAggr || datalogLit > 1)){
                 rewriteWithJoin(rule,ruleId,formulaLabeling,true);
                 remappingBodyLabeling[eagerLabel.size()-1]=ruleId;
             }else{
@@ -717,17 +717,17 @@ void Analyzer::splitProgram(){
 }
 
 Analyzer::Analyzer(const aspc::Program& p,const std::vector<bool>& labels,bool fullgrounded, std::set<std::string>& predsDefinedByPosProgram, std::set<std::string>& predsAppearingInPosProgram):program(p),inputLabel(labels),fullGrounding(fullgrounded), predicatesDefinedInPosCycleProgram(predsDefinedByPosProgram), predsAppearingInPosProgram(predsAppearingInPosProgram){
-    for(const aspc::Rule& rule : p.getRules()){
-        //std::vector<std::string> predicate 
-        if(!rule.isConstraint()){
-            for(const aspc::Literal& lit : rule.getBodyLiterals()){
-                if(std::find(predicatesDefinedInPosCycleProgram.begin(), predicatesDefinedInPosCycleProgram.end(), lit.getPredicateName()) != predicatesDefinedInPosCycleProgram.end()){
-                    std::cout << "Predicates defined in positive program cannot appear inside the body of rules of to-compile or to-ground program.\nThink about moving the rule inside positive cycle program\n";
-                    exit(180);
-                }
-            }
-        }
-    }
+    // for(const aspc::Rule& rule : p.getRules()){
+    //     //std::vector<std::string> predicate 
+    //     if(!rule.isConstraint()){
+    //         for(const aspc::Literal& lit : rule.getBodyLiterals()){
+    //             if(std::find(predicatesDefinedInPosCycleProgram.begin(), predicatesDefinedInPosCycleProgram.end(), lit.getPredicateName()) != predicatesDefinedInPosCycleProgram.end()){
+    //                 std::cout << "Predicates defined in positive program cannot appear inside the body of rules of to-compile or to-ground program.\nThink about moving the rule inside positive cycle program\n";
+    //                 exit(180);
+    //             }
+    //         }
+    //     }
+    // }
     splitProgram();
 }
 const std::vector<bool>& Analyzer::getEagerLabel()const {return eagerLabel;}

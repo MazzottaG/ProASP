@@ -6,10 +6,11 @@ ProgramReader::ProgramReader(int argc, char *argv[]){
 	// std::vector<std::string> files({"encoding.compile","encoding.ground"});
 
 	label = false;
-	fullGrounding=true;
+	fullGrounding=false;
 	unsigned programSize=0;
     for(int fileIndex = 1; fileIndex<4; fileIndex++){
-    // for(int fileIndex = 0; fileIndex<2; fileIndex++){
+        if(fileIndex >= argc)
+            continue;
         std::string filename(argv[fileIndex]);
         antlr4::ANTLRFileStream input;
         input.loadFromFile(filename);
@@ -34,12 +35,12 @@ ProgramReader::ProgramReader(int argc, char *argv[]){
             programSize=listener.getProgram().getRulesSize();
             label=!label;
         }else{
-            parser.addParseListener(&specialListener);
+            parser.addParseListener(&lazyProgramListener);
             parser.program();
         }
 	}
 	listener.getProgram().findPredicates(originalPredicates);
-    posCycleProgram = &specialListener.getProgram();
+    posCycleProgram = &lazyProgramListener.getProgram();
     //add also predicates of pos cycle program to original predicates so that theyn will 
     //be printed in the answer sets
     posCycleProgram->findPredicates(originalPredicates);
@@ -59,13 +60,14 @@ ProgramReader::ProgramReader(int argc, char *argv[]){
     }
     std::cout << "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%" <<std::endl;
     
-    posCycleRewriter.rewrite(posCycleProgram, &constraintsPosP);
-    //posCycleRewriter.re
+    posCycleRewriter.rewrite(&rewrittenProgram, posCycleProgram, &constraintsPosP);
+    
     //check that constraints inside to-compile and to-ground program do not contain in the body
     //literals belonging to two distinct components of the scc of pos-cycle program
 	posCycleRewriter.crossComponentPredicatesAppearInConstraintForProgram(getInputProgram());
     //mergePosCycleProgramAndInputProgram(posCycleRewriter.getGeneratorProgram()); 
     posCyclePropagatorProgram = &posCycleRewriter.getPropagatorProgram();
+    posCycleDomainProgram = &posCycleRewriter.getDomainProgram();
 }
 
 void ProgramReader::mergePosCycleProgramAndInputProgram(const aspc::Program& genProgramPosCycle){

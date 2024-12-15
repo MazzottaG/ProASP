@@ -297,7 +297,8 @@ class Solver : public Clone {
     uint64_t solves,starts,decisions,propagations,conflicts,conflictsRestarts;
 
     protected:
-
+    double totalTimePropF;
+    double totalTimeFixpoint;
     long curRestart;
 
     // Alpha variables

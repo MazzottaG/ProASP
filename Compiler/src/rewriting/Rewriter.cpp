@@ -228,9 +228,13 @@ void Rewriter::addDomainRule(std::vector<int>& generatorRuleLabel){
         generatorRuleLabel.push_back(DOMAIN_RULE);
     }
 }
-void Rewriter::addToGenerateRule(const aspc::Rule& r, std::vector<int>& generatorRuleLabel){
-        generatorProgram.addRule(r);
-        generatorRuleLabel.push_back(TO_GENERATE);
+void Rewriter::addDomainRuleFromLazy(const aspc::Rule& r, std::vector<int>& generatorRuleLabel, unsigned idx){
+    generatorProgram.addRule(r);
+    generatorRuleLabel.push_back(DOMAIN_RULE);
+}
+void Rewriter::addToGenerateRule(const aspc::Rule& r, std::vector<int>& generatorRuleLabel, unsigned idx){
+    generatorProgram.addRule(r);
+    generatorRuleLabel.push_back(TO_GENERATE);
 }
 void Rewriter::addToGroundRule(const aspc::Rule& r,std::vector<int>& generatorRuleLabel, Analyzer& analyzer){
     if(r.containsAggregate()){
@@ -838,7 +842,7 @@ void Rewriter::computeCompletion(){
             for(aspc::Literal l: extractionLiterals) if(!analyzer->isEDB(l.getPredicateName())) datalogBody = false;
             bool extract = extractionLiterals.size() > 1 || extractionIneqs.size() > 0;
             aspc::Literal headLit(false,pair.first[0].first.getHead()[0]);
-            if(extract){
+            if(extract && ! datalogBody){
                 // extracting propagator rule dom :- shared body
                 std::string dom_pred = "Dom_"+predicate_1+"_"+predicate_2;
                 aspc::Atom projected_head(dom_pred,headLit.getTerms());
@@ -866,6 +870,21 @@ void Rewriter::computeCompletion(){
             generatorProgram.addRule(generateP2);
             // ---------------------------------------------------
 
+            if(extract && datalogBody){
+                aspc::Atom head_p1(predicate_1,headLit.getTerms());
+                aspc::Atom head_p2(predicate_2,headLit.getTerms());
+                extractionLiterals.push_back(aspc::Literal(false, head_p1));
+                extractionLiterals.push_back(aspc::Literal(false, head_p2));
+                aspc::Rule constraint_1({},extractionLiterals, extractionIneqs,false);
+                extractionLiterals.pop_back();
+                extractionLiterals.pop_back();
+                extractionLiterals.push_back(aspc::Literal(true, head_p1));
+                extractionLiterals.push_back(aspc::Literal(true, head_p2));
+                aspc::Rule constraint_2({},extractionLiterals, extractionIneqs,false);
+                completionProgram.addRule(constraint_1);
+                completionProgram.addRule(constraint_2);
+                continue;
+            }
             assert(extractionLiterals.size() == 1 && extractionIneqs.empty());
             std::unordered_set<std::string> headVars;
             headLit.addVariablesToSet(headVars);
@@ -923,7 +942,7 @@ void Rewriter::computeCompletion(){
     }
     std::cout << "Applying standard completion on:"<<std::endl;
     for(unsigned i=0; i<completionProgram.getRulesSize(); i++){
-        aspc::Rule rule = completionProgram.getRule(i);
+        aspc::Rule rule(completionProgram.getRule(i));
         if(rule.isConstraint()) {
             propagatorsProgram.addRule(rule);
             //labeledPropgatorRules.push_back(labeledSingleHeadRules[i]);
