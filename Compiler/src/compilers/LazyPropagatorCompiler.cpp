@@ -359,7 +359,6 @@ void LazyPropagatorCompiler::compileExplainFalse(std::vector<int>& scc, std::vec
     outfile << ind << "return std::make_pair(false, Glucose::CRef_Undef);\n";
     outfile << --ind << "}\n";
     outfile << ind++ << "else{\n";
-    outfile << ind << ";\n";
     outfile << ind << "return std::make_pair(true, Glucose::CRef_Undef);\n";
     outfile << --ind << "}\n";
 
@@ -591,7 +590,7 @@ void LazyPropagatorCompiler::compileRuleByStarter(unsigned id, const aspc::Rule&
                                 outfile << ind <<"if(!tupleAndAdded_" << i << ".second) propFalse_" << i << " = true;\n";
                                 outfile << ind++ << "else{\n";
                                 outfile << ind << "tuple_" << i << " = tupleAndAdded_" << i << ".first;\n";
-                                outfile << ind << "std::pair<bool, Glucose::CRef> propFalseAndConf_" << i << " = LazyPropagator::getInstance().propagateToFalse(tuple_" << i << ", true);\n";                            
+                                outfile << ind << "std::pair<bool, Glucose::CRef> propFalseAndConf_" << i << " = PositiveProgramFactory::getInstance().hasPossibleSupport(tuple_" << i << "->getId()) ? std::make_pair(false, Glucose::CRef_Undef) : LazyPropagator::getInstance().propagateToFalse(tuple_" << i << ", true);\n";
                                 outfile << ind << "propFalse_" << i << " = propFalseAndConf_" << i << ".first;\n";
                                 outfile << ind << "assert(propFalseAndConf_" << i << ".second == Glucose::CRef_Undef);\n";
                                 //if propagationDone is set in propFalse redirection for negated tuple then it just means that the redirection propagated the dummy tuple

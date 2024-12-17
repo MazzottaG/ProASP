@@ -378,7 +378,7 @@ class PositiveProgramFactory{
         }
 
         bool hasPossibleSupport(int tupleId){
-            return tupleToPossibleSupports.count(tupleId) > 0;
+            return tupleToPossibleSupports.count(tupleId) > 0 && !toRemovePossibleSupports.count(tupleId) ;
         }
 
         //called for clearing support just before adding a new support

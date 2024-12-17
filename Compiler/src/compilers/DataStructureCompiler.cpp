@@ -213,19 +213,39 @@ std::vector<std::vector<unsigned>> DataStructureCompiler::declareExplainFalseDat
         orderByStartersHead.push_back({});
         std::vector<bool> visitedFormulas(body.size(),false);
         std::unordered_set<std::string> boundVars;
-
         aspc::Literal lit(false,head[starter]);
         lit.addVariablesToSet(boundVars);
+        std::unordered_set<std::string> headVars(boundVars.begin(), boundVars.end());
         auxMapNameForPredicate[lit.getPredicateName()].insert(std::vector<unsigned>({}));
         unsigned selectedFormula=0;
         std::vector<unsigned>* currentOrdering=&orderByStartersHead.back();
         while (selectedFormula < body.size()){
             selectedFormula = body.size();
             unsigned selectedExternalFormula = body.size();
+            unsigned selectedMaxShareHeadVarsFormula = body.size();
+            unsigned maxSharedHeadVars = 0;
             bool notVisited = false;
             for(unsigned i = 0; i < body.size(); i++){
                 if(!visitedFormulas[i]){
                     notVisited=true;
+                    if(body[i]->isLiteral() && !body[i]->isBoundedLiteral(boundVars)){
+                        const aspc::Literal* literal = (const aspc::Literal*) body[i];
+                        if(!literal->isNegated() && !positiveProgramPreds.count(literal->getPredicateName())){
+                            unsigned numSharedHeadVars = 0;
+                            for(std::string var : literal->getVariables()){
+                                if(headVars.count(var)){
+                                    numSharedHeadVars++;
+                                }
+                            }
+                            if(numSharedHeadVars > maxSharedHeadVars){
+                                selectedMaxShareHeadVarsFormula = i;
+                                maxSharedHeadVars = numSharedHeadVars;
+                                selectedExternalFormula = i;
+                            }
+                        }
+
+                    }
+
                     if(body[i]->isBoundedLiteral(boundVars) || body[i]->isBoundedRelation(boundVars) || body[i]->isBoundedValueAssignment(boundVars)){
                         selectedFormula = i;
                         if(!body[i]->isLiteral()){
@@ -240,7 +260,7 @@ std::vector<std::vector<unsigned>> DataStructureCompiler::declareExplainFalseDat
                         }
                         
                     }
-                    if(body[i]->isPositiveLiteral()){
+                    if(body[i]->isPositiveLiteral() && selectedMaxShareHeadVarsFormula == body.size()){
                         std::string predicateName = ((const aspc::Literal*) body[i])->getPredicateName();        
                         if(!positiveProgramPreds.count(predicateName))
                                 selectedExternalFormula = i;

@@ -299,6 +299,7 @@ class Solver : public Clone {
     protected:
     double totalTimePropF;
     double totalTimeFixpoint;
+    double totalCallsPropF;
     long curRestart;
 
     // Alpha variables

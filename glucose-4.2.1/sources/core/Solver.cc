@@ -1624,7 +1624,6 @@ lbool Solver::search(int nof_conflicts) {
     bool blocked = false;
     bool aDecisionWasMade = false;
     starts++;
-
     // simplify
     if (useLCM && performLCM){
         //printf("###simplifyAll: %lld\n", conflicts);
@@ -1684,10 +1683,6 @@ lbool Solver::search(int nof_conflicts) {
     int iterations = 0;
     for(; ;) {
         iterations+=1;
-        // if(iterations% 300 == 0){
-        //     std::cout <<"Total time propFalse loop: " << totalTimePropF << "\n";
-        //     std::cout <<"Total time fixpoints loop: " << totalTimeFixpoint << "\n";
-        // }
         if(decisionLevel() == 0) { // We import clauses FIXME: ensure that we will import clauses enventually (restart after some point)
             parallelImportUnaryClauses();
 
@@ -1746,11 +1741,15 @@ lbool Solver::search(int nof_conflicts) {
                 //possibly propagate tuples that have lost their support to false and compute consequences
                 std::unordered_set<int> toCheck = PositiveProgramFactory::getInstance().getToCheck();
                 LazyPropagator::getInstance().getAlwaysToCheckTuples(toCheck);
-                auto start = std::chrono::high_resolution_clock::now();
                 for(int tupleId : toCheck){
                     if(tupleId >= TupleFactory::getInstance().getNextTupleId()) continue;
                     Tuple* toCheckTuple = TupleFactory::getInstance().getTupleFromInternalID(tupleId);
+                    auto start = std::chrono::high_resolution_clock::now();
                     std::pair<bool, Glucose::CRef> propagatedTupleAndReason = LazyPropagator::getInstance().propagateToFalse(toCheckTuple);
+                    auto end = std::chrono::high_resolution_clock::now();
+                    auto duration = std::chrono::duration_cast<std::chrono::duration<double>>(end - start).count();
+                    totalTimePropF += duration;
+                    totalCallsPropF++;
                     confl = propagatedTupleAndReason.second;
                     #ifdef DEBUG_PROP
                         std::cout << "Result of propagate to false for tuple ";
@@ -1767,9 +1766,6 @@ lbool Solver::search(int nof_conflicts) {
                         PositiveProgramFactory::getInstance().removeToCheckTuple(tupleId);
                 }
             
-                auto end = std::chrono::high_resolution_clock::now();
-                auto duration = std::chrono::duration_cast<std::chrono::duration<double>>(end - start).count();
-                totalTimePropF += duration;
                 if(confl == CRef_Undef)
                     PositiveProgramFactory::getInstance().clearToCheck();
             }
@@ -2218,6 +2214,7 @@ lbool Solver::solve_(bool do_simp, bool turn_off_simp) // Parameters are useless
             #ifdef DEBUG_LAZY_PROP
                 std::cout <<"Total time propFalse loop: " << totalTimePropF << "\n";
                 std::cout <<"Total time fixpoints loop: " << totalTimeFixpoint << "\n";
+                std::cout <<"Total calls to propFalse: " << totalCallsPropF << "\n";
             #endif DEBUG_LAZY_PROP
         }
     } else if(status == l_False && conflict.size() == 0)
