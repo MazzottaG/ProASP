@@ -2,7 +2,7 @@
 #define POSITIVEPROGRAMFACTORY_H
 #include <unordered_set>
 #include "AuxMapHandler.h"
-#include "TupleSignSet.h"
+#include "TupleSignSetWithHead.h"
 #include "../datastructures/TupleLight.h"
 //#define DEBUG_LAZY_PROP
 class PositiveProgramFactory{
@@ -21,22 +21,20 @@ class PositiveProgramFactory{
         std::unordered_map<int, std::unordered_set<int>> supportToTuples;
 
         //used to keep track of which tuples that are undef might propagate a tuple to false
-        std::unordered_map<int, TupleSignSet> tupleToPossibleSupports;
+        std::unordered_map<int, TupleSignSetWithHead> tupleToPossibleSupports;
         //std::unordered_map<int, int> tupleToPossibleSupports;
         std::unordered_map<int, std::unordered_set<int>> possibleSupportToTuples;
 
-        std::unordered_map<int, TupleSignSet> tupleToPossibleSupportsTemp;
+        std::unordered_map<int, TupleSignSetWithHead> tupleToPossibleSupportsTemp;
         std::unordered_map<int, std::unordered_set<int>> possibleSupportToTuplesTemp;
 
         //entries of possibleSupportsToTuples that have to be invalidated since key is invalidated/propagated
-        std::unordered_set<int> toRemovePossibleSupports;
+        std::vector<std::pair<int, int>> toRemovePossibleSupports;
         //entries of tupleToPossibleSupports that have to be invalidated since key is invalidated/propagated
         std::unordered_set<int> toRemoveTupleToPossibleSupports;
-
         //keeps track of tuples on which propagateToFalse was already called
         //such tuples can be definetly removed from toCheck if no conflict, restored in toCheck otherwise 
         std::unordered_set<int> removedToCheck;
-
     public:
         static PositiveProgramFactory& getInstance(){
             static PositiveProgramFactory instance;
@@ -134,49 +132,43 @@ class PositiveProgramFactory{
         }
         //persist diff of current level
         void closeDecisionLevelNoConflict(){
-            
             #ifdef DEBUG_LAZY_PROP
                 std::cout <<"Closing decision level without confl\n";
             #endif
-            
-            for(int toRemoveSupport : toRemovePossibleSupports){
-                #ifdef DEBUG_LAZY_PROP
-                    std::cout <<"Removing " << toRemoveSupport << " from possibleSupports\n";
-                #endif
-                for(int toRemoveTuple : toRemoveTupleToPossibleSupports){
-                    possibleSupportToTuples[toRemoveSupport].erase(toRemoveTuple);
-                    if(possibleSupportToTuples[toRemoveSupport].size() == 0)
-                        possibleSupportToTuples.erase(toRemoveSupport);
-                }
+            for(auto& toRemove : toRemovePossibleSupports){
+                possibleSupportToTuples[toRemove.first].erase(toRemove.second);
+                if(possibleSupportToTuples[toRemove.first].size() == 0)
+                    possibleSupportToTuples.erase(toRemove.first);
             }
-
             for(int toRemoveTuple : toRemoveTupleToPossibleSupports){
-                #ifdef DEBUG_LAZY_PROP
-                    std::cout <<"Removing " << toRemoveTuple << " from tupleToPossibleSupports\n";
-                #endif
                 tupleToPossibleSupports.erase(toRemoveTuple);
             }
-
-            for(auto it : tupleToPossibleSupportsTemp){
+            for(auto& it : tupleToPossibleSupportsTemp){
                 #ifdef DEBUG_LAZY_PROP
-                    std::cout <<"emplacing new tupleToPossibleSupportsTemp " << it.first << " ";
+                    std::cout <<"emplacing new tupleToPossibleSupportsTemp ";
+                    AuxMapHandler::getInstance().printTuple(it.first >= 0 ? TupleFactory::getInstance().getTupleFromInternalID(it.first) : TupleFactory::getInstance().getDummyTupleFromInternalID(it.first));
+                    std::cout << " ";
                     for(auto support : it.second){
-                        std::cout << support.value << " ";
+                        AuxMapHandler::getInstance().printTuple(support.value >= 0 ? TupleFactory::getInstance().getTupleFromInternalID(support.value) : TupleFactory::getInstance().getDummyTupleFromInternalID(support.value));
+                        std::cout << " ";
                     }
                     std::cout << std::endl;
                 #endif
                 tupleToPossibleSupports.emplace(it);
             }
-            for(auto it : possibleSupportToTuplesTemp){
+            for(auto& it : possibleSupportToTuplesTemp){
                 if(possibleSupportToTuples.count(it.first) != 0){
                     for(auto t : it.second){
                         possibleSupportToTuples[it.first].insert(t);
                     }
                 }else{
                     #ifdef DEBUG_LAZY_PROP
-                        std::cout <<"emplacing new possibleSupportToTuples " << it.first << " ";
+                        std::cout <<"emplacing new possibleSupportToTuples ";
+                        AuxMapHandler::getInstance().printTuple(it.first >= 0 ? TupleFactory::getInstance().getTupleFromInternalID(it.first) : TupleFactory::getInstance().getDummyTupleFromInternalID(it.first));
+                        std::cout << " ";
                         for(int supported : it.second){
-                            std::cout << supported << " ";
+                            AuxMapHandler::getInstance().printTuple(supported >= 0 ? TupleFactory::getInstance().getTupleFromInternalID(supported) : TupleFactory::getInstance().getDummyTupleFromInternalID(supported));
+                            std::cout << " ";
                         }
                         std::cout << std::endl;
                     #endif
@@ -190,9 +182,9 @@ class PositiveProgramFactory{
 
         //if no undef for tuple add, otherwise update
         void addPossibleSupportForTuple(int tupleId, int supportId, bool sign){
-            //std::cout <<"Saved possible support for tuple "<< tupleId <<"->support: "<<supportId << "\n";
+            // std::cout <<"Saved possible support for tuple "<< tupleId <<"->support: "<<supportId << "\n";
             if(!tupleToPossibleSupportsTemp.count(tupleId)){
-                std::pair<int, TupleSignSet> t = std::make_pair(tupleId, TupleSignSet());
+                std::pair<int, TupleSignSetWithHead> t = std::make_pair(tupleId, TupleSignSetWithHead());
                 tupleToPossibleSupportsTemp.emplace(t);
             }
             tupleToPossibleSupportsTemp[tupleId].insert(supportId, sign);
@@ -202,7 +194,6 @@ class PositiveProgramFactory{
                 possibleSupportToTuplesTemp.emplace(t);
             }
             possibleSupportToTuplesTemp[supportId].insert(tupleId);
-            
         }
         //clear supports for deleted tuple
         void onDeleteLazyTuple(int tupleId){
@@ -216,169 +207,127 @@ class PositiveProgramFactory{
         //given a possible (undef) support, add its supported tuples as to check
         //called when possible support is propagated
         //sign is true if lit is propagated to false, false otherwise
-        void removePossibleSupports(int tupleId, bool sign){
+        void removePossibleSupports(int originalTupleId, bool sign, bool fromUndo=false){
             #ifdef DEBUG_LAZY_PROP
-                std::cout <<"In removePossibleSupport for " << tupleId << "\n";
+                std::cout <<"In removePossibleSupport for " << originalTupleId << "\n";
             #endif
-            //tuple has possible supports saved
-            if(tupleToPossibleSupports.count(tupleId)){
-                if(!TupleFactory::getInstance().isPropagationFromLazyProp(tupleId) && !TupleFactory::getInstance().isTupleChecked(tupleId)){
-                    #ifdef DEBUG_LAZY_PROP
-                        std::cout <<"Added " << tupleId << " in toCheck from removePossibleSupports\n";
-                    #endif  
-                    toCheck.insert(tupleId);
-                }
-                for(auto support : tupleToPossibleSupports[tupleId]){
-                    toRemovePossibleSupports.insert(support.value);
-                }
-                toRemoveTupleToPossibleSupports.insert(tupleId);
-            }
-
-            //tuple is a possible support for some other tuple
-            if(possibleSupportToTuples.count(tupleId)){
-                //remove tuples that could be supported by tupleId
-                for(auto supported : possibleSupportToTuples[tupleId]){
-                    bool signOfSupport = tupleToPossibleSupports[supported].signOf(tupleId);
-                    if(!TupleFactory::getInstance().isPropagationFromLazyProp(supported) && !TupleFactory::getInstance().getTupleFromInternalID(supported)->isFalse()
-                        &&  signOfSupport != sign){//tupleToPossibleSupports[supported].signOf(tupleId) != sign
-                        toCheck.insert(supported);
+            std::vector<std::pair<int,int>> toRemovePossibleSupportsTemp;
+            std::unordered_set<int> toRemoveTupleToPossibleSupportsTemp;
+            std::vector<int> toPropagate;
+            int tupleId;
+            toPropagate.push_back(originalTupleId);
+            while(!toPropagate.empty()){
+                tupleId = toPropagate.back();
+                #ifdef DEBUG_LAZY_PROP
+                    std::cout << "Found ";
+                    AuxMapHandler::getInstance().printTuple(tupleId >= 0 ? TupleFactory::getInstance().getTupleFromInternalID(tupleId) : TupleFactory::getInstance().getDummyTupleFromInternalID(tupleId) ); 
+                    std::cout << " in toPropagate of removePossibleSuppot\n";
+                #endif
+                sign = tupleId == originalTupleId ? sign : true;
+                toPropagate.pop_back();
+                //tuple has possible supports saved
+                if(tupleToPossibleSupports.count(tupleId)){
+                    if(TupleFactory::getInstance().isTupleFromInputInterface(tupleId) && !TupleFactory::getInstance().isPropagationFromLazyProp(tupleId) && !TupleFactory::getInstance().isTupleChecked(tupleId)){
                         #ifdef DEBUG_LAZY_PROP
-                            std::cout <<"Added "<< supported << "in toCheck from removePossibleSupports\n";
-                        #endif
+                            std::cout <<"Added " << tupleId << " in toCheck from removePossibleSupports\n";
+                        #endif  
+                        toCheck.insert(tupleId);
                     }
-                    if(signOfSupport != sign){
-                        for(auto support : tupleToPossibleSupports[supported]){
-                            toRemovePossibleSupports.insert(support.value);
-                        }
-                        
-                        toRemoveTupleToPossibleSupports.insert(supported);
+                    for(auto support : tupleToPossibleSupports[tupleId]){
+                        toRemovePossibleSupports.push_back(std::make_pair(support.value, tupleId));
                     }
+                    toRemoveTupleToPossibleSupports.insert(tupleId);
                 }
-                //remove tupleId from all possibleSupports 
-                toRemovePossibleSupports.insert(tupleId);
-            }
 
-            //tuple has a fresh possible support that has to be invalidated
-            // a key of tupleToPossibleSupportTemp becomes false
-            if(tupleToPossibleSupportsTemp.count(tupleId)){
-                for(auto support : tupleToPossibleSupportsTemp.at(tupleId)){
-                    possibleSupportToTuplesTemp[support.value].erase(tupleId);
-                    //std::cout <<"Removing "<< support <<" from tupleToPossibleSupportsTemp\n";
-                    if(possibleSupportToTuplesTemp[support.value].size() == 0){
-                        possibleSupportToTuplesTemp.erase(support.value);
-                    }
-                }
-                tupleToPossibleSupportsTemp.erase(tupleId);
-                //std::cout <<"Removing " << tupleId << " from possibleSupportToTuplesTemp\n";
-            }
-            
-            if(possibleSupportToTuplesTemp.count(tupleId)){
-                std::unordered_set<int> toRemovePossibleSupportsTemp;
-                std::unordered_set<int> toRemoveTupleToPossibleSupportsTemp;
-                for(int supported : possibleSupportToTuplesTemp[tupleId]){
-                    bool signOfSupport = tupleToPossibleSupportsTemp[supported].signOf(tupleId);
-                    if(!TupleFactory::getInstance().isPropagationFromLazyProp(supported) && !TupleFactory::getInstance().getTupleFromInternalID(supported)->isFalse()
-                        && signOfSupport != sign){//tupleToPossibleSupportsTemp[supported].signOf(tupleId) != sign
-                        toCheck.insert(supported);
-                        #ifdef DEBUG_LAZY_PROP
-                            std::cout <<"Added "<< supported << "in toCheck\n";
-                        #endif
-                    }
-                    if(signOfSupport != sign){
-                        for(auto support : tupleToPossibleSupportsTemp[supported]){
-                            toRemovePossibleSupportsTemp.insert(support.value);
+                //tuple is a possible support for some other tuple
+                if(possibleSupportToTuples.count(tupleId)){
+                    //remove tuples that could be supported by tupleId
+                    for(auto supported : possibleSupportToTuples[tupleId]){
+                        bool signOfSupport = tupleToPossibleSupports[supported].signOf(tupleId);
+                        if(TupleFactory::getInstance().isTupleFromInputInterface(supported) && !TupleFactory::getInstance().isPropagationFromLazyProp(supported) && !TupleFactory::getInstance().getTupleFromInternalID(supported)->isFalse()
+                            &&  signOfSupport != sign){//tupleToPossibleSupports[supported].signOf(tupleId) != sign
+                            toCheck.insert(supported);
+                            #ifdef DEBUG_LAZY_PROP
+                                std::cout <<"Added "<< supported << "in toCheck from removePossibleSupports\n";
+                            #endif
                         }
-                        toRemoveTupleToPossibleSupportsTemp.insert(supported);
+                        if(signOfSupport != sign){
+                            for(auto support : tupleToPossibleSupports[supported]){
+                                toRemovePossibleSupports.push_back(std::make_pair(support.value, supported));
+                            }
+                            toRemoveTupleToPossibleSupports.insert(supported);
+                            toPropagate.push_back(supported);
+                        }
                     }
                 }
-                toRemovePossibleSupportsTemp.insert(tupleId);
+                if(!fromUndo){
+                    //tuple has a fresh possible support that has to be invalidated
+                    // a key of tupleToPossibleSupportTemp becomes false
+                    if(tupleToPossibleSupportsTemp.count(tupleId)){
+                        for(auto support : tupleToPossibleSupportsTemp.at(tupleId)){
+                            toRemovePossibleSupportsTemp.push_back(std::make_pair(support.value, tupleId));
+                        }
+                        toRemoveTupleToPossibleSupportsTemp.insert(tupleId);
+                    }
+                    
+                    if(possibleSupportToTuplesTemp.count(tupleId)){
+                        for(int supported : possibleSupportToTuplesTemp[tupleId]){
+                            bool signOfSupport = tupleToPossibleSupportsTemp[supported].signOf(tupleId);
+                            if(TupleFactory::getInstance().isTupleFromInputInterface(supported) && !TupleFactory::getInstance().isPropagationFromLazyProp(supported) && !TupleFactory::getInstance().getTupleFromInternalID(supported)->isFalse()
+                                && signOfSupport != sign){
+                                toCheck.insert(supported);
+                                #ifdef DEBUG_LAZY_PROP
+                                    std::cout <<"Added "<< supported << "in toCheck\n";
+                                #endif
+                            }
+                            if(signOfSupport != sign){
+                                for(auto support : tupleToPossibleSupportsTemp[supported]){
+                                    toRemovePossibleSupportsTemp.push_back(std::make_pair(support.value, supported));
+                                }
+                                toRemoveTupleToPossibleSupportsTemp.insert(supported);
+                                toPropagate.push_back(supported);
+                            }
+                        }
+                    }
+                }
+            }
+            if(!fromUndo){
 
-                for(int toRemoveSupport : toRemovePossibleSupportsTemp){
+                for(auto& toRemove : toRemovePossibleSupportsTemp){
                     #ifdef DEBUG_LAZY_PROP
                         std::cout <<"Removing " << toRemoveSupport << " from possibleSupportsTemp\n";
                     #endif
-                    for(int toRemoveTuple : toRemoveTupleToPossibleSupportsTemp){
-                        possibleSupportToTuplesTemp[toRemoveSupport].erase(toRemoveTuple);
-                        if(possibleSupportToTuplesTemp[toRemoveSupport].size() == 0)
-                            possibleSupportToTuplesTemp.erase(toRemoveSupport);
-                    }
+                    possibleSupportToTuplesTemp[toRemove.first].erase(toRemove.second);
+                    if(possibleSupportToTuplesTemp[toRemove.first].size() == 0)
+                        possibleSupportToTuplesTemp.erase(toRemove.first);
                 }
-
                 for(int toRemoveTuple : toRemoveTupleToPossibleSupportsTemp){
                     #ifdef DEBUG_LAZY_PROP
-                        std::cout <<"Removing " << toRemoveTuple << " from tupleToPossibleSupportsTemp\n";
+                        std::cout <<"Removing ";
+                        AuxMapHandler::getInstance().printTuple(toRemoveTuple >= 0 ? TupleFactory::getInstance().getTupleFromInternalID(toRemoveTuple) : TupleFactory::getInstance().getDummyTupleFromInternalID(toRemoveTuple));
+                        std::cout << " from tupleToPossibleSupportsTemp\n";
                     #endif
                     tupleToPossibleSupportsTemp.erase(toRemoveTuple);
                 }
-            
-            }
-            
-        }
-
-        void removePossibleSupportsFromUndo(int tupleId, bool sign){
-            #ifdef DEBUG_LAZY_PROP
-                std::cout <<"In removePossibleSupportsFromUndo for " << tupleId << "\n";
-            #endif
-            //tuple has possible supports saved
-            if(tupleToPossibleSupports.count(tupleId)){
-                if(!TupleFactory::getInstance().isPropagationFromLazyProp(tupleId) && !TupleFactory::getInstance().isTupleChecked(tupleId)){
-                    #ifdef DEBUG_LAZY_PROP
-                        std::cout <<"Added " << tupleId << " in toCheck from removePossibleSupportsFromUndo\n";
-                    #endif  
-                    toCheck.insert(tupleId);
+            }else{
+              for(auto& toRemove : toRemovePossibleSupports){
+                possibleSupportToTuples[toRemove.first].erase(toRemove.second);
+                if(possibleSupportToTuples[toRemove.first].size() == 0)
+                    possibleSupportToTuples.erase(toRemove.first);
                 }
-                for(auto support : tupleToPossibleSupports[tupleId]){
-                    toRemovePossibleSupports.insert(support.value);
-                }
-                toRemoveTupleToPossibleSupports.insert(tupleId);
-            }
-
-            //tuple is a possible support for some other tuple
-            if(possibleSupportToTuples.count(tupleId)){
-                //remove tuples that could be supported by tupleId
-                for(auto supported : possibleSupportToTuples[tupleId]){
-                    bool signOfSupport = tupleToPossibleSupports[supported].signOf(tupleId);
-                    if(!TupleFactory::getInstance().isPropagationFromLazyProp(supported) && !TupleFactory::getInstance().getTupleFromInternalID(supported)->isFalse()
-                        &&  signOfSupport != sign){//tupleToPossibleSupports[supported].signOf(tupleId) != sign
-                        toCheck.insert(supported);
-                        #ifdef DEBUG_LAZY_PROP
-                            std::cout <<"Added "<< supported << "in toCheck from removePossibleSupportsFromUndo\n";
-                        #endif
-                    }
-                    if(signOfSupport != sign){
-                        for(auto support : tupleToPossibleSupports[supported]){
-                            toRemovePossibleSupports.insert(support.value);
-                        }
-                        
-                        toRemoveTupleToPossibleSupports.insert(supported);
-                    }
-                }
-                //remove tupleId from all possibleSupports 
-                toRemovePossibleSupports.insert(tupleId);
-            }
-            for(int toRemoveSupport : toRemovePossibleSupports){
-                #ifdef DEBUG_LAZY_PROP
-                    std::cout <<"Removing " << toRemoveSupport << " from possibleSupports\n";
-                #endif
                 for(int toRemoveTuple : toRemoveTupleToPossibleSupports){
-                    possibleSupportToTuples[toRemoveSupport].erase(toRemoveTuple);
-                    if(possibleSupportToTuples[toRemoveSupport].size() == 0)
-                        possibleSupportToTuples.erase(toRemoveSupport);
+                    tupleToPossibleSupports.erase(toRemoveTuple);
                 }
-            }
 
-            for(int toRemoveTuple : toRemoveTupleToPossibleSupports){
-                #ifdef DEBUG_LAZY_PROP
-                    std::cout <<"Removing " << toRemoveTuple << " from tupleToPossibleSupports\n";
-                #endif
-                tupleToPossibleSupports.erase(toRemoveTuple);
+                toRemovePossibleSupports.clear();
+                toRemoveTupleToPossibleSupports.clear();  
             }
-            toRemovePossibleSupports.clear();
-            toRemoveTupleToPossibleSupports.clear();    
         }
+
+
 
         bool hasPossibleSupport(int tupleId){
-            return tupleToPossibleSupports.count(tupleId) > 0 && !toRemovePossibleSupports.count(tupleId) ;
+            return tupleToPossibleSupports.count(tupleId) > 0 && toRemoveTupleToPossibleSupports.count(tupleId) == 0;
         }
 
         //called for clearing support just before adding a new support
@@ -397,8 +346,9 @@ class PositiveProgramFactory{
             std::cout <<"TupleToPossibleSupports: \n";
             for(auto it : tupleToPossibleSupports){
                 //std::cout << it.first;
-                AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(it.first));
+                AuxMapHandler::getInstance().printTuple(it.first >= 0 ? TupleFactory::getInstance().getTupleFromInternalID(it.first) : TupleFactory::getInstance().getDummyTupleFromInternalID(it.first));
                 std::cout  << " -> ";
+                
                 
                 for(auto it1 : it.second){
                     if(!possibleSupportToTuples.count(it1.value)){
@@ -412,8 +362,8 @@ class PositiveProgramFactory{
                     // }
                     //assert(!TupleFactory::getInstance().getTupleFromInternalID(it1)->isFalse());
                     std::cout << "<";
-                    std::cout << it1.value;
-                    AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(it1.value));
+                    //std::cout << it1.value;
+                    AuxMapHandler::getInstance().printTuple(it1.value >= 0 ? TupleFactory::getInstance().getTupleFromInternalID(it1.value): TupleFactory::getInstance().getDummyTupleFromInternalID(it1.value));
                     std::cout <<", " << it1.sign << "> ";
                 }
                 std::cout<<std::endl;
@@ -422,7 +372,9 @@ class PositiveProgramFactory{
             std::cout <<"possibleSupportToTuples: \n";
             for(auto it : possibleSupportToTuples){
                 //assert(TupleFactory::getInstance().getTupleFromInternalID(it.first)->isUndef());
-                std::cout << it.first << " -> ";
+                //std::cout << it.first << " -> ";
+                AuxMapHandler::getInstance().printTuple(it.first >= 0 ? TupleFactory::getInstance().getTupleFromInternalID(it.first): TupleFactory::getInstance().getDummyTupleFromInternalID(it.first));
+                std::cout << " -> ";
                 for(int it1 : it.second){
                     if(!tupleToPossibleSupports.count(it1)){
                         std::cout << "Was expecting to find " << it1 << " in tupleToPossibleSupports\n";
@@ -434,7 +386,8 @@ class PositiveProgramFactory{
                     // }
                     //assert(!TupleFactory::getInstance().getTupleFromInternalID(it1)->isFalse());
                     //assert(tupleToPossibleSupports.count(it1));
-                    std::cout << it1 << " ";
+                    //std::cout << it1 << " ";
+                    AuxMapHandler::getInstance().printTuple(it1 >= 0 ? TupleFactory::getInstance().getTupleFromInternalID(it1): TupleFactory::getInstance().getDummyTupleFromInternalID(it1));
                 }
                 std::cout<<std::endl;
             }
@@ -517,7 +470,6 @@ class PositiveProgramFactory{
         }
         
         void updateToCheckDueToTuple(int tupleId){
-            
             #ifdef DEBUG_LAZY_PROP
                 std::cout <<"In updateToCheckDueToTuple for ";
                 AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(tupleId));  
@@ -609,6 +561,6 @@ class PositiveProgramFactory{
         }
         std::unordered_set<int> getToCheck(){
             return toCheck;
-        }   
+        }
 };
 #endif /*POSITIVEPROGRAMFACTORY_H*/

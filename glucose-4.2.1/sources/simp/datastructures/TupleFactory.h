@@ -272,6 +272,7 @@ class TupleFactory{
         std::vector<unsigned>& getVisibleAtoms(){return visibleTuple;}
         
         ~TupleFactory(){
+            deleteDummies();
             for(unsigned i = 1; i < nextTupleId; ++i){
                 delete internalIDToTuple[i];
             }

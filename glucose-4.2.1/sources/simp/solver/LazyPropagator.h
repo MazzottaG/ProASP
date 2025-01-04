@@ -3,7 +3,7 @@
 #include <vector>
 #include <chrono>
 #include "AbstractLazyPropagator.h"
-#include "TupleSignSet.h"
+#include "TupleSignSetWithHead.h"
 //#define DEBUG_PROP
 //#define DEBUG_LAZY_PROP
 class LazyPropagator{
@@ -18,20 +18,19 @@ private:
     std::unordered_set<int> alwaysToCheckTuples;
     std::unordered_set<int> currentlyToCheckTuples;
     //not false body literals found in propagateToFalse call
-    TupleSignSet bodyLiteralsSet;
-    std::vector<int> bodyLiterals;
-    std::unordered_set<int> undefsSet;
+    //TupleSignSet bodyLiteralsSet;
+    std::vector<IntBoolEntry> bodyLiterals;
+    std::vector<int> undefsVec;
 
     std::unordered_set<int> alwaysToCheckPredicates;
     std::unordered_set<int> trueEnqueued;
     //tuple to index in bodyLiterals up to which body literals must be removed
     std::unordered_map<int, int> tupleToBodyRemoveIndex;
-    // bool restartFixpoint;
+    std::vector<int> headTuplesChain;
     bool propagationDone;
     bool truePropInPropFalse;
     static Glucose::Solver* s;
     int indexCurrentLevelTuplePropFalse;
-
     //used for keeping track of already explained tuples in propFalse
     std::unordered_set<int> alreadyExplained;
     LazyPropagator();
@@ -41,14 +40,12 @@ public:
     void findAlwaysToCheckTuples();
     void addAlwaysToCheckTuple(int tupleId, int predicateId){
         if(alwaysToCheckPredicates.count(predicateId)){
-            //std::cout << "Added " <<  tupleId << " in currentlyToCheckTuples\n";
             if(alwaysToCheckTuples.count(tupleId)){
                 currentlyToCheckTuples.insert(tupleId);
             }
         }
     }
     void removeAlwaysToCheckTuple(int tupleId){
-        //std::cout << "Removed " <<  tupleId << " from currentlyToCheckTuples\n";
         currentlyToCheckTuples.erase(tupleId);
     }
 
@@ -135,7 +132,6 @@ public:
             AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(var));
             std::cout <<std::endl;
         #endif
-        //std::cout <<"Inside explainTrueLiteral\n";
         std::vector<Glucose::Lit> toExplain;
         Glucose::Lit lit = Glucose::mkLit(var, false);
         Glucose::vec<Glucose::Lit> &litReason = TupleFactory::getInstance().getTupleFromInternalID(var)->getReasonLits();
@@ -146,13 +142,9 @@ public:
         while (!toExplain.empty()){
             Glucose::Lit lit = toExplain.back();
             Tuple *tuple = TupleFactory::getInstance().getTupleFromInternalID(Glucose::var(lit));
-            // std::cout <<"Found ";
-            // AuxMapHandler::getInstance().printTuple(tuple);
-            // std::cout << " In toExplain of explainTrue\n";
             toExplain.pop_back();
             Glucose::vec<Glucose::Lit> &tupleReason = tuple->getReasonLits();
             if (tupleReason.size() > 0){
-                // std::cout << "tupleReason size: " << tupleReason.size() << "\n";
                 //special case for true
                 if(TupleFactory::getInstance().isTupleFromGen(Glucose::var(tupleReason[0]))) propagationReason.push(tupleReason[0]);
                 for(unsigned i = 1; i < tupleReason.size(); ++i){
@@ -162,7 +154,6 @@ public:
                         if(reasonSet){
                             if(!reasonSet->count(tupleId)){
                                 reasonSet->insert(tupleId);
-                                // std::cout << "Adding tuple from gen with id " << tupleId << " in true reason\n";
                                 if(s->levelFromPropagator(tupleId) == s->currentLevel())
                                     indexCurrentLevelTuple = propagationReason.size();
                                 propagationReason.push(Glucose::mkLit(tupleId, sign));
@@ -174,7 +165,6 @@ public:
                         }
                     }
                     else{
-                        // std::cout <<"Add to explain" << Glucose::var(tupleReason[i]) << "\n";
                         toExplain.push_back(tupleReason[i]);
                     }
                 }
@@ -232,9 +222,6 @@ public:
             propagationReason.push(spCopy[i]);
         }
         while (!toExplain.empty()){
-            // std::cout << "To explain in explodeLits: ";
-            // AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(Glucose::var(toExplain.back())));
-            // std::cout << "\n";
             Glucose::Lit lit = toExplain.back();
             Tuple *tuple = TupleFactory::getInstance().getTupleFromInternalID(Glucose::var(lit));
             tupleId = tuple->getId();
@@ -255,11 +242,7 @@ public:
                 }
             }
             else{
-                // std::cout <<"Empty reason for ";
-                // AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(tupleId));
-                // std::cout << "\n";
                 if(!TupleFactory::getInstance().isFact(tupleId)){
-                    //propagationReason[currentPos] = Glucose::mkLit(tupleId, sign(lit));
                     propagationReason.push(Glucose::mkLit(tupleId, sign(lit)));
                     if(currentLevelTupleIndex == -1 && TupleFactory::getInstance().isTupleFromGen(tupleId)  && s->levelFromPropagator(tupleId) == s->currentLevel())
                         currentLevelTupleIndex = propagationReason.size() -1;
@@ -286,7 +269,7 @@ public:
 
     std::pair<bool, Glucose::CRef> propagateToFalse(Tuple* tuple, bool makePropagation = true){
         indexCurrentLevelTuplePropFalse = -1;
-        undefsSet.clear();
+        undefsVec.clear();
         trueEnqueued.clear();
         #ifdef DEBUG_LAZY_PROP
             std::cout <<"Propagate to false of lazy propagator for tuple: ";
@@ -311,108 +294,103 @@ public:
             }
             removeBodyLiteralsAddedByTuple(tuple->getId(), false);
             tupleToBodyRemoveIndex.clear();
-
-            assert(bodyLiteralsSet.size() == 0);
+            removeLastBodyLiteral(tuple->getId());
             assert(bodyLiterals.size() == 0);
-            assert(undefsSet.size() == 0);
-            TupleFactory::getInstance().deleteDummies();
+            assert(undefsVec.size() == 0);
             alreadyExplained.clear();
+            headTuplesChain.clear();
             return propagatedAndConf;
         }
         return std::make_pair(false, Glucose::CRef_Undef);
     }
     void switchIfNoCurrentLevelTupleFound(int pos, Glucose::vec<Glucose::Lit>& reason){
-        //std::cout <<"Inside switch\n";
         if(indexCurrentLevelTuplePropFalse != -1 || reason.size() == 1)
             return;
-        //std::cout <<"switching\n";
         Glucose::Lit lit = reason[1];
         reason[1] = reason[pos];
         reason[pos] = lit;
     }
     
     void addExplainingTuple(int id){
-        //std::cout <<"Added tupleToBodyRemoveIndex id: " << id << " body literals size: " << bodyLiterals.size() << "\n";
         tupleToBodyRemoveIndex.emplace(std::make_pair(id, bodyLiterals.size()));
+    }
+    void addTupleInChain(int tupleId){
+        headTuplesChain.push_back(tupleId);
     }
 
     bool addBodyLiteral(int id, bool sign){
-        //std::cout << "Add body literal in vec ";
-        // std::cout << id;
-        //AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(id));
-        //std::cout << "\n";
-        if(bodyLiteralsSet.insert(id, sign)){
-            if(id > 0 && TupleFactory::getInstance().getTupleFromInternalID(id)->isUndef())
-            undefsSet.insert(id);
-            bodyLiterals.push_back(id);
-            return true;
-        }
-        return false;
+        if(id > 0 && TupleFactory::getInstance().getTupleFromInternalID(id)->isUndef())
+            undefsVec.push_back(id);
+        bodyLiterals.push_back(IntBoolEntry(id,sign));
+        return true;
     }
     void removeLastBodyLiteral(int id){
-        assert(bodyLiterals[bodyLiterals.size()-1] == id);
-        bodyLiteralsSet.erase(id);
-        undefsSet.erase(id);
+        if(bodyLiterals[bodyLiterals.size()-1].value != id){
+            exit(1);
+        }
+        assert(bodyLiterals[bodyLiterals.size()-1].value == id);
+        //bodyLiteralsSet.erase(id);
+        if(undefsVec.size() > 0 && id == undefsVec.back())
+            undefsVec.pop_back();
         
-        //std::cout <<"Removing body literal ";
-        //AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(id));
-        // std::cout << id;
-        //std::cout << "\n";
         bodyLiterals.pop_back();
     }
     void printBodyLiterals(){
         std::cout << "Printing body literals: ";
         for(unsigned i = 0; i < bodyLiterals.size(); ++i){
-            AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(bodyLiterals[i]));
+            AuxMapHandler::getInstance().printTuple(bodyLiterals[i].value >=0 ? TupleFactory::getInstance().getTupleFromInternalID(bodyLiterals[i].value) : TupleFactory::getInstance().getDummyTupleFromInternalID(bodyLiterals[i].value));
+            std::cout << " ";
+        }
+        std::cout <<"\n";
+    }
+    void printHeadChainLiterals(){
+        std::cout << "Printing head chain literals: ";
+        for(unsigned i = 0; i < headTuplesChain.size(); ++i){
+            AuxMapHandler::getInstance().printTuple(headTuplesChain[i] >=0 ? TupleFactory::getInstance().getTupleFromInternalID(headTuplesChain[i]) : TupleFactory::getInstance().getDummyTupleFromInternalID(headTuplesChain[i]));
             std::cout << " ";
         }
         std::cout <<"\n";
     }
     int getUndefsBodySize(){
-        return undefsSet.size();
+        return undefsVec.size();
     }
     int getBodySize(){
         return bodyLiterals.size();
     }
-
+    int getTuplesChainSize() {
+        return headTuplesChain.size();
+    }
     void addPossibleSupportsForTuple(int id){
         #ifdef DEBUG_LAZY_PROP
             std::cout<<"Saving possible supports for tuple ";// << id;
-            AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(id)); 
+            AuxMapHandler::getInstance().printTuple(id >=0 ? TupleFactory::getInstance().getTupleFromInternalID(id) : TupleFactory::getInstance().getDummyTupleFromInternalID(id));
             std::cout<<" : ";
         #endif
         //there must be some body literal to save
         assert(bodyLiterals.size() > 0);
-        for(int i = 0; i < bodyLiterals.size(); ++i){
-            #ifdef DEBUG_LAZY_PROP
-                std::cout <<bodyLiterals[i];
-                AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(bodyLiterals[i]));
-                std::cout << " ";
-            #endif
-            PositiveProgramFactory::getInstance().addPossibleSupportForTuple(id, bodyLiterals[i], bodyLiteralsSet.signOf(bodyLiterals[i]));
+        
+        for(unsigned i = 0; i < headTuplesChain.size(); ++i){
+            int start = tupleToBodyRemoveIndex.at(headTuplesChain[i]);
+            int end =  i != headTuplesChain.size()-1 ? tupleToBodyRemoveIndex.at(headTuplesChain[i+1])-1 : bodyLiterals.size();
+            for(int j = start; j < end; ++j){
+                PositiveProgramFactory::getInstance().addPossibleSupportForTuple(headTuplesChain[i], bodyLiterals[j].value, bodyLiterals[j].sign);
+            }
         }
         #ifdef DEBUG_LAZY_PROP
-            //std::cout <<" Tuple factory had "<<TupleFactory::getInstance().propagatedByLazyPropTuples.size() << " tuples propagated by lazy prop\n";
             std::cout<<"\n";
         #endif
     }
 
-    void storeBodyLiteralsFromTuple(int tuple, TupleSignSet& lits){
-        //std::cout <<"Storing body literals for tuple: " << tuple << " ->\n";
+    void storeBodyLiteralsFromTuple(int tuple, TupleSignSetWithHead& lits){
         assert(tupleToBodyRemoveIndex.count(tuple) != 0);
         assert(lits.size() == 0);
-        //std::cout << tupleToBodyRemoveIndex.count(tuple) << "\n";
         int tupleId;
-        //std::cout << "Doing store body literals from " << tupleToBodyRemoveIndex.at(tuple) << "to " << bodyLiterals.size() <<"\n";
+        int start = tupleToBodyRemoveIndex.at(tuple);
+        //head is the last tule of bodyLiterals (remember orderings)
+        lits.insertHead(bodyLiterals[bodyLiterals.size()-1].value, bodyLiterals[bodyLiterals.size()-1].sign);
         for(unsigned i = tupleToBodyRemoveIndex.at(tuple); i < bodyLiterals.size(); ++i){
-            // AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(bodyLiterals.at(i)));
-            //std::cout << " \n";
-            tupleId = bodyLiterals.at(i);
-            //std::cout <<"Before insert of " << tupleId << "\n";
-            lits.insert(tupleId, bodyLiteralsSet.signOf(tupleId));
-            //std::cout <<"After insert\n";
+            lits.insert(bodyLiterals.at(i).value, bodyLiterals.at(i).sign);
         }
-        //std::cout <<"\n";
     }
     
     void addEnqueued(int id){
@@ -423,36 +401,34 @@ public:
         return trueEnqueued.count(id) > 0;
     }
 
-    std::vector<int>& getBodyLiterals(){
-        return bodyLiterals;
-    }
 
     //remove body literals added from tuple id
     void removeBodyLiteralsAddedByTuple(int id, bool noErase = true){
         if(tupleToBodyRemoveIndex.count(id)){
-            // std::cout <<"Removing added body literals by " << id << " should remove up to " << tupleToBodyRemoveIndex[id] << "\n";
             for(int i = bodyLiterals.size() -1; i >= tupleToBodyRemoveIndex.at(id); --i){
-                // std::cout << "Removing at index " << i << "\n";
-                bodyLiteralsSet.erase(bodyLiterals.at(i));
-                undefsSet.erase(bodyLiterals.at(i));
-                //std::cout <<"Removing ";
-                //AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(bodyLiterals.back())); 
-                //std::cout << " from bodyLiterals\n";
+                if(undefsVec.size() > 0){
+                    if(bodyLiterals.back().value == undefsVec.back())
+                        undefsVec.pop_back();
+                }
                 bodyLiterals.pop_back();
             }
-            if(!noErase)
+            if(!noErase){
+                eraseLastTupleFromHeadChain(id);
                 tupleToBodyRemoveIndex.erase(id);
+            }
         }
-        //std::cout <<"After removeBodyLiterals by " << id << "\n";
     }
-    
+    void eraseLastTupleFromHeadChain(int id){
+        if(headTuplesChain.size() > 0 && id == headTuplesChain.back()){
+            headTuplesChain.pop_back();
+        }
+    }
     AbstractLazyPropagator *getPropagatorFromPredicateId(int predId){
         assert(predicateToPropagator.count(predId));
         return propagators[predicateToPropagator[predId]];
     }
 
     void addAlreadyExplainedTuple(int id){
-        //std::cout <<"Added alreadyExplained tuple " << id << "\n";
         alreadyExplained.insert(id);
     }
     bool isTupleAlreadyExplained(int id){

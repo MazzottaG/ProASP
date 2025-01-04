@@ -1692,28 +1692,27 @@ lbool Solver::search(int nof_conflicts) {
         }
         #ifdef DEBUG_PROP
             PositiveProgramFactory::getInstance().printSupported();
-            for(unsigned i = TupleFactory::getInstance().getFactSize(); i < TupleFactory::getInstance().getNextTupleId(); ++i){
-                if(TupleFactory::getInstance().getTupleFromInternalID(i)->isTrue()){
-                    AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(i));
-                    std::cout << " is true: \n";
-                        std::cout <<"With support: ";
-                        Glucose::vec<Glucose::Lit>& sp = TupleFactory::getInstance().getTupleFromInternalID(i)->getReasonLits();
-                        for(unsigned j = 0; j < sp.size(); ++j){
-                            AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(Glucose::var(sp[j])));
-                            std::cout << " ";
-                        }
-                        std::cout <<"\n";
-                }
-                else if(TupleFactory::getInstance().getTupleFromInternalID(i)->isFalse()){
-                    AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(i));
-                    std::cout << " is false: \n";
-                }
-            }
+            // for(unsigned i = TupleFactory::getInstance().getFactSize(); i < TupleFactory::getInstance().getNextTupleId(); ++i){
+            //     if(TupleFactory::getInstance().getTupleFromInternalID(i)->isTrue()){
+            //         AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(i));
+            //         std::cout << " is true: \n";
+            //             std::cout <<"With support: ";
+            //             Glucose::vec<Glucose::Lit>& sp = TupleFactory::getInstance().getTupleFromInternalID(i)->getReasonLits();
+            //             for(unsigned j = 0; j < sp.size(); ++j){
+            //                 AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(Glucose::var(sp[j])));
+            //                 std::cout << " ";
+            //             }
+            //             std::cout <<"\n";
+            //     }
+            //     else if(TupleFactory::getInstance().getTupleFromInternalID(i)->isFalse()){
+            //         AuxMapHandler::getInstance().printTuple(TupleFactory::getInstance().getTupleFromInternalID(i));
+            //         std::cout << " is false: \n";
+            //     }
+            // }
         #endif
         bool propagatedToFalse = false;
         CRef confl;
         vec<Lit> lits;
-
         do{
             // std::cout <<"Going up\n";
             std::pair<bool, Glucose::CRef> generatedTupleAndReason;
@@ -1770,9 +1769,6 @@ lbool Solver::search(int nof_conflicts) {
                     PositiveProgramFactory::getInstance().clearToCheck();
             }
         }while(propagatedToFalse && confl == Glucose::CRef_Undef);
-        
-        if(confl == CRef_Undef)
-            PositiveProgramFactory::getInstance().clearToCheck();
         if(confl != CRef_Undef) {
             PositiveProgramFactory::getInstance().conflict();
             LazyPropagator::getInstance().clearWatchers();

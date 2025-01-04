@@ -1,11 +1,12 @@
-#ifndef TUPLESIGNSET_H
-#define TUPLESIGNSET_H
+#ifndef TUPLESIGNSETWITHHEAD_H
+#define TUPLESIGNSETWITHHEAD_H
 #include <unordered_set>
 struct IntBoolEntry {
     int value;
     bool sign;
 
     IntBoolEntry(int v, bool f) : value(v), sign(f) {}
+    IntBoolEntry() : value(0), sign(false) {}
 };
 
 struct IntBoolEntryHash {
@@ -20,11 +21,19 @@ struct IntBoolEntryEq {
    }
 };
 
-class TupleSignSet {
+class TupleSignSetWithHead {
     private:
+        IntBoolEntry head;
         std::unordered_set<IntBoolEntry, IntBoolEntryHash, IntBoolEntryEq> entries;
 
     public:
+        TupleSignSetWithHead(){}
+        void insertHead(int val, bool sign){
+            head = IntBoolEntry(val,sign);   
+        }
+        IntBoolEntry getHead(){
+            return head;
+        }
         bool insert(int val, bool sign) {
             IntBoolEntry entry(val,sign);
             return entries.insert(IntBoolEntry(val, sign)).second;
@@ -46,4 +55,4 @@ class TupleSignSet {
         auto begin() const { return entries.begin(); }
         auto end() const { return entries.end(); }
 };
-#endif /*TUPLESIGNSET_H*/
+#endif /*TUPLESIGNSETWITHHEAD_H*/
