@@ -1722,7 +1722,6 @@ lbool Solver::search(int nof_conflicts) {
                     if(confl != CRef_Undef) std::cout <<"Conflict in unit\n";
                 #endif
                 // std::cout <<"toCheck size for lazy propagator after propagate: " << PositiveProgramFactory::getInstance().getToCheck().size()<< "\n";
-                auto start = std::chrono::high_resolution_clock::now();
                 if(confl == CRef_Undef ){
                     generatedTupleAndReason = LazyPropagator::getInstance().computeFixpoint(lits);
                     confl = generatedTupleAndReason.second;
@@ -1730,9 +1729,6 @@ lbool Solver::search(int nof_conflicts) {
                         if(confl != CRef_Undef) std::cout << "Conflict in fixpoint of lazy prop\n";
                     #endif
                 }
-                auto end = std::chrono::high_resolution_clock::now();
-                auto duration = std::chrono::duration_cast<std::chrono::duration<double>>(end - start).count();
-                totalTimeFixpoint += duration;
             }while(generatedTupleAndReason.first && confl == CRef_Undef);
             LazyPropagator::getInstance().clearWatchers();
             propagatedToFalse = false;
@@ -1743,12 +1739,7 @@ lbool Solver::search(int nof_conflicts) {
                 for(int tupleId : toCheck){
                     if(tupleId >= TupleFactory::getInstance().getNextTupleId()) continue;
                     Tuple* toCheckTuple = TupleFactory::getInstance().getTupleFromInternalID(tupleId);
-                    auto start = std::chrono::high_resolution_clock::now();
                     std::pair<bool, Glucose::CRef> propagatedTupleAndReason = LazyPropagator::getInstance().propagateToFalse(toCheckTuple);
-                    auto end = std::chrono::high_resolution_clock::now();
-                    auto duration = std::chrono::duration_cast<std::chrono::duration<double>>(end - start).count();
-                    totalTimePropF += duration;
-                    totalCallsPropF++;
                     confl = propagatedTupleAndReason.second;
                     #ifdef DEBUG_PROP
                         std::cout << "Result of propagate to false for tuple ";
@@ -2207,11 +2198,6 @@ lbool Solver::solve_(bool do_simp, bool turn_off_simp) // Parameters are useless
                 std::cout << " ";
             }
             std::cout <<"END FULL MODEL"<<std::endl;
-            #ifdef DEBUG_LAZY_PROP
-                std::cout <<"Total time propFalse loop: " << totalTimePropF << "\n";
-                std::cout <<"Total time fixpoints loop: " << totalTimeFixpoint << "\n";
-                std::cout <<"Total calls to propFalse: " << totalCallsPropF << "\n";
-            #endif DEBUG_LAZY_PROP
         }
     } else if(status == l_False && conflict.size() == 0)
         ok = false;

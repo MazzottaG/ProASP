@@ -58,7 +58,7 @@ void LazyPropagatorCompiler::compileTupleFactoryCC(){
 
     outfile << ind++ << "Glucose::vec<Glucose::Lit>& TupleFactory::explain(unsigned var){\n";
     outfile << ind << "assert(var<internalIDToTuple.size());\n";
-    outfile << ind++ << "if(propagatedByLazyPropTuples.count(var)){\n";
+    outfile << ind++ << "if(propagatedByLazyPropTuples.find(var) != propagatedByLazyPropTuples.end()){\n";
     outfile << ind << "trueTupleReasons.clear();\n";
     outfile << ind << "LazyPropagator::getInstance().explainTrueLiteral(var, trueTupleReasons);\n";
     outfile << ind << "return trueTupleReasons;\n";
@@ -68,7 +68,7 @@ void LazyPropagatorCompiler::compileTupleFactoryCC(){
 
     outfile << ind++ << "void TupleFactory::explainNoAnalyze(unsigned var, Glucose::vec<Glucose::Lit>& tupleReasons, std::unordered_set<int>* reasonSet){\n";
     outfile << ind << "assert(var<internalIDToTuple.size());\n";
-    outfile << ind++ << "if(propagatedByLazyPropTuples.count(var)){\n";
+    outfile << ind++ << "if(propagatedByLazyPropTuples.find(var) != propagatedByLazyPropTuples.end()){\n";
     outfile << ind << "LazyPropagator::getInstance().explainTrueLiteral(var, tupleReasons, reasonSet);\n";
     outfile << --ind <<"}\n";
     outfile << ind++ <<"else{\n";
@@ -263,10 +263,6 @@ void LazyPropagatorCompiler::compileExplainFalse(std::vector<int>& scc, std::vec
         outfile << ind << "LazyPropagator::getInstance().addBodyLiteral(tuple->getId(), !tupleNegated ? true : false);\n";
         outfile << ind << "LazyPropagator::getInstance().addExplainingTuple(tuple->getId());\n";
     }
-    // if(!isRecursive){
-    //     //outfile << ind << "LazyPropagator::getInstance().addExplainingTuple(tuple->getId());\n";
-    //     outfile << ind << "LazyPropagator::getInstance().addBodyLiteral(tuple->getId(), !tupleNegated ? true : false);\n";
-    // }
     outfile << ind << "std::unordered_set<int> dummyTuplesInBody;\n";
 
     if(isRecursive){
@@ -289,7 +285,7 @@ void LazyPropagatorCompiler::compileExplainFalse(std::vector<int>& scc, std::vec
         outfile << ind++ << "if(LazyPropagator::getInstance().isTupleAlreadyExplained(tuple_0->getId())){\n";
         
         outfile << ind << "int currentTuple = tuple_0->getId();\n";
-        outfile << ind++ << "while(tupleToParent.count(currentTuple)){\n";
+        outfile << ind++ << "while(tupleToParent.find(currentTuple) != tupleToParent.end()){\n";
         outfile << ind << "LazyPropagator::getInstance().eraseLastTupleFromHeadChain(currentTuple);\n";
         outfile << ind << "int parentTuple = tupleToParent.at(currentTuple);\n";
         outfile << ind << "tupleToChildren.at(parentTuple).erase(currentTuple);\n";
@@ -323,7 +319,7 @@ void LazyPropagatorCompiler::compileExplainFalse(std::vector<int>& scc, std::vec
     if(isRecursive){
         outfile << ind++ << "if(toExplainSize == toExplain.size()){\n";
         outfile << ind << "int currentTuple = tuple_0->getId();\n";
-        outfile << ind++ << "while(tupleToParent.count(currentTuple)){\n";
+        outfile << ind++ << "while(tupleToParent.find(currentTuple) != tupleToParent.end()){\n";
         //closing branch and therefore undefs must be removed
         outfile << ind << "LazyPropagator::getInstance().removeBodyLiteralsAddedByTuple(currentTuple, false);\n";
         outfile << ind << "LazyPropagator::getInstance().removeLastBodyLiteral(currentTuple);\n";
@@ -449,6 +445,8 @@ void LazyPropagatorCompiler::compileRuleByStarter(unsigned id, const aspc::Rule&
     std::unordered_map<int, int> removeNegatedUndefBlocks;
     std::vector<int> redirectPropFalseTuples;
     std::unordered_set<int> tupleFromPPIdx;
+    std::vector<std::pair<int, std::pair<bool, bool>>>toAddBodyLiteralBoundAndSign;
+    std::unordered_set<int> predsDefinedInPosProgramForRule;
     //when evaluating rule by started the zero tuple has been declared outside the compileRule
     if(starter != formulas.size()){
         declaredTuples.push_back(0);
@@ -542,6 +540,8 @@ void LazyPropagatorCompiler::compileRuleByStarter(unsigned id, const aspc::Rule&
             if(formula->isLiteral()){
                 const aspc::Literal* lit = (const aspc::Literal*)formula;
                 bool predDefinedInPosProgram = positiveProgramHeadPredicates.count(lit->getPredicateName());
+                if(predDefinedInPosProgram)
+                    predsDefinedInPosProgramForRule.insert(i);
                 if(predDefinedInPosProgram) tupleFromPPIdx.insert(i);
                 if(lit->isBoundedLiteral(boundVars)){
                     //bound lit
@@ -563,13 +563,8 @@ void LazyPropagatorCompiler::compileRuleByStarter(unsigned id, const aspc::Rule&
                             if(predDefinedInPosProgram){
                                 outfile << ind << "bool propFalse_" << i << " = false;\n";
                             }
-                            outfile << ind << "bool addedBodyLit_" << i << " = false;\n";
                             outfile << ind++ << "if(tuple_" << i << " != NULL){\n";
-                            //&& !TupleFactory::getInstance().isTupleDummy(tuple_" + std::to_string(i) + "->getId())
-                            std::string addBodyLitCondition =  predDefinedInPosProgram ? "!TupleFactory::getInstance().isFact(tuple_" + std::to_string(i) + "->getId()) ": "s->levelFromPropagator(tuple_" + std::to_string(i)+ "->getId()) > 0 || !s->isAssigned(tuple_" + std::to_string(i) + "->getId())";
-                            outfile << ind++ << "if(" << addBodyLitCondition << ")\n";
-                            outfile << ind << "addedBodyLit_" << i << " = LazyPropagator::getInstance().addBodyLiteral(tuple_" << i << "->getId(), !tupleNegated ? true : false);\n";
-                            --ind;
+                            toAddBodyLiteralBoundAndSign.push_back(std::make_pair(i, std::make_pair(true, true)));
                             outfile << ind++ << "if(tuple_" << i << "->isTrue()){\n";
                             //add reasons of true that will be part of the reasons of propagated to false
                             outfile << ind << "TupleFactory::getInstance().explainNoAnalyze(tuple_" << i << "->getId(), tupleReasons, &reasonSet);\n";
@@ -675,14 +670,13 @@ void LazyPropagatorCompiler::compileRuleByStarter(unsigned id, const aspc::Rule&
                         std::string continueOnlyWithTrueBody = !explainFalse ? " && tuple_" + std::to_string(i) + "->isTrue()" : "";
                         outfile << ind++ << "if(tuple_" << i <<" != NULL" << continueOnlyWithTrueBody << "){\n";
                         if(explainFalse){
-                            outfile << ind <<"bool addedBodyLit_" << i << " = false;\n";
                             if(predDefinedInPosProgram){
                                 outfile << ind ++ << "if(tuple_" << i <<" != NULL && tuple_" << i << "->isUnknown()){\n";
                                 outfile << ind << "dummyTuplesInBody.insert(tuple_" << i <<"->getId());\n";
                                 outfile << --ind <<"}\n";
                             }
                             outfile << ind++ << "if(tuple_" << i << "->isFalse() && !TupleFactory::getInstance().isLazyPropLevelZero(tuple_" << i << "->getId())){\n";
-                            outfile << ind++ <<"if(!reasonSet.count(tuple_" << i << "->getId())){\n";
+                            outfile << ind++ <<"if(reasonSet.find(tuple_" << i << "->getId()) == reasonSet.end()){\n";
                             outfile << ind << "if(!TupleFactory::getInstance().isTupleFromGen(tuple_" << i << "->getId()) || s->levelFromPropagator(tuple_" << i << "->getId()) > 0) tupleReasons.push(Glucose::mkLit(tuple_" << i << "->getId(), false));\n";
 
                             outfile << ind << "reasonSet.insert(tuple_" << i << "->getId());\n";
@@ -691,14 +685,7 @@ void LazyPropagatorCompiler::compileRuleByStarter(unsigned id, const aspc::Rule&
                             outfile << --ind <<"}\n";
                             //bound literal is true
                             outfile << ind++ <<"else{\n";
-                            std::string addBodyLitCondition;
-                            if(toRedirect) //&& !TupleFactory::getInstance().isTupleDummy(tuple_" + std::to_string(i) + "->getId()) 
-                                addBodyLitCondition =  predDefinedInPosProgram ? "!TupleFactory::getInstance().isFact(tuple_" + std::to_string(i) + "->getId()) ": "s->levelFromPropagator(tuple_" + std::to_string(i)+ "->getId()) > 0 || !s->isAssigned(tuple_" + std::to_string(i) + "->getId())";
-                            else
-                                addBodyLitCondition =  predDefinedInPosProgram ? "!TupleFactory::getInstance().isFact(tuple_" + std::to_string(i) + "->getId())": "s->levelFromPropagator(tuple_" + std::to_string(i)+ "->getId()) > 0 || !s->isAssigned(tuple_" + std::to_string(i) + "->getId())";                            
-                            outfile << ind++ << "if(" << addBodyLitCondition << ")\n";
-                            outfile << ind << "addedBodyLit_" << i << " = LazyPropagator::getInstance().addBodyLiteral(tuple_" << i << "->getId(), !tupleNegated ? false : true);\n";
-                            --ind;
+                            toAddBodyLiteralBoundAndSign.push_back(std::make_pair(i, std::make_pair(true, false)));
                             closingPars++;
                             removeBodyLiteralsBlocksAndSymbols.emplace(std::make_pair(closingPars, i));
                             if(predDefinedInPosProgram)
@@ -713,7 +700,6 @@ void LazyPropagatorCompiler::compileRuleByStarter(unsigned id, const aspc::Rule&
                     std::unordered_set<int> boundIndices;
                     std::string predStruct = predicateToStruct[lit->getPredicateName()];
                     std::string structType = predStruct == "Vec" ? "std::vector<int>*" : "IndexedSet*";
-                    if(explainFalse) outfile << ind <<"bool addedBodyLit_" << i << " = false;\n";
                     for(unsigned k=0; k<lit->getAriety(); k++){
                         if(!lit->isVariableTermAt(k) || boundVars.count(lit->getTermAt(k))){
                             std::string term = lit->isVariableTermAt(k) || isInteger(lit->getTermAt(k)) ? lit->getTermAt(k) : "ConstantsManager::getInstance().mapConstant(\""+lit->getTermAt(k)+"\")";
@@ -730,7 +716,7 @@ void LazyPropagatorCompiler::compileRuleByStarter(unsigned id, const aspc::Rule&
 
                         outfile << ind << structType << " tuplesF_"<<i<<" = &"<<prefix<<"f"<<mapName<<"()->getValues"<<predStruct<<"({"<<terms<<"});\n";
                         outfile << ind++ << "for(auto i=tuplesF_"<<i<<"->begin(); i != tuplesF_"<<i<<"->end(); i++){\n";
-                        outfile << ind++ <<"if(!reasonSet.count(*i)){\n";
+                        outfile << ind++ <<"if(reasonSet.find(*i) == reasonSet.end()){\n";
                         outfile << ind << "if(!TupleFactory::getInstance().isTupleFromGen(*i) || s->levelFromPropagator(*i) > 0) tupleReasons.push(Glucose::mkLit(*i, false));\n";
                         outfile << ind << "reasonSet.insert(*i);\n";
                         outfile << ind << "if(s->levelFromPropagator(*i) == s->currentLevel()) LazyPropagator::getInstance().switchIfNoCurrentLevelTupleFound(tupleReasons.size()-1, tupleReasons);\n";
@@ -751,13 +737,10 @@ void LazyPropagatorCompiler::compileRuleByStarter(unsigned id, const aspc::Rule&
                     if(!explainFalse)
                         outfile << ind << "Tuple* tuple_"<<i<<" = TupleFactory::getInstance().getTupleFromInternalID(*i);\n";
                     else{
-                        outfile << ind << "addedBodyLit_" << i << " = false;\n";
                         outfile << ind << "if(i == tuplesU_" << i << "->end()) i = tuples_" << i << "->begin();\n";
                         outfile << ind << "if(i == tuples_" << i << "->end()) break;\n";
                         outfile << ind << "Tuple* tuple_" << i << " = TupleFactory::getInstance().getTupleFromInternalID(*i);\n";
-                        outfile << ind++ <<"if(s->levelFromPropagator(tuple_" << i << "->getId()) > 0 || !s->isAssigned(tuple_" << i << "->getId()))\n";
-                        outfile << ind << "addedBodyLit_" << i << " = LazyPropagator::getInstance().addBodyLiteral(tuple_" << i << "->getId(), !tupleNegated ? false : true);\n";
-                        --ind;
+                        toAddBodyLiteralBoundAndSign.push_back(std::make_pair(i, std::make_pair(false, false)));
                         removeBodyLiteralsBlocksAndSymbols.emplace(std::make_pair(closingPars, i));
                     }
                     outfile << ind++ << "if(tuple_"<<i<<" != NULL){\n";
@@ -791,6 +774,23 @@ void LazyPropagatorCompiler::compileRuleByStarter(unsigned id, const aspc::Rule&
             //last tuple must be false when I am not doing propagation.s
             //I am not doing propagation in propagateToFalse redirections
             if(explainFalse){
+                //addBodyLiterals
+                for(int tupleIdx = 0; tupleIdx < toAddBodyLiteralBoundAndSign.size(); ++tupleIdx){
+                    if(toAddBodyLiteralBoundAndSign[tupleIdx].second.first){
+                        std::string addBodyLitCondition =  predsDefinedInPosProgramForRule.count(toAddBodyLiteralBoundAndSign[tupleIdx].first) ? "!TupleFactory::getInstance().isFact(tuple_" + std::to_string(toAddBodyLiteralBoundAndSign[tupleIdx].first) + "->getId()) ": "s->levelFromPropagator(tuple_" + std::to_string(toAddBodyLiteralBoundAndSign[tupleIdx].first)+ "->getId()) > 0 || !s->isAssigned(tuple_" + std::to_string(toAddBodyLiteralBoundAndSign[tupleIdx].first) + "->getId())";
+                        std::string negatedBodyLitCondition = toAddBodyLiteralBoundAndSign[tupleIdx].second.second ? "tuple_" + std::to_string(toAddBodyLiteralBoundAndSign[tupleIdx].first) + " != NULL && (" : ""; 
+                        std::string negatedBodyLitConditionPar = toAddBodyLiteralBoundAndSign[tupleIdx].second.second ? ")" : "";
+                        outfile << ind++ << "if(" << negatedBodyLitCondition << addBodyLitCondition << negatedBodyLitConditionPar << ")\n";
+                        std::string supportSign = !toAddBodyLiteralBoundAndSign[tupleIdx].second.second ? "!tupleNegated ? false : true" : "!tupleNegated ? true : false";
+                        outfile << ind << "LazyPropagator::getInstance().addBodyLiteral(tuple_" << toAddBodyLiteralBoundAndSign[tupleIdx].first << "->getId(), " << supportSign << ");\n";
+                        --ind;
+                    }
+                    else{
+                        outfile << ind++ <<"if(s->levelFromPropagator(tuple_" << toAddBodyLiteralBoundAndSign[tupleIdx].first << "->getId()) > 0 || !s->isAssigned(tuple_" << toAddBodyLiteralBoundAndSign[tupleIdx].first << "->getId()))\n";
+                        outfile << ind << "LazyPropagator::getInstance().addBodyLiteral(tuple_" << toAddBodyLiteralBoundAndSign[tupleIdx].first << "->getId(), !tupleNegated ? false : true);\n";
+                        --ind;
+                    }
+                }
                 //recursive component explain false
                 if(isRecursive){
                     if(formula->isLiteral()){
@@ -801,14 +801,13 @@ void LazyPropagatorCompiler::compileRuleByStarter(unsigned id, const aspc::Rule&
                             outfile << ind << "toExplain.push_back(tuple_" << i << ");\n";
                             outfile << ind << "toExplainUndefs.push_back(TupleSignSetWithHead());\n";
                             outfile << ind << "tupleToParent.emplace(std::make_pair(tuple_" << i << "->getId(), tuple_0->getId()));\n";
-                            outfile << ind << "if(!tupleToChildren.count(tuple_0->getId())) tupleToChildren.emplace(std::make_pair(tuple_0->getId(), std::unordered_set<int>()));\n";
+                            outfile << ind << "if(tupleToChildren.find(tuple_0->getId()) == tupleToChildren.end()) tupleToChildren.emplace(std::make_pair(tuple_0->getId(), std::unordered_set<int>()));\n";
                             outfile << ind << "tupleToChildren.at(tuple_0->getId()).insert(tuple_" << i << "->getId());\n";
                             outfile << --ind <<"}\n";
                         }
                     }
                 }
                 std::pair<int, bool> lastTuple = reasonTupleWithSign.at(reasonTupleWithSign.size() -1);
-
                 //redirect propagateToFalse towards components on which current tuple depends
                 if(redirectPropFalseTuples.size() > 0)
                     outfile << ind << "int predicateId;\n";
@@ -820,7 +819,7 @@ void LazyPropagatorCompiler::compileRuleByStarter(unsigned id, const aspc::Rule&
                     outfile << ind << "if(!canPropagate) return std::make_pair(false, Glucose::CRef_Undef);\n";
                     outfile << --ind <<"}\n";
                 }
-                //save undefs added by redirections into lazy prop
+                //save body literals added by redirections into lazy prop
                 if(isRecursive && !compileAsExit){
                     outfile << ind << "if(dummyTuplesInBody.size() != 0) LazyPropagator::getInstance().storeBodyLiteralsFromTuple(tuple_0->getId(), toExplainUndefs.back());\n";
                 }
@@ -863,7 +862,15 @@ void LazyPropagatorCompiler::compileRuleByStarter(unsigned id, const aspc::Rule&
                 outfile << (atom->isVariableTermAt(k) || isInteger(atom->getTermAt(k)) ? atom->getTermAt(k) : "ConstantsManager::getInstance().mapConstant(\"" + atom->getTermAt(k) + "\")");
             }
             outfile << "}, AuxMapHandler::getInstance().get_" << atom->getPredicateName() << "());\n";
-            outfile << ind++ << "if(head_" << index << "== original && LazyPropagator::getInstance().getUndefsBodySize() == 0 && dummyTuplesInBody.size() == 0 && toClearLazyFalseTuples.size() == 0){\n";
+            outfile << ind <<"int undefsBodySize = LazyPropagator::getInstance().getUndefsBodySize();\n";
+            //RemoveBodyLits
+            for(int tupleIdx = toAddBodyLiteralBoundAndSign.size()-1; tupleIdx >= 0; --tupleIdx){
+                if(toAddBodyLiteralBoundAndSign[tupleIdx].second.second)
+                    outfile << ind <<"if(tuple_" << toAddBodyLiteralBoundAndSign[tupleIdx].first << " != NULL) LazyPropagator::getInstance().removeLastBodyLiteral(tuple_" << toAddBodyLiteralBoundAndSign[tupleIdx].first << "->getId());\n";
+                else
+                    outfile << ind <<"LazyPropagator::getInstance().removeLastBodyLiteral(tuple_" << toAddBodyLiteralBoundAndSign[tupleIdx].first << "->getId());\n";
+            }
+            outfile << ind++ << "if(head_" << index << "== original && undefsBodySize == 0 && dummyTuplesInBody.size() == 0 && toClearLazyFalseTuples.size() == 0){\n";
             outfile << ind << "LazyPropagator::getInstance().setTruePropInPropFalse(true);\n";
         }
         outfile << ind << "bool tupleIsFromInputInterface = TupleFactory::getInstance().isTupleFromInputInterface(head_" << index << "->getId());\n";
@@ -897,10 +904,7 @@ void LazyPropagatorCompiler::compileRuleByStarter(unsigned id, const aspc::Rule&
     for (int i = closingPars; i > 0; --i) {
         if(explainFalse){
             if(removeBodyLiteralsBlocksAndSymbols.count(i)){
-                if(!removeNegatedUndefBlocks.count(i))
-                    outfile << ind << "if(addedBodyLit_" << removeBodyLiteralsBlocksAndSymbols[i] << ") LazyPropagator::getInstance().removeLastBodyLiteral(tuple_" << removeBodyLiteralsBlocksAndSymbols[i] << "->getId());\n";
-                else{
-                    outfile << ind <<"if(addedBodyLit_" << removeBodyLiteralsBlocksAndSymbols[i] << ") LazyPropagator::getInstance().removeLastBodyLiteral(tuple_" << removeBodyLiteralsBlocksAndSymbols[i] << "->getId());\n";
+                if(removeNegatedUndefBlocks.count(i) > 0){
                     if(std::find(redirectPropFalseTuples.begin(), redirectPropFalseTuples.end(), removeBodyLiteralsBlocksAndSymbols[i])  != redirectPropFalseTuples.end()){
                         outfile << ind << "else if(!propFalse_" << removeBodyLiteralsBlocksAndSymbols[i] << ") LazyPropagator::getInstance().removeBodyLiteralsAddedByTuple(tuple_" << removeBodyLiteralsBlocksAndSymbols[i] << "->getId(), false);\n";
                     }
@@ -1338,6 +1342,7 @@ void LazyPropagatorCompiler::compileLazyPropClass(){
     outfile << --ind << "}\n";
 
     outfile <<ind++ << "void LazyPropagator::getAlwaysToCheckTuples(std::unordered_set<int>& toCheck){\n";
+    outfile << ind << "if(alwaysToCheckPredicates.size() == 0) return;\n";
     outfile << ind <<"for(int id : currentlyToCheckTuples) toCheck.insert(id);\n";
     outfile << --ind << "}\n";
 }

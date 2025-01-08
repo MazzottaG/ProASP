@@ -39,8 +39,8 @@ public:
     void getAlwaysToCheckTuples(std::unordered_set<int>&);
     void findAlwaysToCheckTuples();
     void addAlwaysToCheckTuple(int tupleId, int predicateId){
-        if(alwaysToCheckPredicates.count(predicateId)){
-            if(alwaysToCheckTuples.count(tupleId)){
+        if(alwaysToCheckPredicates.find(predicateId) != alwaysToCheckPredicates.end()){
+            if(alwaysToCheckTuples.find(tupleId) != alwaysToCheckTuples.end()){
                 currentlyToCheckTuples.insert(tupleId);
             }
         }
@@ -62,7 +62,7 @@ public:
     }
 
     bool isPredicateAlwaysToCheck(int predName){
-        return alwaysToCheckPredicates.count(predName);
+        return alwaysToCheckPredicates.find(predName) != alwaysToCheckPredicates.end();
     }
     ~LazyPropagator(){
         for (AbstractLazyPropagator *p : propagators){
@@ -278,7 +278,7 @@ public:
         #endif
         truePropInPropFalse = false;
         int predicateId = tuple->getPredicateName();
-        if(predicateToPropagator.count(predicateId)){
+        if(predicateToPropagator.find(predicateId) != predicateToPropagator.end()){
             Glucose::vec<Glucose::Lit>& tupleReasons =  TupleFactory::getInstance().isLazyNegatedTuple(tuple->getId()) || (TupleFactory::getInstance().isTupleFromInputInterface(tuple->getId()) && !s->isAssigned(tuple->getId())) ? tuple->getReasonLits() : s->getReasonClause();
             tupleReasons.clear();
             std::unordered_set<int> reasonSet;
@@ -325,11 +325,8 @@ public:
         return true;
     }
     void removeLastBodyLiteral(int id){
-        if(bodyLiterals[bodyLiterals.size()-1].value != id){
-            exit(1);
-        }
-        assert(bodyLiterals[bodyLiterals.size()-1].value == id);
-        //bodyLiteralsSet.erase(id);
+        if(bodyLiterals[bodyLiterals.size()-1].value != id)
+            return;
         if(undefsVec.size() > 0 && id == undefsVec.back())
             undefsVec.pop_back();
         
@@ -382,7 +379,7 @@ public:
     }
 
     void storeBodyLiteralsFromTuple(int tuple, TupleSignSetWithHead& lits){
-        assert(tupleToBodyRemoveIndex.count(tuple) != 0);
+        assert(tupleToBodyRemoveIndex.find(tuple) != tupleToBodyRemoveIndex.end());
         assert(lits.size() == 0);
         int tupleId;
         int start = tupleToBodyRemoveIndex.at(tuple);
@@ -398,13 +395,13 @@ public:
     }
     
     bool alreadyEnqueued(int id){
-        return trueEnqueued.count(id) > 0;
+        return trueEnqueued.find(id) !=trueEnqueued.end();
     }
 
 
     //remove body literals added from tuple id
     void removeBodyLiteralsAddedByTuple(int id, bool noErase = true){
-        if(tupleToBodyRemoveIndex.count(id)){
+        if(tupleToBodyRemoveIndex.find(id) != tupleToBodyRemoveIndex.end()){
             for(int i = bodyLiterals.size() -1; i >= tupleToBodyRemoveIndex.at(id); --i){
                 if(undefsVec.size() > 0){
                     if(bodyLiterals.back().value == undefsVec.back())
@@ -424,7 +421,7 @@ public:
         }
     }
     AbstractLazyPropagator *getPropagatorFromPredicateId(int predId){
-        assert(predicateToPropagator.count(predId));
+        assert(predicateToPropagator.find(predId) != predicateToPropagator.end());
         return propagators[predicateToPropagator[predId]];
     }
 
@@ -432,7 +429,7 @@ public:
         alreadyExplained.insert(id);
     }
     bool isTupleAlreadyExplained(int id){
-        return alreadyExplained.count(id) > 0;
+        return alreadyExplained.find(id) != alreadyExplained.end();
     }
 
     void attachWatched(int tupleId){
@@ -442,7 +439,7 @@ public:
         }
     }
     bool isPredicateDefinedInPositiveProgram(int predicateName){
-        return predicatedDefinedByPositiveProgram.count(predicateName) > 0;
+        return predicatedDefinedByPositiveProgram.find(predicateName) != predicatedDefinedByPositiveProgram.end();
     }
     
     void setPropagationDone(bool propDone){
