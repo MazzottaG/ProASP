@@ -149,12 +149,18 @@ void HybridGenerator::buildComponentGenerator(int componentId,std::string classN
             outfile << ind++ << "if(starter != NULL){\n";
             outfile << ind << "TruthStatus value = "<<sign<<";\n";
             std::string ifBody = "";
+            std::unordered_set<std::string> headPredicates;
             for(const std::string& predicate: components[componentId]){
                 for(unsigned ruleIndex : program.getRulesForPredicate(predicate)){
                     if(ruleLabel[ruleIndex] == Rewriter::DOMAIN_RULE){
-                        std::string sharedPredicate = program.getRule(ruleIndex).getHead()[0].getPredicateName();
-                        if(ifBody != "") ifBody += " || ";
-                        ifBody+="starter->getPredicateName() == AuxMapHandler::getInstance().get_"+sharedPredicate+"()";
+                        for(auto head : program.getRule(ruleIndex).getHead()){
+                            if(!headPredicates.count(head.getPredicateName())){
+                                headPredicates.insert(head.getPredicateName());
+                                std::string sharedPredicate = head.getPredicateName();
+                                if(ifBody != "") ifBody += " || ";
+                                ifBody+="starter->getPredicateName() == AuxMapHandler::getInstance().get_"+sharedPredicate+"()";
+                            }
+                        }
                     }
                 }
             }

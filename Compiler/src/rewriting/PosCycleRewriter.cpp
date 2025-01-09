@@ -60,13 +60,13 @@ std::unordered_set<std::string> PosCycleRewriter::getAlwaysToCheckFalsePredicate
 void PosCycleRewriter::rewriteRulesAsGeneratorRules(){
     //no constraint can contain two predicates in its body defined in two distinct components
     //except when external predicates (predicates not define in P.P.) bind all the variables
-    for(const aspc::Rule& rule : programPP->getRules()){
-        if(rule.isConstraint() && crossComponentPredicatesAppearsInConstraint(rule)){
-            std::cout << "Constraints cannot contain predicates defined by two different sccs of the positive cycle program\nIn case this is needed, all variables must be bound by predicates not defined in positive cycle program\n";
-            exit(180);
-        }
+    // for(const aspc::Rule& rule : programPP->getRules()){
+    //     if(rule.isConstraint() && crossComponentPredicatesAppearsInConstraint(rule)){
+    //         std::cout << "Constraints cannot contain predicates defined by two different sccs of the positive cycle program\nIn case this is needed, all variables must be bound by predicates not defined in positive cycle program\n";
+    //         exit(180);
+    //     }
             
-    }
+    // }
 
     for(const aspc::Rule& rule : programPP->getRules()){
         if(rule.isConstraint()){
@@ -87,16 +87,16 @@ void PosCycleRewriter::rewriteRulesAsGeneratorRules(){
     }
 }
 
-void PosCycleRewriter::crossComponentPredicatesAppearInConstraintForProgram(const aspc::Program& prg){
-    for(const aspc::Rule& rule : prg.getRules()){
-        if(rule.isConstraint()){
-            if(crossComponentPredicatesAppearsInConstraint(rule)){
-                std::cout <<  "Constraints have literals in their body that belong to two different sccs of the positive cycle program\n";
-                exit(180);
-            }  
-        }
-    }
-}
+// void PosCycleRewriter::crossComponentPredicatesAppearInConstraintForProgram(const aspc::Program& prg){
+//     for(const aspc::Rule& rule : prg.getRules()){
+//         if(rule.isConstraint()){
+//             if(crossComponentPredicatesAppearsInConstraint(rule)){
+//                 std::cout <<  "Constraints have literals in their body that belong to two different sccs of the positive cycle program\n";
+//                 exit(180);
+//             }  
+//         }
+//     }
+// }
 
 bool PosCycleRewriter::crossComponentPredicatesAppearsInConstraint(const aspc::Rule& constraint){
     std::unordered_set<int> sccsForConstraint;

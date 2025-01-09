@@ -701,9 +701,6 @@ void Analyzer::splitProgram(){
             sccLazyLabel[i] = NOT_LAZY;
     }
 
-    // for(std::string pred : predsAppearingInPosProgram){
-    //     std::cout <<"pred " <<pred <<" appears in pos program\n";
-    // }
     labelLazyness(scc,predicateToComponent,sccLazyLabel);
     std::cout << "--------- LAZYNESS ---------"<<std::endl;
     printProgramBySCC(scc,sccLazyLabel,LAZY);

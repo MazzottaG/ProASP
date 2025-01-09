@@ -1,7 +1,7 @@
 #ifndef LAZYPROPAGATOR_H
 #define LAZYPROPAGATOR_H
 #include <vector>
-#include <chrono>
+// #include <chrono>
 #include "AbstractLazyPropagator.h"
 #include "TupleSignSetWithHead.h"
 //#define DEBUG_PROP
@@ -94,7 +94,7 @@ public:
             generated = generated || generatedPropAndConf.first;
 
         }
-        return std::make_pair(generated, generatedPropAndConf.second);
+        return std::make_pair(generated, Glucose::CRef_Undef);
     }
     
     std::pair<bool, Glucose::CRef> computeFixpoint(Glucose::vec<Glucose::Lit> &lits){
@@ -122,7 +122,7 @@ public:
                 return generatedPropAndConf;
             generated = generated || generatedPropAndConf.first;
         }
-        return generatedPropAndConf;
+        return std::make_pair(generated, Glucose::CRef_Undef);
     }
 
     
@@ -325,7 +325,7 @@ public:
         return true;
     }
     void removeLastBodyLiteral(int id){
-        if(bodyLiterals[bodyLiterals.size()-1].value != id)
+        if(bodyLiterals.size() == 0 || bodyLiterals[bodyLiterals.size()-1].value != id)
             return;
         if(undefsVec.size() > 0 && id == undefsVec.back())
             undefsVec.pop_back();

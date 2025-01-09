@@ -41,7 +41,7 @@ private:
 public:
     std::unordered_set<std::string> getAlwaysToCheckFalsePredicates();
     static const std::string domainPredicatexPrefix;
-    void crossComponentPredicatesAppearInConstraintForProgram(const aspc::Program& );
+    // void crossComponentPredicatesAppearInConstraintForProgram(const aspc::Program& );
     PosCycleRewriter(){};
     void rewrite(aspc::Program*, const aspc::Program*, aspc::Program*);
     const aspc::Program& getGeneratorProgram() const;
