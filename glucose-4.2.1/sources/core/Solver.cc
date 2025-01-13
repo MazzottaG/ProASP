@@ -1636,7 +1636,7 @@ lbool Solver::search(int nof_conflicts) {
         performLCM = 0;
     }
     //call propagate to false for all input interface tuples
-    if(decisionLevel() == 0){
+    if(starts == 1){
         #ifdef DEBUG_PROP
             std::cout <<"Calling propagate to false at level zero\n";
             PositiveProgramFactory::getInstance().printStats();
@@ -1949,7 +1949,7 @@ lbool Solver::search(int nof_conflicts) {
                 }
                 if(LazyPropagator::getInstance().isPredicateDefinedInPositiveProgram(TupleFactory::getInstance().getTupleFromInternalID(var(next))->getPredicateName())){
                     if(sign(next) == 0 && TupleFactory::getInstance().isTupleFromInputInterface(var(next))){
-                        PositiveProgramFactory::getInstance().addTrueSolverChoice(var(next));
+                        PositiveProgramFactory::getInstance().addToCheckTuple(var(next));
                     }
                 }
             }

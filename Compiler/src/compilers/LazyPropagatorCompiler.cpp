@@ -286,11 +286,12 @@ void LazyPropagatorCompiler::compileExplainFalse(std::vector<int>& scc, std::vec
         
         outfile << ind << "int currentTuple = tuple_0->getId();\n";
         outfile << ind++ << "while(tupleToParent.find(currentTuple) != tupleToParent.end()){\n";
-        outfile << ind << "LazyPropagator::getInstance().eraseLastTupleFromHeadChain(currentTuple);\n";
+        outfile << ind << "LazyPropagator::getInstance().removeBodyLiteralsAddedByTuple(currentTuple, false);\n";
+        outfile << ind <<"LazyPropagator::getInstance().removeLastBodyLiteral(currentTuple);\n";
         outfile << ind << "int parentTuple = tupleToParent.at(currentTuple);\n";
         outfile << ind << "tupleToChildren.at(parentTuple).erase(currentTuple);\n";
         outfile << ind++ << "if(tupleToChildren.at(parentTuple).size() != 0){\n";
-        outfile << ind << "LazyPropagator::getInstance().eraseLastTupleFromHeadChain(parentTuple);\n";
+        outfile << ind << "LazyPropagator::getInstance().removeBodyLiteralsAddedByTuple(parentTuple);\n";
         outfile << ind <<"tupleToParent.erase(currentTuple);\n";
         outfile << ind << "break;\n";
         outfile << --ind <<"}\n";
@@ -404,7 +405,7 @@ void LazyPropagatorCompiler::compileExplainFalse(std::vector<int>& scc, std::vec
 
     outfile << --ind <<"}\n";
     if(isRecursive)
-        outfile << ind << "LazyPropagator::getInstance().removeBodyLiteralsAddedByTuple(0, false);\n";
+        outfile << ind << "LazyPropagator::getInstance().removeBodyLiteralsAddedByTuple(0);\n";
     else
         outfile << ind << "LazyPropagator::getInstance().removeBodyLiteralsAddedByTuple(tuple->getId(), false);\n";
 
@@ -797,10 +798,11 @@ void LazyPropagatorCompiler::compileRuleByStarter(unsigned id, const aspc::Rule&
                         const aspc::Literal* lit = (const aspc::Literal*)formula;
                         bool predDefinedInPosProgram = positiveProgramHeadPredicates.count(lit->getPredicateName());
                         if(predDefinedInPosProgram){
-                            outfile << ind++ <<"if(TupleFactory::getInstance().isTupleDummy(tuple_" << i << "->getId())){\n";
+                            outfile << ind << "bool toAddToExplain = false;\n";
+                            outfile << ind++ <<"if(TupleFactory::getInstance().isTupleDummy(tuple_" << i << "->getId()) && tupleToParent.emplace(std::make_pair(tuple_" << i << "->getId(), tuple_0->getId())).second){\n";
+                            outfile << ind << "toAddToExplain = true;\n";
                             outfile << ind << "toExplain.push_back(tuple_" << i << ");\n";
                             outfile << ind << "toExplainUndefs.push_back(TupleSignSetWithHead());\n";
-                            outfile << ind << "tupleToParent.emplace(std::make_pair(tuple_" << i << "->getId(), tuple_0->getId()));\n";
                             outfile << ind << "if(tupleToChildren.find(tuple_0->getId()) == tupleToChildren.end()) tupleToChildren.emplace(std::make_pair(tuple_0->getId(), std::unordered_set<int>()));\n";
                             outfile << ind << "tupleToChildren.at(tuple_0->getId()).insert(tuple_" << i << "->getId());\n";
                             outfile << --ind <<"}\n";
@@ -821,7 +823,7 @@ void LazyPropagatorCompiler::compileRuleByStarter(unsigned id, const aspc::Rule&
                 }
                 //save body literals added by redirections into lazy prop
                 if(isRecursive && !compileAsExit){
-                    outfile << ind << "if(dummyTuplesInBody.size() != 0) LazyPropagator::getInstance().storeBodyLiteralsFromTuple(tuple_0->getId(), toExplainUndefs.back());\n";
+                    outfile << ind << "if(toAddToExplain) LazyPropagator::getInstance().storeBodyLiteralsFromTuple(tuple_0->getId(), toExplainUndefs.back());\n";
                 }
                 outfile << ind++ << "if(LazyPropagator::getInstance().getUndefsBodySize() != 0 && dummyTuplesInBody.size() == 0){\n";
                 outfile << ind++ <<"if(TupleFactory::getInstance().isTupleFromInputInterface(original->getId()) && ! LazyPropagator::getInstance().isPredicateAlwaysToCheck(original->getPredicateName()))\n";

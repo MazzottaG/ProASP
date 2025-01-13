@@ -380,7 +380,6 @@ public:
 
     void storeBodyLiteralsFromTuple(int tuple, TupleSignSetWithHead& lits){
         assert(tupleToBodyRemoveIndex.find(tuple) != tupleToBodyRemoveIndex.end());
-        assert(lits.size() == 0);
         int tupleId;
         int start = tupleToBodyRemoveIndex.at(tuple);
         //head is the last tule of bodyLiterals (remember orderings)
