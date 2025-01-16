@@ -1656,7 +1656,8 @@ lbool Solver::search(int nof_conflicts) {
                 Tuple* toCheckTuple = TupleFactory::getInstance().getTupleFromInternalID(tupleId);
                 bool propagatedTuple = false;
                 std::pair<bool, Glucose::CRef> generatedTupleAndReason;
-                generatedTupleAndReason = LazyPropagator::getInstance().propagateToFalse(toCheckTuple);
+                Glucose::vec<Glucose::Lit>& tupleReasons = TupleFactory::getInstance().isLazyNegatedTuple(toCheckTuple->getId()) || (TupleFactory::getInstance().isTupleFromInputInterface(toCheckTuple->getId()) && !isAssigned(toCheckTuple->getId())) ? toCheckTuple->getReasonLits() : getReasonClause();
+                generatedTupleAndReason = LazyPropagator::getInstance().propagateToFalse(toCheckTuple, tupleReasons);
                 confl = generatedTupleAndReason.second;
                 #ifdef DEBUG_LAZY_PROP
                     std::cout << "Result of propagate to false for tuple ";
@@ -1739,7 +1740,14 @@ lbool Solver::search(int nof_conflicts) {
                 for(int tupleId : toCheck){
                     if(tupleId >= TupleFactory::getInstance().getNextTupleId()) continue;
                     Tuple* toCheckTuple = TupleFactory::getInstance().getTupleFromInternalID(tupleId);
-                    std::pair<bool, Glucose::CRef> propagatedTupleAndReason = LazyPropagator::getInstance().propagateToFalse(toCheckTuple);
+                    Glucose::vec<Glucose::Lit>& tupleReasons = TupleFactory::getInstance().isLazyNegatedTuple(toCheckTuple->getId()) || (TupleFactory::getInstance().isTupleFromInputInterface(toCheckTuple->getId()) && !isAssigned(toCheckTuple->getId())) ? toCheckTuple->getReasonLits() : getReasonClause();
+                    std::pair<bool, Glucose::CRef> propagatedTupleAndReason = LazyPropagator::getInstance().propagateToFalse(toCheckTuple, tupleReasons);
+                    if(LazyPropagator::getInstance().makeRestart()){
+                        cancelUntil(0);
+                        PositiveProgramFactory::getInstance().clearDueToRestart();
+                        addClause_(tupleReasons);
+                        return l_Undef;
+                    }
                     confl = propagatedTupleAndReason.second;
                     #ifdef DEBUG_PROP
                         std::cout << "Result of propagate to false for tuple ";
@@ -2163,7 +2171,7 @@ lbool Solver::solve_(bool do_simp, bool turn_off_simp) // Parameters are useless
         // Extend & copy model:
         model.growTo(nVars());
         for(int i = 0; i < nVars(); i++) model[i] = value(i);
-        if(true){
+        if(false){
             Propagator::getInstance().expandModel();
             //std::cout << "Answer: ";
             std::cout << "START MODEL ";

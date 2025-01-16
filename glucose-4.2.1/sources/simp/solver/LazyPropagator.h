@@ -33,6 +33,7 @@ private:
     int indexCurrentLevelTuplePropFalse;
     //used for keeping track of already explained tuples in propFalse
     std::unordered_set<int> alreadyExplained;
+    bool askRestart;
     LazyPropagator();
 
 public:
@@ -60,7 +61,12 @@ public:
     static Glucose::Solver* getSolver(){
         return s; 
     }
-
+    void requireRestart(){
+        askRestart = true;
+    }
+    bool makeRestart(){
+        return askRestart;
+    }
     bool isPredicateAlwaysToCheck(int predName){
         return alwaysToCheckPredicates.find(predName) != alwaysToCheckPredicates.end();
     }
@@ -266,11 +272,18 @@ public:
                 std::cout <<"Found current level tuple at position "<< currentLevelTupleIndex <<" : "<< Glucose::var(propagationReason[currentLevelTupleIndex])<<"\n";
         #endif
     }
+    void clearPropFalseStructures(){
+        tupleToBodyRemoveIndex.clear(); 
+        bodyLiterals.clear();
+        alreadyExplained.clear();
+        headTuplesChain.clear();
+    }
 
-    std::pair<bool, Glucose::CRef> propagateToFalse(Tuple* tuple, bool makePropagation = true){
+    std::pair<bool, Glucose::CRef> propagateToFalse(Tuple* tuple, Glucose::vec<Glucose::Lit>& tupleReasons, bool makePropagation = true){
         indexCurrentLevelTuplePropFalse = -1;
         undefsVec.clear();
         trueEnqueued.clear();
+        askRestart = false;
         #ifdef DEBUG_LAZY_PROP
             std::cout <<"Propagate to false of lazy propagator for tuple: ";
             AuxMapHandler::getInstance().printTuple(tuple);
@@ -279,7 +292,6 @@ public:
         truePropInPropFalse = false;
         int predicateId = tuple->getPredicateName();
         if(predicateToPropagator.find(predicateId) != predicateToPropagator.end()){
-            Glucose::vec<Glucose::Lit>& tupleReasons =  TupleFactory::getInstance().isLazyNegatedTuple(tuple->getId()) || (TupleFactory::getInstance().isTupleFromInputInterface(tuple->getId()) && !s->isAssigned(tuple->getId())) ? tuple->getReasonLits() : s->getReasonClause();
             tupleReasons.clear();
             std::unordered_set<int> reasonSet;
             reasonSet.clear();
@@ -288,17 +300,16 @@ public:
             reasonSet.insert(tuple->getId());
             propagationDone = false;
             std::pair<bool, Glucose::CRef> propagatedAndConf =  propagators[predicateToPropagator[predicateId]]->propagateToFalse(LazyPropagator::s, tuple, tuple, tupleReasons, reasonSet, makePropagation, false);
+            if(askRestart){
+                clearPropFalseStructures();
+                return propagatedAndConf;
+            }
             //not propagated due to undef in some body or propagation failed due to a conflict
             if(!propagatedAndConf.first || propagatedAndConf.second == Glucose::CRef_Undef){
                 PositiveProgramFactory::getInstance().removeToCheckTuple(tuple->getId());
             }
             removeBodyLiteralsAddedByTuple(tuple->getId(), false);
-            tupleToBodyRemoveIndex.clear();
-            removeLastBodyLiteral(tuple->getId());
-            assert(bodyLiterals.size() == 0);
-            assert(undefsVec.size() == 0);
-            alreadyExplained.clear();
-            headTuplesChain.clear();
+            clearPropFalseStructures();
             return propagatedAndConf;
         }
         return std::make_pair(false, Glucose::CRef_Undef);

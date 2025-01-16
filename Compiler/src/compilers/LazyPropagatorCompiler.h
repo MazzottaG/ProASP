@@ -5,6 +5,7 @@
 #include "DataStructureCompiler.h"
 #include "DependencyManager.h"
 //#define COMPILE_DEBUG_PRINT
+#define ALLOW_RESTARTS
 class LazyPropagatorCompiler{
     private:
         //program containing both constraints and generation rules

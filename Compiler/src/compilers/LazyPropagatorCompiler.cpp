@@ -96,6 +96,7 @@ void LazyPropagatorCompiler::compileTupleFactoryCC(){
     outfile << ind++ << "void TupleFactory::notifyAddedCheckedTuple(int tupleId){\n";
     outfile << ind << "LazyPropagator::getInstance().removeAlwaysToCheckTuple(tupleId);\n";
     outfile << --ind << "}\n";
+    outfile.close();
 }
 
 void LazyPropagatorCompiler::compileSCC(std::vector<int> scc, unsigned index){
@@ -247,10 +248,10 @@ void LazyPropagatorCompiler::compileExplainFalse(std::vector<int>& scc, std::vec
     bool isRecursive = nonExitRules.size() != 0;
     if(isRecursive){
         outfile << ind << "std::vector<Tuple*> toExplain;\n";
-        outfile << ind << "std::vector<TupleSignSetWithHead> toExplainUndefs;\n";
+        outfile << ind << "std::vector<TupleSignSetWithHead> toExplainBodyLits;\n";
         outfile << ind << "toExplain.push_back(tuple);\n";
-        outfile << ind << "toExplainUndefs.push_back(TupleSignSetWithHead());\n";
-        outfile << ind << "toExplainUndefs.back().insertHead(tuple->getId(), !tupleNegated ? true : false);\n";        
+        outfile << ind << "toExplainBodyLits.push_back(TupleSignSetWithHead());\n";
+        outfile << ind << "toExplainBodyLits.back().insertHead(tuple->getId(), !tupleNegated ? true : false);\n";        
         outfile << ind << "std::unordered_map<int, int> tupleToParent;\n";
         outfile << ind << "std::unordered_map<int, std::unordered_set<int>> tupleToChildren;\n";
         outfile << ind << "int root = 0;\n";
@@ -269,18 +270,24 @@ void LazyPropagatorCompiler::compileExplainFalse(std::vector<int>& scc, std::vec
         outfile << ind++ << "while(!toExplain.empty()){\n";
         outfile << ind << "Tuple* tuple_0 = toExplain.back();\n";
         outfile << ind << "toExplain.pop_back();\n";
-        outfile << ind << "for(auto undef : toExplainUndefs.back()) LazyPropagator::getInstance().addBodyLiteral(undef.value, undef.sign);\n";
+        outfile << ind << "for(auto undef : toExplainBodyLits.back()) LazyPropagator::getInstance().addBodyLiteral(undef.value, undef.sign);\n";
         outfile << ind << "int toExplainSize = toExplain.size();\n";
 
         outfile << ind++ <<"if(PositiveProgramFactory::getInstance().hasPossibleSupport(tuple_0->getId())){\n";
-        outfile << ind << "LazyPropagator::getInstance().addPossibleSupportsForTuple(original->getId());\n";
+        #ifdef ALLOW_RESTARTS
+            outfile << ind++ <<"if(original->isTrue())\n";
+            outfile << ind << "LazyPropagator::getInstance().addPossibleSupportsForTuple(original->getId());\n";
+            --ind;
+        #else
+            outfile << ind << "LazyPropagator::getInstance().addPossibleSupportsForTuple(original->getId());\n";
+        #endif
         outfile << ind << "tupleReasons.clear();\n";
         outfile << ind << "LazyPropagator::getInstance().setPropagationDone(true);\n";
         outfile << ind << "return std::make_pair(false, Glucose::CRef_Undef);\n";
         outfile << --ind <<"}\n";
 
         outfile << ind << "LazyPropagator::getInstance().addTupleInChain(tuple_0->getId());\n";
-        outfile << ind << "LazyPropagator::getInstance().addBodyLiteral(toExplainUndefs.back().getHead().value, toExplainUndefs.back().getHead().sign);\n";
+        outfile << ind << "LazyPropagator::getInstance().addBodyLiteral(toExplainBodyLits.back().getHead().value, toExplainBodyLits.back().getHead().sign);\n";
         outfile << ind << "LazyPropagator::getInstance().addExplainingTuple(tuple_0->getId());\n";
         outfile << ind++ << "if(LazyPropagator::getInstance().isTupleAlreadyExplained(tuple_0->getId())){\n";
         
@@ -302,10 +309,10 @@ void LazyPropagatorCompiler::compileExplainFalse(std::vector<int>& scc, std::vec
         outfile << ind << "currentTuple = parentTuple;\n";
         outfile << --ind <<"}\n";
         
-        outfile << ind << "toExplainUndefs.pop_back();\n";
+        outfile << ind << "toExplainBodyLits.pop_back();\n";
         outfile << ind << "continue;\n";
         outfile << --ind << "}\n";
-        outfile << ind << "toExplainUndefs.pop_back();\n";
+        outfile << ind << "toExplainBodyLits.pop_back();\n";
         outfile << ind << "LazyPropagator::getInstance().addAlreadyExplainedTuple(tuple_0->getId());\n";
     }else{
         outfile << ind << "Tuple* tuple_0 = tuple;\n";
@@ -354,7 +361,9 @@ void LazyPropagatorCompiler::compileExplainFalse(std::vector<int>& scc, std::vec
         outfile << --ind << "}\n";
         outfile << ind << "std::cout <<std::endl;\n";
     #endif
-    outfile << ind << "assert(s->currentLevel() == 0 || tupleReasons.size() >= 2);\n";
+    #ifndef ALLOW_RESTARTS
+        outfile << ind << "assert(s->currentLevel() == 0 || tupleReasons.size() >= 2);\n";
+    #endif
     outfile << ind << "bool tupleIsFromInputInterface = TupleFactory::getInstance().isTupleFromInputInterface(original->getId());\n";
     outfile << ind++ << "if(tupleIsFromInputInterface){\n";
     outfile << ind << "bool foundConflict = s->isConflictPropagation(tuple->getId(), true);\n";
@@ -373,8 +382,16 @@ void LazyPropagatorCompiler::compileExplainFalse(std::vector<int>& scc, std::vec
     // outfile << ind << "Glucose::Lit temp = tupleReasons[1];\n";
     // outfile << ind << "tupleReasons[1] = tupleReasons[currentLevelTupleIndex];\n";
     // outfile << ind << "tupleReasons[currentLevelTupleIndex] = temp;\n";
-    outfile << ind << "assert(s->levelFromPropagator(Glucose::var(tupleReasons[1])) == s->currentLevel());\n";
+    #ifdef ALLOW_RESTARTS
+        outfile << ind++ << "if(s->levelFromPropagator(Glucose::var(tupleReasons[1])) != s->currentLevel()){\n";
+        outfile << ind << "LazyPropagator::getInstance().requireRestart();\n";
+        outfile << ind << "return std::make_pair(false, Glucose::CRef_Undef);\n";
+        outfile << --ind <<"}\n";
+        outfile << ind << "assert(s->currentLevel() == 0 || tupleReasons.size() >= 2);\n";
+    #else
+        outfile << ind << "assert(s->levelFromPropagator(Glucose::var(tupleReasons[1])) == s->currentLevel());\n";
     
+    #endif
     outfile << ind << "TupleFactory::getInstance().addPropagationFromLazyProp(tuple->getId());\n";
     outfile << ind << "Glucose::CRef clause = s->externalPropagation(original->getId(), true);\n";
     outfile << ind++ << "if(clause != Glucose::CRef_Undef){\n";
@@ -621,7 +638,6 @@ void LazyPropagatorCompiler::compileRuleByStarter(unsigned id, const aspc::Rule&
                             //if false then go ahead, otherwise no
                             //create tuple and do explainFalse
                             if(predDefinedInPosProgram){
-                                outfile << ind << "Glucose::CRef conflProp;\n";
                                 outfile << ind << "bool propFalse_" << i << " = false;\n";
                                 outfile << ind++ << "if(tuple_" << i << " == NULL){\n";
                                 outfile << ind << "std::pair<Tuple*, bool> tupleAndAdded_" << i << " = TupleFactory::getInstance().addNewLazyFalseTuple({";
@@ -635,7 +651,8 @@ void LazyPropagatorCompiler::compileRuleByStarter(unsigned id, const aspc::Rule&
                                 outfile << ind <<"if(!tupleAndAdded_" << i << ".second) propFalse_" << i << " = true;\n";
                                 outfile << ind++ << "else{\n";
                                 outfile << ind << "tuple_" << i << " = tupleAndAdded_" << i << ".first;\n";
-                                outfile << ind << "std::pair<bool, Glucose::CRef> propFalseAndConf_" << i << " = PositiveProgramFactory::getInstance().hasPossibleSupport(tuple_" << i << "->getId()) ? std::make_pair(false, Glucose::CRef_Undef) : LazyPropagator::getInstance().propagateToFalse(tuple_" << i << ", true);\n";
+                                outfile << ind << "Glucose::vec<Glucose::Lit>& tupleReasons = TupleFactory::getInstance().isLazyNegatedTuple(tuple_" << i << "->getId()) || (TupleFactory::getInstance().isTupleFromInputInterface(tuple_" << i << "->getId()) && !s->isAssigned(tuple_" << i << "->getId())) ? tuple_" << i << "->getReasonLits() : s->getReasonClause();\n";
+                                outfile << ind << "std::pair<bool, Glucose::CRef> propFalseAndConf_" << i << " = PositiveProgramFactory::getInstance().hasPossibleSupport(tuple_" << i << "->getId()) ? std::make_pair(false, Glucose::CRef_Undef) : LazyPropagator::getInstance().propagateToFalse(tuple_" << i << ", tupleReasons, true);\n";
                                 outfile << ind << "propFalse_" << i << " = propFalseAndConf_" << i << ".first;\n";
                                 outfile << ind << "assert(propFalseAndConf_" << i << ".second == Glucose::CRef_Undef);\n";
                                 //if propagationDone is set in propFalse redirection for negated tuple then it just means that the redirection propagated the dummy tuple
@@ -802,7 +819,7 @@ void LazyPropagatorCompiler::compileRuleByStarter(unsigned id, const aspc::Rule&
                             outfile << ind++ <<"if(TupleFactory::getInstance().isTupleDummy(tuple_" << i << "->getId()) && tupleToParent.emplace(std::make_pair(tuple_" << i << "->getId(), tuple_0->getId())).second){\n";
                             outfile << ind << "toAddToExplain = true;\n";
                             outfile << ind << "toExplain.push_back(tuple_" << i << ");\n";
-                            outfile << ind << "toExplainUndefs.push_back(TupleSignSetWithHead());\n";
+                            outfile << ind << "toExplainBodyLits.push_back(TupleSignSetWithHead());\n";
                             outfile << ind << "if(tupleToChildren.find(tuple_0->getId()) == tupleToChildren.end()) tupleToChildren.emplace(std::make_pair(tuple_0->getId(), std::unordered_set<int>()));\n";
                             outfile << ind << "tupleToChildren.at(tuple_0->getId()).insert(tuple_" << i << "->getId());\n";
                             outfile << --ind <<"}\n";
@@ -823,10 +840,14 @@ void LazyPropagatorCompiler::compileRuleByStarter(unsigned id, const aspc::Rule&
                 }
                 //save body literals added by redirections into lazy prop
                 if(isRecursive && !compileAsExit){
-                    outfile << ind << "if(toAddToExplain) LazyPropagator::getInstance().storeBodyLiteralsFromTuple(tuple_0->getId(), toExplainUndefs.back());\n";
+                    outfile << ind << "if(toAddToExplain) LazyPropagator::getInstance().storeBodyLiteralsFromTuple(tuple_0->getId(), toExplainBodyLits.back());\n";
                 }
                 outfile << ind++ << "if(LazyPropagator::getInstance().getUndefsBodySize() != 0 && dummyTuplesInBody.size() == 0){\n";
-                outfile << ind++ <<"if(TupleFactory::getInstance().isTupleFromInputInterface(original->getId()) && ! LazyPropagator::getInstance().isPredicateAlwaysToCheck(original->getPredicateName()))\n";
+                #ifdef ALLOW_RESTARTS
+                    outfile << ind++ <<"if(TupleFactory::getInstance().isTupleFromInputInterface(original->getId()) && ! LazyPropagator::getInstance().isPredicateAlwaysToCheck(original->getPredicateName()) && original->isTrue())\n";
+                #else
+                    outfile << ind++ <<"if(TupleFactory::getInstance().isTupleFromInputInterface(original->getId()) && ! LazyPropagator::getInstance().isPredicateAlwaysToCheck(original->getPredicateName()))\n";
+                #endif
                 outfile << ind <<"LazyPropagator::getInstance().addPossibleSupportsForTuple(original->getId());\n";
                 --ind;
                 outfile << ind++ <<"else\n"; //&& !LazyPropagator::getInstance().isPredicateAlwaysToCheck(original->getPredicateName())
@@ -1158,6 +1179,7 @@ void LazyPropagatorCompiler::closePropagatorFile(){
     --ind;
     outfile << --ind << "};\n";
     outfile << ind << "#endif\n";
+    outfile.close();
 }
 
 
@@ -1347,4 +1369,5 @@ void LazyPropagatorCompiler::compileLazyPropClass(){
     outfile << ind << "if(alwaysToCheckPredicates.size() == 0) return;\n";
     outfile << ind <<"for(int id : currentlyToCheckTuples) toCheck.insert(id);\n";
     outfile << --ind << "}\n";
+    outfile.close();
 }
