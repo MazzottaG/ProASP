@@ -255,8 +255,8 @@ class PositiveProgramFactory{
                             for(auto support : tupleToPossibleSupports[supported]){
                                 toRemovePossibleSupports.push_back(std::make_pair(support.value, supported));
                             }
-                            toRemoveTupleToPossibleSupports.insert(supported);
-                            toPropagate.push_back(supported);
+                            if(toRemoveTupleToPossibleSupports.insert(supported).second)
+                                toPropagate.push_back(supported);
                         }
                     }
                 }
@@ -284,8 +284,8 @@ class PositiveProgramFactory{
                                 for(auto support : tupleToPossibleSupportsTemp[supported]){
                                     toRemovePossibleSupportsTemp.push_back(std::make_pair(support.value, supported));
                                 }
-                                toRemoveTupleToPossibleSupportsTemp.insert(supported);
-                                toPropagate.push_back(supported);
+                                if(toRemoveTupleToPossibleSupportsTemp.insert(supported).second)
+                                    toPropagate.push_back(supported);
                             }
                         }
                     }
@@ -396,28 +396,30 @@ class PositiveProgramFactory{
         void printPossibleSupportsTempStructures(){
             std::cout <<"TupleToPossibleSupportsTemp: \n";
             for(auto it : tupleToPossibleSupportsTemp){
-                std::cout << it.first << " -> ";
+                AuxMapHandler::getInstance().printTuple(it.first >= 0 ? TupleFactory::getInstance().getTupleFromInternalID(it.first): TupleFactory::getInstance().getDummyTupleFromInternalID(it.first));
+                std::cout << " -> ";
                 for(auto it1 : it.second){
                     if(!possibleSupportToTuplesTemp.count(it1.value)){
                         std::cout <<"Was expecting to find " << it1.value << " in possibleSupportToTuplesTemp\n";
                         exit(1);
                     }
                     //assert(possibleSupportToTuples.count(it1));
-                    std::cout << it1.value << " ";
+                    AuxMapHandler::getInstance().printTuple(it1.value >= 0 ? TupleFactory::getInstance().getTupleFromInternalID(it1.value): TupleFactory::getInstance().getDummyTupleFromInternalID(it1.value));
                 }
                 std::cout<<std::endl;
             }
             std::cout<<std::endl;
             std::cout <<"possibleSupportToTuplesTemp: \n";
             for(auto it : possibleSupportToTuplesTemp){
-                std::cout << it.first << " -> ";
+                AuxMapHandler::getInstance().printTuple(it.first >= 0 ? TupleFactory::getInstance().getTupleFromInternalID(it.first): TupleFactory::getInstance().getDummyTupleFromInternalID(it.first));
+                std::cout << " -> ";
                 for(int it1 : it.second){
                     if(!tupleToPossibleSupportsTemp.count(it1)){
                         std::cout << "Was expecting to find " << it1 << " in tupleToPossibleSupportsTemp\n";
                         exit(1);
                     }
                     //assert(tupleToPossibleSupports.count(it1));
-                    std::cout << it1 << " ";
+                    AuxMapHandler::getInstance().printTuple(it1 >= 0 ? TupleFactory::getInstance().getTupleFromInternalID(it1): TupleFactory::getInstance().getDummyTupleFromInternalID(it1));
                 }
                 std::cout<<std::endl;
             }

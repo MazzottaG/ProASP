@@ -28,7 +28,7 @@ class ProgramReader{
         const std::unordered_set<std::string>& getOriginalPredicates(){ return originalPredicates;}
         std::unordered_set<std::string> getAlwaysToCheckPredicates(){return posCycleRewriter.getAlwaysToCheckFalsePredicates();}
         bool isFullGrounding()const {return fullGrounding;}
-        void rewriteRuleForComponent(std::set<std::string>);
+        void rewriteRuleForComponent();
         std::pair<std::unordered_map<std::string,std::string>,bool> getVariableMapping(const aspc::Rule* r1,const aspc::Rule* r2)const;
 private:
 

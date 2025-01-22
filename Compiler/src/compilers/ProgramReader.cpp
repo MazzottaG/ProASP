@@ -52,7 +52,7 @@ ProgramReader::ProgramReader(int argc, char *argv[]){
 	std::cout << "%%%%%%%%%%%%%%%%%%%%%% "<<(fullGrounding ? "Full Grounding ": "")<<"Input Program %%%%%%%%%%%%%%%%%%%%%%" <<std::endl;
     listener.getProgram().print();
     std::cout << "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%" <<std::endl;
-    rewriteRuleForComponent(posCycleProgram->getHeadPredicates());
+    rewriteRuleForComponent();
     std::cout << "%%%%%%%%%%%%%%%%%%%%%% "<<(fullGrounding ? "Full Grounding ": "")<<"Rewritten Input Program %%%%%%%%%%%%%%%%%%%%%%" <<std::endl;
     for(unsigned ruleId = 0; ruleId<rewrittenProgram.getRulesSize();ruleId++){
         std::cout << (rewrittenRuleLabel[ruleId] ? "Ground " : "Compile ");
@@ -60,7 +60,7 @@ ProgramReader::ProgramReader(int argc, char *argv[]){
     }
     std::cout << "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%" <<std::endl;
     
-    posCycleRewriter.rewrite(&rewrittenProgram, posCycleProgram, &constraintsPosP);
+    posCycleRewriter.rewrite(&rewrittenProgram, posCycleProgram);
     
     //check that constraints inside to-compile and to-ground program do not contain in the body
     //literals belonging to two distinct components of the scc of pos-cycle program
@@ -132,7 +132,7 @@ void ProgramReader::rewriteGroundingPredicate(aspc::Program& program, std::vecto
         }
     }
 }
-void ProgramReader::rewriteRuleForComponent(std::set<std::string> predsDefInPosProgram){
+void ProgramReader::rewriteRuleForComponent(){
     aspc::Program inputProgram (listener.getProgram());
     dependencyManager.buildDependecyGraph(inputProgram);
     auto components = dependencyManager.getSCC();
@@ -158,23 +158,7 @@ void ProgramReader::rewriteRuleForComponent(std::set<std::string> predsDefInPosP
             std::cout << "   ";
             r->print();
             rewrittenProgram.addRule(*r);
-            //if constraint contains predicates defined in positive program, then it must be compiled(cannot be grounded)
-            bool mustCompile=false;
-            if(r->isConstraint()){
-                for(const aspc::Literal& lit : r->getBodyLiterals()){
-                    if(predsDefInPosProgram.count(lit.getPredicateName())){
-                        mustCompile = true;
-                    }
-                }
-            }
-            if(mustCompile){
-                rewrittenRuleLabel.push_back(false);
-                //add constraints from to-compile and to-ground such that 
-                //PosCycleRewriter can create generator rules from constraints 
-                constraintsPosP.addRule(*r);
-            }
-            else
-                rewrittenRuleLabel.push_back(ruleLabel[ruleId]);
+            rewrittenRuleLabel.push_back(ruleLabel[ruleId]);
         }
     }
 }

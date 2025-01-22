@@ -469,7 +469,7 @@ int main(int argc, char** argv)
         }else{
             vec<Lit> lits;
             while (0 >= solver->nVars()) solver->newVar();
-            lits.push( mkLit(0) );
+            lits.push( mkLit(0, true) );
             solver->addClause_(lits);
             std::vector<unsigned> facts;
             read_asp(solver,argv[argc-1],facts);

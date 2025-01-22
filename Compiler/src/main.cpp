@@ -88,7 +88,6 @@ int main(int argc, char *argv[])
 
 	r.getGeneratorProgram().print();
 	std::cout<<"-----\n";
-	r.addOriginalConstraintForProgram(*prgDatalogPosCycle);
 	std::cout<<"Propagator Program\n";
 	std::cout<<"-----\n";
 	r.getPropagatorsProgram().print();

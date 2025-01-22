@@ -13,6 +13,16 @@ void LazyPropagatorCompiler::compile(){
     compileTupleFactoryCC();
     std::vector<std::vector<int>> sccs = depManager.getSCC();
     positiveProgramHeadPredicates = program.getHeadPredicates();
+    for(unsigned ruleID = 0; ruleID < program.getRulesSize(); ++ruleID){
+        const aspc::Rule& rule = program.getRule(ruleID);
+        auto res = auxMapCompiler->declarePropagatorDataStructure(rule);
+        ruleOrderings.emplace(ruleID, res.first);
+        ruleOrderingsByHead.emplace(ruleID, res.second);
+        if(!rule.isConstraint()){
+            auto res1 = auxMapCompiler->declareExplainFalseDataStructure(rule, positiveProgramHeadPredicates);//, componentPredicateNames);
+            ruleOrderingsExplainFalse.emplace(ruleID, res1);
+        }
+    }
     for(int i = sccs.size() -1; i >= 0; --i){
         std::cout <<"Compiling SCC with lazy propagators\n";
         std::cout <<"Predicates: ";
@@ -22,7 +32,15 @@ void LazyPropagatorCompiler::compile(){
         std::cout << std::endl;
         compileSCC(sccs[i], i);
     }
-    //compileConstraints();
+    unsigned constrIdx = 0;
+    for(unsigned ruleID = 0; ruleID < program.getRulesSize(); ++ruleID){
+        const aspc::Rule& rule = program.getRule(ruleID);
+        if(rule.isConstraint()){
+            std::cout <<"Compiling constraint with lazy propagators\n";
+            rule.print();
+            compileConstraint(constrIdx++, ruleID);
+        }
+    }
     compileLazyPropClass();
 }
 
@@ -113,23 +131,7 @@ void LazyPropagatorCompiler::compileSCC(std::vector<int> scc, unsigned index){
     }
     std::vector<unsigned> nonExitRules = findNonExitRule(scc, rulesForComponent);
 
-    for(unsigned ruleID : rulesForComponent){
-        const aspc::Rule& rule = program.getRule(ruleID);
-        auto res = auxMapCompiler->declarePropagatorDataStructure(rule);
-        ruleOrderings.emplace(ruleID, res.first);
-        ruleOrderingsByHead.emplace(ruleID, res.second);
-        auto res1 = auxMapCompiler->declareExplainFalseDataStructure(rule, positiveProgramHeadPredicates);//, componentPredicateNames);
-        ruleOrderingsExplainFalse.emplace(ruleID, res1);
-        // std::cout <<"Rule ID: " << ruleID << " ORDERINGS\n";
-        // for(int i = 0; i< res.first.size(); ++i){
-        //     std::cout <<"Starter: " << i << "\n\t";
-        //     for(int j = 0; j< res.first.at(i).size(); ++j){
-        //         std::cout << res.first.at(i).at(j)<< " ";
-        //     }
-        //     std::cout <<std::endl;
-        // }
-    }
-    openPropagatorFile(index, componentPredicateNames);
+    openPropagatorFile(index, "Comp", componentPredicateNames);
     compileFixPointComputationLevelZero(scc,rulesForComponent, componentPredicateNames, nonExitRules);
     compileFixPointComputation(scc,rulesForComponent, componentPredicateNames, nonExitRules);
     compileExplainFalse(scc,rulesForComponent, componentPredicateNames, nonExitRules);
@@ -137,7 +139,23 @@ void LazyPropagatorCompiler::compileSCC(std::vector<int> scc, unsigned index){
     compileStopPropagateToFalse();
     closePropagatorFile();
 }
-
+void LazyPropagatorCompiler::compileConstraint(unsigned index, unsigned ruleID){
+    
+    std::set<std::string> componentPredicateNames;
+    openPropagatorFile(index, "LazyConstr", componentPredicateNames);
+    std::vector<int> scc;
+    std::vector<unsigned> nonExitRules;
+    std::vector<unsigned> rules;
+    rules.push_back(ruleID);
+    compileFixPointComputationLevelZero(scc, rules, componentPredicateNames, nonExitRules);
+    compileFixPointComputation(scc, rules, componentPredicateNames, nonExitRules);
+    outfile << ind++ << "std::pair<bool, Glucose::CRef> propagateToFalse(Glucose::Solver* s, Tuple* tuple, Tuple* original, Glucose::vec<Glucose::Lit>& tupleReasons, std::unordered_set<int>& reasonSet, bool makePropagation, bool tupleNegated){\n";
+    outfile << ind <<"return std::make_pair(false, Glucose::CRef_Undef);\n";
+    outfile << --ind << "}\n";
+    compileComponentWatched(scc, rules);
+    compileStopPropagateToFalse();
+    closePropagatorFile();
+}
 void LazyPropagatorCompiler::compileFixPointComputationLevelZero(std::vector<int>& scc, std::vector<unsigned>& rules, std::set<std::string>& componentPredicateNames, std::vector<unsigned>& nonExitRules){
     outfile << ind++ << "std::pair<bool, Glucose::CRef> computeFixpointLevelZero(Glucose::Solver* s, Glucose::vec<Glucose::Lit>& lits){\n";
     outfile << ind++ << "{\n";
@@ -789,6 +807,13 @@ void LazyPropagatorCompiler::compileRuleByStarter(unsigned id, const aspc::Rule&
         }
         if(i == numberOfFormulas -1){
             outfile << ind << "//Rule is firing;\n";
+            if(fixpointCompilation && rule.isConstraint()){
+                outfile << ind << "if(s->currentLevel() == 0){\n";
+                outfile << ind << "lits.clear();\n";
+                outfile << ind << "s->addClause_(lits);\n";
+                outfile << ind << "return std::make_pair(true, Glucose::CRef_PropConf);\n";
+                outfile << --ind << "}\n";
+            }
             //last tuple must be false when I am not doing propagation.s
             //I am not doing propagation in propagateToFalse redirections
             if(explainFalse){
@@ -861,6 +886,13 @@ void LazyPropagatorCompiler::compileRuleByStarter(unsigned id, const aspc::Rule&
                 
             }
         }
+    }
+    if(fixpointCompilation && rule.isConstraint()){
+        outfile << ind << "std::pair<const Tuple *, bool> insertResult;\n";
+        outfile << ind << "Tuple* dummy_0 = TupleFactory::getInstance().getTupleFromInternalID(0);\n";
+        outfile << ind << "bool tupleIsFromInputInterface = TupleFactory::getInstance().isTupleFromInputInterface(dummy_0->getId());\n";
+        compileReasonAndSupportSaving(reasonTupleWithSign, 0, "dummy_", fixpointCompilation);
+        compileTrueInterfacePropagation(0, "dummy_", false, true, false);
     }
     std::vector<aspc::Atom> head = rule.getHead();
     for(int index = 0; index < head.size(); index++){
@@ -1005,15 +1037,14 @@ void LazyPropagatorCompiler::compileReasonAndSupportSaving(std::vector<std::pair
     }
 
     outfile << ind <<"int indexCurrentLevelTuple = -1;\n";
-    outfile << ind <<"bool isSATVar = head_" << index << "->getId() < s->nVars();\n";
-    outfile << ind << "Glucose::vec<Glucose::Lit>& propagationReason =  !isSATVar || !s->isAssigned(head_"<< index << "->getId()) ? head_" << index << "->getReasonLits() : s->getReasonClause();\n";
+    outfile << ind <<"bool isSATVar = " << tuplePrefix << index << "->getId() < s->nVars();\n";
+    outfile << ind << "Glucose::vec<Glucose::Lit>& propagationReason =  !isSATVar || !s->isAssigned(" << tuplePrefix << index << "->getId()) ? " << tuplePrefix << index << "->getReasonLits() : s->getReasonClause();\n";
     if(fixpoint)
-        outfile << ind << "if(TupleFactory::getInstance().isPropagationFromLazyProp(head_" << index << "->getId())) PositiveProgramFactory::getInstance().clearTupleSupport(head_" << index << "->getId());\n";
+        outfile << ind << "if(TupleFactory::getInstance().isPropagationFromLazyProp(" << tuplePrefix << index << "->getId())) PositiveProgramFactory::getInstance().clearTupleSupport(" << tuplePrefix << index << "->getId());\n";
     outfile << ind << "propagationReason.clear();\n";
     //add propagating literal
-    outfile << ind << "propagationReason.push(Glucose::mkLit(head_" << index << "->getId(), false));\n";
-
-
+    outfile << ind << "propagationReason.push(Glucose::mkLit(" << tuplePrefix << index << "->getId(), false));\n";
+    
     for(unsigned i = 0; i < declaredTuples.size(); ++i){
         if(declaredTuples.at(i).second){
             outfile << ind++ << "if(!TupleFactory::getInstance().isTupleFromGen(tuple_" << declaredTuples.at(i).first <<"->getId()) || s->levelFromPropagator(tuple_" << declaredTuples.at(i).first <<"->getId()) > 0){\n";
@@ -1137,10 +1168,9 @@ void LazyPropagatorCompiler:: compileTrueNonInterfacePropagation(int index, std:
     outfile << --ind << "}\n";
 }
 
-void LazyPropagatorCompiler::openPropagatorFile(unsigned compID, std::set<std::string>& componentPredicateNames){
+void LazyPropagatorCompiler::openPropagatorFile(unsigned compID, std::string prefix, std::set<std::string>& componentPredicateNames){
 
-    ind = Indentation(0);
-    std::string prefix = "Comp";
+    ind = Indentation(0); 
     std::string className = prefix +"_"+std::to_string(compID)+"_Propagator";
     propagatorNames.push_back(className);
     std::string executorPath = execPath + "/../../glucose-4.2.1/sources/simp/propagators/"+className+".h";

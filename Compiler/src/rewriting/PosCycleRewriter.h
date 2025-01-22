@@ -43,7 +43,7 @@ public:
     static const std::string domainPredicatexPrefix;
     // void crossComponentPredicatesAppearInConstraintForProgram(const aspc::Program& );
     PosCycleRewriter(){};
-    void rewrite(aspc::Program*, const aspc::Program*, aspc::Program*);
+    void rewrite(aspc::Program*, const aspc::Program*);
     const aspc::Program& getGeneratorProgram() const;
     const aspc::Program& getPropagatorProgram() const;
     const aspc::Program& getDomainProgram() const;   

@@ -1885,7 +1885,6 @@ lbool Solver::search(int nof_conflicts) {
             varDecayActivity();
             claDecayActivity();
 
-
         } else {
             // Our dynamic restart, see the SAT09 competition compagnion paper
             if((luby_restart && nof_conflicts <= conflictC) ||
@@ -2171,7 +2170,7 @@ lbool Solver::solve_(bool do_simp, bool turn_off_simp) // Parameters are useless
         // Extend & copy model:
         model.growTo(nVars());
         for(int i = 0; i < nVars(); i++) model[i] = value(i);
-        if(false){
+        if(true){
             Propagator::getInstance().expandModel();
             //std::cout << "Answer: ";
             std::cout << "START MODEL ";

@@ -323,7 +323,7 @@ class TupleFactory{
                 return var < positiveWatcher.size() ? positiveWatcher[var] : EMPTY_WATCHER;
         }
         bool isTupleFromInputInterface(int tupleId){
-            return !((tupleId < factSize && tupleId >= 0) || tupleId >= lastTupleFromGen);
+            return !((tupleId < factSize && tupleId > 0) || tupleId >= lastTupleFromGen);
         }
         int getNextTupleId(){
             return nextTupleId;

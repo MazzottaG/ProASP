@@ -30,7 +30,7 @@ class LazyPropagatorCompiler{
         std::vector<std::string> propagatorNames;
         std::unordered_set<std::string> alwaysToCheckPredicates;
         std::vector<unsigned> findNonExitRule(std::vector<int>, std::vector<unsigned>);
-        void compileReasonAndSupportSaving(std::vector<std::pair<int, bool>>&, int, std::string tuplePrefix, bool);
+        void compileReasonAndSupportSaving(std::vector<std::pair<int, bool>>&, int, std::string tuplePrefix, bool fixpoint);
         void compileTrueInterfacePropagation(int, std::string, bool, bool, bool);
         void compileTrueNonInterfacePropagation(int, std::string, bool, bool);
         bool compileAddTupleToFactoryForExplainFalse(unsigned, const aspc::Literal*, const std::set<std::string>& componentPreds);
@@ -42,7 +42,8 @@ class LazyPropagatorCompiler{
         void compileTupleFactoryCC();
         //compile scc of pos Cycle program
         void compileSCC(std::vector<int>, unsigned);
-        void openPropagatorFile(unsigned, std::set<std::string>&);
+        void compileConstraint(unsigned, unsigned);
+        void openPropagatorFile(unsigned, std::string, std::set<std::string>&);
         void closePropagatorFile();
         void compileComponentWatched(std::vector<int>& , std::vector<unsigned>&);
         void compileRuleWatcher(unsigned, std::unordered_map<std::string, int>&);

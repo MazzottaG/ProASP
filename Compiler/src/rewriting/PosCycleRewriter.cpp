@@ -2,17 +2,17 @@
 
 
 const std::string PosCycleRewriter::domainPredicatexPrefix = "DomL_";
-void PosCycleRewriter::rewrite(aspc::Program* propProgram, const aspc::Program* prg, aspc::Program* constraintsProgram){
+void PosCycleRewriter::rewrite(aspc::Program* propProgram, const aspc::Program* prg){
     this->programPP = prg;
-    this->addedConstraintsProgram = constraintsProgram;
+    //this->addedConstraintsProgram = constraintsProgram;
     this->propProgram = propProgram;
     if(!programPP->isStratified()){
         std::cout <<"Lazy propagator can only work with stratified programs\n";
         exit(180);
     }
-    for(const aspc::Rule& rule : addedConstraintsProgram->getRules()){
-        assert(rule.isConstraint());
-    }
+    // for(const aspc::Rule& rule : addedConstraintsProgram->getRules()){
+    //     assert(rule.isConstraint());
+    // }
     for(const aspc::Rule& rule : prg->getRules()){
         if(rule.getArithmeticRelationsWithAggregate().size() != 0){
             std::cout << "Lazy propagator does not support aggregates\n";
@@ -68,15 +68,15 @@ void PosCycleRewriter::rewriteRulesAsGeneratorRules(){
             
     // }
 
-    for(const aspc::Rule& rule : programPP->getRules()){
-        if(rule.isConstraint()){
-            for(const aspc::Literal& lit : rule.getBodyLiterals()){
-                if(predicatesDefinedInPosCycleProgram.count(lit.getPredicateName())){
-                    rewriteRuleAsGeneratorsForPredicate(&rule, dependencyManager.getPredicateId(lit.getPredicateName()));
-                }
-            }
-        }
-    }
+    // for(const aspc::Rule& rule : programPP->getRules()){
+    //     if(rule.isConstraint()){
+    //         for(const aspc::Literal& lit : rule.getBodyLiterals()){
+    //             if(predicatesDefinedInPosCycleProgram.count(lit.getPredicateName())){
+    //                 rewriteRuleAsGeneratorsForPredicate(&rule, dependencyManager.getPredicateId(lit.getPredicateName()));
+    //             }
+    //         }
+    //     }
+    // }
     
     for(const aspc::Rule& rule : propProgram->getRules()){
         for(const aspc::Literal& lit : rule.getBodyLiterals()){
@@ -379,9 +379,9 @@ void PosCycleRewriter::rewriteComponentRuleAsConstraint(const aspc::Rule* rule){
 //original P.P.
 void PosCycleRewriter::buildPropagatorProgram(){
     for(const aspc::Rule& rule : programPP->getRules()){
-        if(!rule.isConstraint()){
+        //if(!rule.isConstraint()){
             propagatorProgram.addRule(rule);
-        }
+        //}
     }
 }
 
@@ -439,11 +439,11 @@ std::unordered_set<std::string> PosCycleRewriter::getToBoundVariablesForRule(asp
 }
 
 void PosCycleRewriter::findPredicatesAppearingInUnaryPosConstraints(){
-    for(unsigned programToAddDomainAtoms  = 0; programToAddDomainAtoms < 3; ++programToAddDomainAtoms){
+    for(unsigned programToAddDomainAtoms  = 0; programToAddDomainAtoms < 2; ++programToAddDomainAtoms){
         aspc::Program* currentProgram;
         if(programToAddDomainAtoms == 0) currentProgram = propProgram;
         else if(programToAddDomainAtoms == 1) currentProgram = &propagatorProgram;
-        else currentProgram = addedConstraintsProgram;
+        //else currentProgram = addedConstraintsProgram;
         std::vector<aspc::Rule>& rules = currentProgram->getRules();
         for(aspc::Rule& rule : rules){
             if(rule.isConstraint() && rule.getFormulas().size() == 1){
@@ -471,16 +471,18 @@ void PosCycleRewriter::createDomainRulesFromProgram(){
     //find required domain predicates
     //after required domain predicates are found in the first iteration,
     //put additional domainAtoms considering head variables no longer as external vars (in this way domain rules will be safe)
-    for(unsigned programToAddDomainAtoms  = 0; programToAddDomainAtoms < 3; ++programToAddDomainAtoms){
+    for(unsigned programToAddDomainAtoms  = 0; programToAddDomainAtoms < 2; ++programToAddDomainAtoms){
         aspc::Program* currentProgram;
         if(programToAddDomainAtoms == 0) currentProgram = propProgram;
         else if(programToAddDomainAtoms == 1) currentProgram = &propagatorProgram;
-        else currentProgram = addedConstraintsProgram;
+        //else currentProgram = addedConstraintsProgram;
         std::vector<aspc::Rule>& rules = currentProgram->getRules();
         for(aspc::Rule& rule : rules){
             //normal rules coming from to-ground and to-lazy have to be rewritten as generator rules
             //if they have P.P. predicates in body and therefore head vars are considered as internal
-            
+            //lazy constraints do not require domain predicates
+            if(programToAddDomainAtoms == 1 && rule.isConstraint())
+                continue;
             //Assuming only one head
             if(!rule.isConstraint()){
                 if( predicatesAppearingInUnaryPosConstr.count(rule.getHead().at(0).getPredicateName()) > 0)
@@ -514,18 +516,20 @@ void PosCycleRewriter::createDomainRulesFromProgram(){
     //Add required domain atoms in the body of 
     //normal rules of lazy program
     for(aspc::Rule& rule : propagatorProgram.getRules()){
-        std::vector<aspc::Literal> toAddDomain;
-        for(const aspc::Literal& lit : rule.getBodyLiterals()){
-            if(predicateAndTermRequiringDomain.count(lit.getPredicateName())){
-                for(int idx : predicateAndTermRequiringDomain[lit.getPredicateName()]){
-                    aspc::Literal domainLiteral(domainPredicatexPrefix + lit.getPredicateName() + std::to_string(idx), false);
-                    domainLiteral.addTerm(lit.getTermAt(idx));
-                    toAddDomain.push_back(domainLiteral);
+        if(!rule.isConstraint()){
+            std::vector<aspc::Literal> toAddDomain;
+            for(const aspc::Literal& lit : rule.getBodyLiterals()){
+                if(predicateAndTermRequiringDomain.count(lit.getPredicateName())){
+                    for(int idx : predicateAndTermRequiringDomain[lit.getPredicateName()]){
+                        aspc::Literal domainLiteral(domainPredicatexPrefix + lit.getPredicateName() + std::to_string(idx), false);
+                        domainLiteral.addTerm(lit.getTermAt(idx));
+                        toAddDomain.push_back(domainLiteral);
+                    }
                 }
             }
+            for(int i = 0; i< toAddDomain.size(); ++i)
+                rule.addBodyLiteral(toAddDomain[i]);
         }
-        for(int i = 0; i< toAddDomain.size(); ++i)
-            rule.addBodyLiteral(toAddDomain[i]);
     }
 
     //add required domain atoms in body of constraints
@@ -548,6 +552,8 @@ void PosCycleRewriter::createDomainRulesFromProgram(){
     //for every rule that defines a predicate requiring domain, add new rules
     //that define a projection of such predicates into domain predicates
     for(aspc::Rule& rule : propagatorProgram.getRules()){
+        if(rule.isConstraint())
+            continue;
         std::cout <<"Creating domain rule from: ";
         rule.print();
         //TODO if head has multiple atoms domain rules are subdivided into more compilations
