@@ -1642,8 +1642,6 @@ lbool Solver::search(int nof_conflicts) {
             PositiveProgramFactory::getInstance().printStats();
             PositiveProgramFactory::getInstance().printSupported();
         #endif
-        std::unordered_set<int> toCheck = PositiveProgramFactory::getInstance().getToCheck();
-        LazyPropagator::getInstance().getAlwaysToCheckTuples(toCheck);
         vec<Lit> lits;
         CRef confl = CRef_Undef;
         bool propagated;
@@ -1651,6 +1649,8 @@ lbool Solver::search(int nof_conflicts) {
         //possibly finding false at level zero or inconsistencies at level zero
         do{
             propagated = false;
+            std::unordered_set<int> toCheck = PositiveProgramFactory::getInstance().getToCheck();
+            LazyPropagator::getInstance().getAlwaysToCheckTuples(toCheck);
             for(int tupleId : toCheck){
                 if(tupleId >= TupleFactory::getInstance().getNextTupleId()) continue;
                 Tuple* toCheckTuple = TupleFactory::getInstance().getTupleFromInternalID(tupleId);
@@ -1744,6 +1744,7 @@ lbool Solver::search(int nof_conflicts) {
                     std::pair<bool, Glucose::CRef> propagatedTupleAndReason = LazyPropagator::getInstance().propagateToFalse(toCheckTuple, tupleReasons);
                     if(LazyPropagator::getInstance().makeRestart()){
                         cancelUntil(0);
+                        PositiveProgramFactory::getInstance().clearToCheck();
                         PositiveProgramFactory::getInstance().clearDueToRestart();
                         addClause_(tupleReasons);
                         return l_Undef;

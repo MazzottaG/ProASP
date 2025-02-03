@@ -323,7 +323,9 @@ public:
     }
     
     void addExplainingTuple(int id){
-        tupleToBodyRemoveIndex.emplace(std::make_pair(id, bodyLiterals.size()));
+        // tupleToBodyRemoveIndex.emplace(std::make_pair(id, bodyLiterals.size()));
+        if(!tupleToBodyRemoveIndex.emplace(std::make_pair(id, bodyLiterals.size())).second);
+            tupleToBodyRemoveIndex[id] = bodyLiterals.size();
     }
     void addTupleInChain(int tupleId){
         headTuplesChain.push_back(tupleId);
