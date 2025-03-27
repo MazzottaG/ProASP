@@ -2174,38 +2174,13 @@ lbool Solver::solve_(bool do_simp, bool turn_off_simp) // Parameters are useless
         if(true){
             Propagator::getInstance().expandModel();
             //std::cout << "Answer: ";
-            std::cout << "START MODEL ";
             std::vector<unsigned>& visible=TupleFactory::getInstance().getVisibleAtoms();
             bool error = false;
-            
-            for(unsigned id: visible){
-                //do not print ids of tuples that come from P.P.
-                if(id <= TupleFactory::getInstance().getLastTupleFromGen()){
-                    TupleLight* t = TupleFactory::getInstance().getTupleFromInternalID(id);
-                    //ENUMERATION
-                    if(t != NULL && t->isTrue()) {AuxMapHandler::getInstance().printTuple(t);}
-                    if(t != NULL && t->isFalse()) {std::cout<<"-";AuxMapHandler::getInstance().printTuple(t);}
-                    
-                    //ENFORCE MODEL
-                    // if(t != NULL && t->isTrue()) {std::cout<<"-";AuxMapHandler::getInstance().printTuple(t);}
-                    // if(t != NULL && t->isFalse()) {/*std::cout<<"-";*/AuxMapHandler::getInstance().printTuple(t);}
-                    // std::cout << std::endl;
-                    std::cout << " ";//endl
-                    // if(t != NULL && t->isFalse()) {std::cout << ":-";AuxMapHandler::getInstance().printTuple(t);}
-                }
-            }
-            assert(!error);
-            std::cout << "END MODEL"<<std::endl;
-            std::cout << std::endl;
-            std::cout <<"START FULL MODEL ";
             for(unsigned id: visible){
                 TupleLight* t = TupleFactory::getInstance().getTupleFromInternalID(id);                
-                //PRINT MODEL AS CONSTRAINTS
-                if(t != NULL && t->isTrue()) {std::cout <<":- not ";AuxMapHandler::getInstance().printTuple(t);std::cout <<". ";}
-                if(t != NULL && t->isFalse()) {std::cout <<":- ";AuxMapHandler::getInstance().printTuple(t);std::cout <<". ";}
-                std::cout << " ";
+		        if(t != NULL && t->isTrue()) AuxMapHandler::getInstance().printTuple(t);
             }
-            std::cout <<"END FULL MODEL"<<std::endl;
+	        std::cout << std::endl;
         }
     } else if(status == l_False && conflict.size() == 0)
         ok = false;

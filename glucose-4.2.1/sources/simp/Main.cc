@@ -522,21 +522,21 @@ int main(int argc, char** argv)
                 if(!solver->okay())
                     break;
             }
-            std::vector<std::vector<int>> constraints;
-            read_model_constraints("constraints.lp",constraints);
-            std::cout << "Found "<<constraints.size()<<" constraints"<<std::endl;
-            for(std::vector<int> constraint : constraints){
-                lits.clear();
-                for(int literal : constraint){
-                    bool negated = literal<0;
-                    lits.push( mkLit(negated ? -literal : literal, !negated));
-                    // std::cout << -literal << " ";
-                }
-                // std::cout << "0"<<std::endl;
-                solver->addClause_(lits);
-                if(!solver->okay())
-                    break;
-            }
+            // std::vector<std::vector<int>> constraints;
+            // read_model_constraints("constraints.lp",constraints);
+            // std::cout << "Found "<<constraints.size()<<" constraints"<<std::endl;
+            // for(std::vector<int> constraint : constraints){
+            //     lits.clear();
+            //     for(int literal : constraint){
+            //         bool negated = literal<0;
+            //         lits.push( mkLit(negated ? -literal : literal, !negated));
+            //         // std::cout << -literal << " ";
+            //     }
+            //     // std::cout << "0"<<std::endl;
+            //     solver->addClause_(lits);
+            //     if(!solver->okay())
+            //         break;
+            // }
             LazyPropagator::getInstance().findAlwaysToCheckTuples();
             Propagator::getInstance().activate();
             if(S.okay()){

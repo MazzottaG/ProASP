@@ -10,9 +10,6 @@ void PosCycleRewriter::rewrite(aspc::Program* propProgram, const aspc::Program* 
         std::cout <<"Lazy propagator can only work with stratified programs\n";
         exit(180);
     }
-    // for(const aspc::Rule& rule : addedConstraintsProgram->getRules()){
-    //     assert(rule.isConstraint());
-    // }
     for(const aspc::Rule& rule : prg->getRules()){
         if(rule.getArithmeticRelationsWithAggregate().size() != 0){
             std::cout << "Lazy propagator does not support aggregates\n";
@@ -68,15 +65,14 @@ void PosCycleRewriter::rewriteRulesAsGeneratorRules(){
             
     // }
 
-    // for(const aspc::Rule& rule : programPP->getRules()){
-    //     if(rule.isConstraint()){
-    //         for(const aspc::Literal& lit : rule.getBodyLiterals()){
-    //             if(predicatesDefinedInPosCycleProgram.count(lit.getPredicateName())){
-    //                 rewriteRuleAsGeneratorsForPredicate(&rule, dependencyManager.getPredicateId(lit.getPredicateName()));
-    //             }
-    //         }
-    //     }
-    // }
+    for(const aspc::Rule& rule : programPP->getRules()){
+        for(const aspc::Literal& lit : rule.getBodyLiterals()){
+            if(predicatesDefinedInPosCycleProgram.count(lit.getPredicateName()) && lit.isNegated() && alwaysToCheckFalsePredicates.count(lit.getPredicateName())){
+                rewriteRuleAsGeneratorsForPredicate(&rule, dependencyManager.getPredicateId(lit.getPredicateName()));
+            }
+        }
+
+    }
     
     for(const aspc::Rule& rule : propProgram->getRules()){
         for(const aspc::Literal& lit : rule.getBodyLiterals()){
@@ -209,7 +205,7 @@ void PosCycleRewriter::findAlwaysToCheckFalsePredicates(){
     for(unsigned i = 0; i < 2; ++i){
         std::vector<aspc::Rule>& rules = i == 0 ? propagatorProgram.getRules() : propProgram->getRules();
         for(aspc::Rule r : rules){
-            if(!r.isConstraint()){
+            if(!r.isConstraint() || (r.isConstraint() && i == 0)){
                 for(const aspc::Literal lit : r.getBodyLiterals()){
                     if(lit.isNegated() && predicatesDefinedInPosCycleProgram.count(lit.getPredicateName())){
                         for(std::string var : lit.getVariables()){
@@ -237,11 +233,24 @@ void PosCycleRewriter::findAlwaysToCheckFalsePredicates(){
                         alwaysToCheckFalsePredicates.insert(h.getPredicateName());
                     }
                 }
-
+                bool addedHead = false;
                 for(const aspc::Literal lit : r.getBodyLiterals()){
-                    for(std::string var : lit.getVariables()){
-                        if(predicatesDefinedInPosCycleProgram.count(lit.getPredicateName()) && nonBoundedVars.count(var)){
+                    if(lit.getVariables().size() > 0){
+                        for(std::string var : lit.getVariables()){
+                            if(predicatesDefinedInPosCycleProgram.count(lit.getPredicateName()) && nonBoundedVars.count(var)){
+                                alwaysToCheckFalsePredicates.insert(lit.getPredicateName());
+                            }
+                        }
+                    }
+                    else{
+                        //exception for negated lazy predicates of arity zero
+                        if(predicatesDefinedInPosCycleProgram.count(lit.getPredicateName()) && lit.getVariables().size() == 0 && lit.isNegated()){
                             alwaysToCheckFalsePredicates.insert(lit.getPredicateName());
+                            if(!addedHead){
+                                for(const aspc::Atom h : r.getHead()){
+                                    alwaysToCheckFalsePredicates.insert(h.getPredicateName());
+                                }
+                            }
                         }
                     }
                     
