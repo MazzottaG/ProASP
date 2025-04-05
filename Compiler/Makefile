@@ -10,6 +10,11 @@ CXX = g++
 CXXFLAGS.compile := -std=c++17 -Wall -Wextra -g -DCOMPILE_GENERATOR -DPURE_PROP
 CXXFLAGS.run := -std=c++17 -Wall -Wextra -g -DRUN_GENERATOR
 
+ifeq ($(origin LAZYNESS), undefined)
+    # default lazyness
+else
+    CXXFLAGS.compile += -DLAZYNESS_1
+endif
 CXXFLAGS := $(CXXFLAGS.$(BUILD)) 
 # define library paths in addition to /usr/lib
 #   if I wanted to include libraries not in /usr/lib I'd specify

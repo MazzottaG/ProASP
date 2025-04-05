@@ -292,7 +292,7 @@ void LazyPropagatorCompiler::compileExplainFalse(std::vector<int>& scc, std::vec
         outfile << ind << "int toExplainSize = toExplain.size();\n";
 
         outfile << ind++ <<"if(PositiveProgramFactory::getInstance().hasPossibleSupport(tuple_0->getId())){\n";
-        #ifdef ALLOW_RESTARTS
+        #ifdef LAZYNESS_1
             outfile << ind++ <<"if(makePropagation && original->isTrue())\n";
             outfile << ind << "LazyPropagator::getInstance().addPossibleSupportsForTuple(original->getId());\n";
             --ind;
@@ -381,7 +381,7 @@ void LazyPropagatorCompiler::compileExplainFalse(std::vector<int>& scc, std::vec
         outfile << --ind << "}\n";
         outfile << ind << "std::cout <<std::endl;\n";
     #endif
-    #ifndef ALLOW_RESTARTS
+    #ifndef LAZYNESS_1
         outfile << ind << "assert(s->currentLevel() == 0 || tupleReasons.size() >= 2);\n";
     #endif
     outfile << ind << "bool tupleIsFromInputInterface = TupleFactory::getInstance().isTupleFromInputInterface(original->getId());\n";
@@ -402,7 +402,7 @@ void LazyPropagatorCompiler::compileExplainFalse(std::vector<int>& scc, std::vec
     // outfile << ind << "Glucose::Lit temp = tupleReasons[1];\n";
     // outfile << ind << "tupleReasons[1] = tupleReasons[currentLevelTupleIndex];\n";
     // outfile << ind << "tupleReasons[currentLevelTupleIndex] = temp;\n";
-    #ifdef ALLOW_RESTARTS
+    #ifdef LAZYNESS_1
         outfile << ind++ << "if(tupleReasons.size() == 1 || s->levelFromPropagator(Glucose::var(tupleReasons[1])) != s->currentLevel()){\n";
         outfile << ind << "LazyPropagator::getInstance().requireRestart();\n";
         outfile << ind << "return std::make_pair(false, Glucose::CRef_Undef);\n";
@@ -937,7 +937,7 @@ void LazyPropagatorCompiler::compileRuleByStarter(unsigned id, const aspc::Rule&
             outfile << ind++ << "if(!falseLazyBody && dummyTuplesInBody.size() == 0){\n";
         else
             outfile << ind++ << "if(!falseLazyBody){\n";
-        #ifdef ALLOW_RESTARTS
+        #ifdef LAZYNESS_1
             outfile << ind++ <<"if(TupleFactory::getInstance().isTupleFromInputInterface(original->getId()) && ! LazyPropagator::getInstance().isPredicateAlwaysToCheck(original->getPredicateName()) && original->isTrue()){\n";
         #else
             outfile << ind++ <<"if(TupleFactory::getInstance().isTupleFromInputInterface(original->getId()) && ! LazyPropagator::getInstance().isPredicateAlwaysToCheck(original->getPredicateName())){\n";
