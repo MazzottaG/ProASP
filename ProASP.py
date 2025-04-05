@@ -1,4 +1,5 @@
 import os
+import platform
 import subprocess
 import re
 import argparse
@@ -11,7 +12,7 @@ def current_folder_is_project_folder():
         return True
     return False
 
-def execute_command(cmd):
+def execute_command(cmd, return_out = False):
     try:
         print(f"\tExecuting: {cmd}")
         # Run the command and capture output
@@ -48,6 +49,23 @@ def main():
 
     
     args = parser.parse_args()
+    
+    #project setup
+    compiler_lib = "Compiler/lib"
+    antlr_lib = f"{compiler_lib}/libantlr4-runtime.a"
+    antlr_lib_macos = f"{compiler_lib}/macos-libantlr4-runtime.a"
+    antlr_lib_linux = f"{compiler_lib}/linux-libantlr4-runtime.a"
+    if not os.path.isfile(antlr_lib):
+        generator_folder = "glucose-4.2.1/sources/simp/generators"
+        propagator_folder = "glucose-4.2.1/sources/simp/propagators"
+        execute_command(f"mkdir {generator_folder}")
+        execute_command(f"mkdir {propagator_folder}")
+       
+        if platform.system() == "Darwin":
+            execute_command(f"cp {antlr_lib_macos} {antlr_lib}")
+        else:
+            execute_command(f"cp {antlr_lib_linux} {antlr_lib}")
+
     if args.action == 'compile':
         if args.comp == "" and args.ground == "":
             print("At least one among comp, ground must be specified")
