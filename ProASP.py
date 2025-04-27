@@ -45,7 +45,7 @@ def main():
     compile_parser.add_argument('--lazyness', type=int, choices=[0, 1], help=" degree of lazyness of the solver\n", default=0)
 
     execute_parser = subparsers.add_parser('execute', help="Execute a ProASP solver", aliases=['execute'])
-    execute_parser.add_argument('--instance', help="path to a file containing rules that will be compiled into post-propagators\n", required=True)
+    execute_parser.add_argument('--instance', help="path to an instance\n", required=True)
 
     
     args = parser.parse_args()
