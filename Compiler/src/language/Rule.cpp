@@ -45,13 +45,13 @@ unsigned aspc::Rule::rulesCounter = 0;
 unsigned aspc::Rule::rulesCounterRewriting = 0;
 string aspc::Rule::inequalityStrings[] = {">=", "<=", ">", "<", "!=", "=="};
 
-aspc::Rule::Rule(const vector<aspc::Atom> & head, const vector<aspc::Literal> & body, const vector<aspc::ArithmeticRelation> & arithmeticRelations, const vector<aspc::ArithmeticRelationWithAggregate> & arithmeticRelationsWithAggregate,bool rewriting) : head(head), bodyLiterals(body), arithmeticRelations(arithmeticRelations),arithmeticRelationsWithAggregate(arithmeticRelationsWithAggregate),supportAtom(-1) {
+aspc::Rule::Rule(const vector<aspc::Atom> & head, const vector<aspc::Literal> & body, const vector<aspc::ArithmeticRelation> & arithmeticRelations, const vector<aspc::ArithmeticRelationWithAggregate> & arithmeticRelationsWithAggregate,bool rewriting, bool fromChoice) : head(head), bodyLiterals(body), arithmeticRelations(arithmeticRelations),arithmeticRelationsWithAggregate(arithmeticRelationsWithAggregate),supportAtom(-1), fromChoice(fromChoice) {
     if(rewriting == 0)
         ruleId = rulesCounterRewriting++;
     else
         ruleId = rulesCounter++;
 }
-aspc::Rule::Rule(const vector<aspc::Atom> & head, const vector<aspc::Literal> & body, const vector<aspc::ArithmeticRelation> & arithmeticRelations, const vector<aspc::ArithmeticRelationWithAggregate> & arithmeticRelationsWithAggregate) : head(head), bodyLiterals(body), ruleId(rulesCounter), arithmeticRelations(arithmeticRelations),arithmeticRelationsWithAggregate(arithmeticRelationsWithAggregate),supportAtom(-1) {
+aspc::Rule::Rule(const vector<aspc::Atom> & head, const vector<aspc::Literal> & body, const vector<aspc::ArithmeticRelation> & arithmeticRelations, const vector<aspc::ArithmeticRelationWithAggregate> & arithmeticRelationsWithAggregate, bool fromChoice) : head(head), bodyLiterals(body), ruleId(rulesCounter), arithmeticRelations(arithmeticRelations),arithmeticRelationsWithAggregate(arithmeticRelationsWithAggregate),supportAtom(-1), fromChoice(fromChoice) {
     rulesCounter++;
 }
 
@@ -111,7 +111,7 @@ void aspc::Rule::addBodyVars(std::unordered_set<std::string>& bodyVars)const{
     }
     return;
 }
-aspc::Rule::Rule(const vector<Atom>& head, const vector<Literal> & body, const vector<aspc::ArithmeticRelation>& arithmeticRelations, bool) : Rule(head, body, arithmeticRelations,std::vector<aspc::ArithmeticRelationWithAggregate>()) {
+aspc::Rule::Rule(const vector<Atom>& head, const vector<Literal> & body, const vector<aspc::ArithmeticRelation>& arithmeticRelations, bool fromChoice) : Rule(head, body, arithmeticRelations,std::vector<aspc::ArithmeticRelationWithAggregate>(), fromChoice) {
     //    if(true) {
     //        std::random_shuffle(bodyLiterals.begin(), bodyLiterals.end());
     //        
@@ -128,7 +128,7 @@ aspc::Rule::Rule(const vector<Atom>& head, const vector<Literal> & body, const v
 
 
 }
-aspc::Rule::Rule(const std::vector<aspc::Atom> & head, const std::vector<aspc::Literal> & body, const std::vector<ArithmeticRelation> & inequalities,const std::vector<ArithmeticRelationWithAggregate> & inequalitiesWithAggregate, bool, bool rewriting): Rule(head, body, inequalities,inequalitiesWithAggregate,rewriting){
+aspc::Rule::Rule(const std::vector<aspc::Atom> & head, const std::vector<aspc::Literal> & body, const std::vector<ArithmeticRelation> & inequalities,const std::vector<ArithmeticRelationWithAggregate> & inequalitiesWithAggregate, bool, bool rewriting, bool fromChoice): Rule(head, body, inequalities,inequalitiesWithAggregate,rewriting, fromChoice){
     
     
     supportAtom=-1;
@@ -178,7 +178,7 @@ bool aspc::Rule::equalBodyExpect(const aspc::Rule& other,const std::unordered_se
     return true;
 }
 aspc::Rule::Rule(const Rule& other) :
-head(other.head), bodyLiterals(other.bodyLiterals), ruleId(other.ruleId), arithmeticRelations(other.arithmeticRelations),arithmeticRelationsWithAggregate(other.arithmeticRelationsWithAggregate), orderedBodyByStarters(other.orderedBodyByStarters), orderedBodyIndexesByStarters(other.orderedBodyIndexesByStarters) {
+head(other.head), bodyLiterals(other.bodyLiterals), ruleId(other.ruleId), arithmeticRelations(other.arithmeticRelations),arithmeticRelationsWithAggregate(other.arithmeticRelationsWithAggregate), orderedBodyByStarters(other.orderedBodyByStarters), orderedBodyIndexesByStarters(other.orderedBodyIndexesByStarters), fromChoice(other.fromChoice) {
     for (unsigned i = 0; i < bodyLiterals.size(); i++) {
         formulas.push_back(new Literal(bodyLiterals.at(i)));
 
@@ -294,6 +294,15 @@ void aspc::Rule::updateJoinTupleName(unsigned int formulaIndex,std::string joinT
             ar.setJoinTupleName(joinTupleName);
     }
 }
+
+bool aspc::Rule::isFromChoice()const{
+    return fromChoice;
+}
+
+void aspc::Rule::setFromChoice(bool fromChoice){
+    this->fromChoice = fromChoice;
+}
+
 const vector<aspc::ArithmeticRelation> & aspc::Rule::getArithmeticRelations() const {
     return arithmeticRelations;
 }

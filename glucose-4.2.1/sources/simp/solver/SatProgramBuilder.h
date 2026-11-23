@@ -119,23 +119,26 @@ class SatProgramBuilder{
                 std::vector<std::string> debugAux;
                 for(auto aux : pair.second){
                     int freshSymbol = auxRemapping[aux];
-                    binClause.clear();
-                    binClause.push(Glucose::mkLit(realPairFirst,false));
-                    binClause.push(Glucose::mkLit(freshSymbol, true));
-                    // printClause(binClause);
-                    if(!solver->addClause_(binClause))
-                        return false;
+                    if(!TupleFactory::getInstance().hasAuxFromChoice(realPairFirst)){
+                        binClause.clear();
+                        binClause.push(Glucose::mkLit(realPairFirst,false));
+                        binClause.push(Glucose::mkLit(freshSymbol, true));
+                        // printClause(binClause);
+                        if(!solver->addClause_(binClause))
+                            return false;
+                    }
                     clause.push(Glucose::mkLit(freshSymbol, false));
                 }
                 for(auto supAtom : atomsForLit[pair.first]){
                     binClause.clear();
                     int realSupAtom = Generator::getInstance().getRealVar(supAtom);
-                    binClause.push(Glucose::mkLit(realPairFirst,false));
-                    
-                    binClause.push(Glucose::mkLit(realSupAtom, true));
-                    //printClause(binClause);
-                    if(!solver->addClause_(binClause))
-                        return false;
+                    if(!TupleFactory::getInstance().hasAtomFromChoice(realSupAtom)){
+                        binClause.push(Glucose::mkLit(realPairFirst,false));
+                        binClause.push(Glucose::mkLit(realSupAtom, true));//
+                        //printClause(binClause);
+                        if(!solver->addClause_(binClause))
+                            return false;
+                    }
 
                     clause.push(Glucose::mkLit(realSupAtom, false));
                 }
@@ -155,12 +158,14 @@ class SatProgramBuilder{
 
                 for(auto supAtom : pair.second){
                     int realSupAtom = Generator::getInstance().getRealVar(supAtom);
-                    binClause.clear();
-                    binClause.push(Glucose::mkLit(realPairFirst,false));
-                    binClause.push(Glucose::mkLit(realSupAtom, true));
-                    // printClause(binClause);
-                    if(!solver->addClause_(binClause))
-                       return false;  
+                    if(!TupleFactory::getInstance().hasAtomFromChoice(realSupAtom)){
+                        binClause.clear();
+                        binClause.push(Glucose::mkLit(realPairFirst,false));
+                        binClause.push(Glucose::mkLit(realSupAtom, true));
+                        // printClause(binClause);
+                        if(!solver->addClause_(binClause))
+                        return false;  
+                    }
                     clause.push(Glucose::mkLit(realSupAtom, false));
                 }
                 // printClause(clause);

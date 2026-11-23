@@ -157,7 +157,7 @@ void Rewriter::rewriteGroundedAggregate(const aspc::Rule& r, Analyzer& analyzer,
                     }
                     aggrSetPredicates[aggregateSetPredicate]=aggrSet;
                     buildingHead.push_back(aspc::Atom(aggregateSetPredicate,aggrSet.getTerms()));
-                    data.rules.push_back(aspc::Rule(buildingHead,buildingBody,inequalities,inequalitiesWithAggregate,false,false));
+                    data.rules.push_back(aspc::Rule(buildingHead,buildingBody,inequalities,inequalitiesWithAggregate,false, false, false));
 
                 }
                 clearData();
@@ -182,9 +182,10 @@ void Rewriter::rewriteGroundedAggregate(const aspc::Rule& r, Analyzer& analyzer,
                 inequalitiesWithAggregate.back().setPlusOne(aggrRelation->isPlusOne());
                 for(const aspc::Atom& h : r.getHead()) buildingHead.push_back(h);
 
-                data.rules.push_back(aspc::Rule(buildingHead,buildingBody,inequalities,inequalitiesWithAggregate,false,false));
+                data.rules.push_back(aspc::Rule(buildingHead,buildingBody,inequalities,inequalitiesWithAggregate,false,false,false));
                 data.setAggId(aspc::Atom(aggrId,aggIdTerms));
                 data.setEqual(inequalitiesWithAggregate.back().getComparisonType() == aspc::EQ);
+                data.setUnequal(inequalitiesWithAggregate.back().getComparisonType() == aspc::NE);
                 data.setGenBound(isBoudedValueAssignment);
                 data.setAggSet(aspc::Literal(false,aspc::Atom(aggregateSetPredicate,aggrSet.getTerms())));
                 return;
@@ -196,6 +197,7 @@ void Rewriter::rewriteGroundedAggregate(const aspc::Rule& r, Analyzer& analyzer,
                 data.rules.push_back(r);
                 data.setAggId(aspc::Atom(aggrId,aggIdTerms));
                 data.setEqual(aggrRelation->getComparisonType() == aspc::EQ);
+                data.setUnequal(aggrRelation->getComparisonType() == aspc::NE);
                 data.setGenBound(isBoudedValueAssignment);
                 data.setAggSet(aspc::Literal(aggSetNegated,aspc::Atom(aggSetPred,aggSetTerms)));
                 return;
@@ -239,8 +241,23 @@ void Rewriter::addToGroundRule(const aspc::Rule& r,std::vector<int>& generatorRu
         std::cout << "}\n";
         return;
     }
-    generatorProgram.addRule(r);
-    generatorRuleLabel.push_back(GROUND_RULE);
+    //rules coming from choices marked as to ground with EDB body are generator rules 
+    if(r.isFromChoice()){
+        generatorProgram.addRule(r);
+        bool edb = true;
+        for(const aspc::Literal& lit: r.getBodyLiterals())
+            if(!analyzer.isEDB(lit.getPredicateName()))
+                edb = false;
+        if(edb){
+            generatorRuleLabel.push_back(TO_GENERATE);
+        }
+        else{
+            generatorRuleLabel.push_back(GROUND_RULE);            
+        }
+    }else{
+        generatorProgram.addRule(r);
+        generatorRuleLabel.push_back(GROUND_RULE);
+    }
 
 }
 std::pair<bool,std::pair<std::string,AggrSetPredicate>> Rewriter::buildBody(std::unordered_set<std::string> aggregateBodyVariables,const aspc::Rule& r,std::string auxValPred,std::vector<std::string> auxValTerm){
@@ -506,7 +523,7 @@ std::vector<std::string> Rewriter::writeAggrIdRule(std::pair<bool,std::pair<std:
     bool plusOne = aggregate->getComparisonType() != aspc::EQ && aggregate->isPlusOne();
     std::string aggrId0;
     std::string aggrId1;
-    if(aggregate->getComparisonType() != aspc::EQ){
+    if(aggregate->getComparisonType() != aspc::EQ && aggregate->getComparisonType() != aspc::NE){
         clearData();
         if(body.second.first != "")
             buildingBody.push_back(aspc::Literal(false,aspc::Atom(body.second.first,body.second.second.getTerms())));
@@ -527,7 +544,7 @@ std::vector<std::string> Rewriter::writeAggrIdRule(std::pair<bool,std::pair<std:
         buildingHead.push_back(aspc::Atom(aggrId0,body.second.second.getTerms()));
         addRuleAfterAggregate();
     }else{
-        assert(aggregate->getComparisonType() == aspc::EQ);
+        // assert(aggregate->getComparisonType() == aspc::EQ);
         {
             clearData();
             if(body.second.first != "")
@@ -651,27 +668,45 @@ void Rewriter::rewriteAggregates(){
         // auto body = buildBody(aggregateBodyVariables,r,auxValPredicate,auxValTerm);
         auto body = buildBody(aggregateBodyVariables,r,"",{});
         std::vector<std::string> aggrIds = writeAggrIdRule(body,aggrSet,r);
-        clearData();
-        if(aggrIds.size() == 1){
-            if(body.second.first != "")
-                buildingBody.push_back(aspc::Literal(false,aspc::Atom(body.second.first,body.second.second.getTerms())));
-            buildingBody.push_back(aspc::Literal(r.getArithmeticRelationsWithAggregate()[0].isNegated(),aspc::Atom(aggrIds[0],body.second.second.getTerms())));
-            if(r.isConstraint())
-                addRuleAfterAggregate();
-            else{
-                buildingHead.push_back(r.getHead()[0]);
-                addRuleAfterAggregate();
-            }
+        const aspc::ArithmeticRelationWithAggregate* aggregate = &r.getArithmeticRelationsWithAggregate()[0];
+        if(aggregate->getComparisonType() != aspc::ComparisonType::NE){
+            clearData();
+            if(aggrIds.size() == 1){
+                if(body.second.first != "")
+                    buildingBody.push_back(aspc::Literal(false,aspc::Atom(body.second.first,body.second.second.getTerms())));
+                buildingBody.push_back(aspc::Literal(r.getArithmeticRelationsWithAggregate()[0].isNegated(),aspc::Atom(aggrIds[0],body.second.second.getTerms())));
+                if(r.isConstraint())
+                    addRuleAfterAggregate();
+                else{
+                    buildingHead.push_back(r.getHead()[0]);
+                    addRuleAfterAggregate();
+                }
+            }else{
+                if(body.second.first != "")
+                    buildingBody.push_back(aspc::Literal(false,aspc::Atom(body.second.first,body.second.second.getTerms())));
+                buildingBody.push_back(aspc::Literal(false,aspc::Atom(aggrIds[0],body.second.second.getTerms())));
+                buildingBody.push_back(aspc::Literal(true,aspc::Atom(aggrIds[1],body.second.second.getTerms())));
+                if(r.isConstraint())
+                    addRuleAfterAggregate();
+                else{
+                    buildingHead.push_back(r.getHead()[0]);
+                    addRuleAfterAggregate();
+                }
+            }  
         }else{
-            if(body.second.first != "")
-                buildingBody.push_back(aspc::Literal(false,aspc::Atom(body.second.first,body.second.second.getTerms())));
-            buildingBody.push_back(aspc::Literal(false,aspc::Atom(aggrIds[0],body.second.second.getTerms())));
-            buildingBody.push_back(aspc::Literal(true,aspc::Atom(aggrIds[1],body.second.second.getTerms())));
-            if(r.isConstraint())
-                addRuleAfterAggregate();
-            else{
-                buildingHead.push_back(r.getHead()[0]);
-                addRuleAfterAggregate();
+            bool negatedAggId = true;
+            for(std::string aggrId : aggrIds){
+                clearData();
+                if(body.second.first != "")
+                    buildingBody.push_back(aspc::Literal(false,aspc::Atom(body.second.first,body.second.second.getTerms())));
+                buildingBody.push_back(aspc::Literal(negatedAggId,aspc::Atom(aggrId,body.second.second.getTerms())));
+                if(r.isConstraint())
+                    addRuleAfterAggregate();
+                else{
+                    buildingHead.push_back(r.getHead()[0]);
+                    addRuleAfterAggregate();
+                }
+                negatedAggId = !negatedAggId;
             }
         }
     }
@@ -683,11 +718,32 @@ void Rewriter::rewriteAggregates(){
 void Rewriter::reduceToSigleHeadForPredicate(){
     for(std::string predicate:predicateNames){
         auto rules = program.getRulesForPredicate(predicate);
-        if(rules.size()>1){
+        bool ruleFromChoice = false;
+        bool canSkipCompletion = true;
+        //if the predicate is defined in a normal rule not coming from choice rewriting, or
+        //comes from a choice with IDB I must follow the usual rewriting.
+        //Otherwise the completion can be skipped and rules coming from choices can be added to the generator program
+        for(unsigned int ruleIdx : rules){
+            if(program.getRule(ruleIdx).isFromChoice()){
+                ruleFromChoice = true;
+                for(const aspc::Literal& lit : program.getRule(ruleIdx).getBodyLiterals()){
+                    if(!analyzer->isEDB(lit.getPredicateName()))
+                        canSkipCompletion = false;
+                }
+            }
+            else
+                canSkipCompletion = false;   
+        }
+
+        if(rules.size()>1 || ruleFromChoice){
             unsigned usedSupportPredicates=supportPredicates.size();
             unsigned ariety=0;
             for(int ruleIndex : rules){
                 const aspc::Rule* rule = &program.getRule(ruleIndex);
+                if(canSkipCompletion){
+                    generatorProgram.addRule(*rule);
+                    continue;
+                }
                 std::string supportPredicate = "sup_"+std::to_string(supportPredicates.size());
                 supportPredicateId[supportPredicate]=supportPredicates.size();
                 supportPredicates.push_back(supportPredicate);
@@ -705,16 +761,18 @@ void Rewriter::reduceToSigleHeadForPredicate(){
                     false);
                 std::vector<std::string> terms;
                 for(int i=0;i<ariety;i++) terms.push_back("X_"+std::to_string(i));
-                aspc::Rule constraint(
-                    {},
-                    {aspc::Literal(false,aspc::Atom(supportPredicate,terms)),aspc::Literal(true,aspc::Atom(predicate,terms))},
-                    {},
-                    false);
-                singleHeadForPredicate.addRule(constraint);
+               //:- sup not h
+               if(!ruleFromChoice){
+                    aspc::Rule constraint(
+                        {},
+                        {aspc::Literal(false,aspc::Atom(supportPredicate,terms)),aspc::Literal(true,aspc::Atom(predicate,terms))},
+                        {},
+                        false);
+                    singleHeadForPredicate.addRule(constraint);
+                }
                 //labeledSingleHeadRules.push_back(true);
                 singleHeadForPredicate.addRule(r);
                 //labeledSingleHeadRules.push_back(false);
-
                 // adding rule a :- sup in generator only
                 aspc::Rule supRule(
                     {aspc::Atom(predicate,terms)},
@@ -723,21 +781,23 @@ void Rewriter::reduceToSigleHeadForPredicate(){
                     false);
                 generatorProgram.addRule(supRule);
             }
-            std::vector<aspc::Literal> constraintLiterals;
-            std::vector<std::string> terms;
-            for(int i=0;i<ariety;i++) terms.push_back("X_"+std::to_string(i));
-            constraintLiterals.push_back(aspc::Literal(false,aspc::Atom(predicate,terms)));
-            for(unsigned i=usedSupportPredicates;i<supportPredicates.size();i++){
-                constraintLiterals.push_back(aspc::Literal(true,aspc::Atom("sup_"+std::to_string(i),terms)));
+            if(!canSkipCompletion){
+                std::vector<aspc::Literal> constraintLiterals;
+                std::vector<std::string> terms;
+                for(int i=0;i<ariety;i++) terms.push_back("X_"+std::to_string(i));
+                constraintLiterals.push_back(aspc::Literal(false,aspc::Atom(predicate,terms)));
+                for(unsigned i=usedSupportPredicates;i<supportPredicates.size();i++){
+                    constraintLiterals.push_back(aspc::Literal(true,aspc::Atom("sup_"+std::to_string(i),terms)));
+                }
+                aspc::Rule constraint(
+                    {},
+                    constraintLiterals,
+                    {},
+                    false);
+                constraint.setSupportAtom(0);
+                singleHeadForPredicate.addRule(constraint);
+                //labeledSingleHeadRules.push_back(false);
             }
-            aspc::Rule constraint(
-                {},
-                constraintLiterals,
-                {},
-                false);
-            constraint.setSupportAtom(0);
-            singleHeadForPredicate.addRule(constraint);
-            //labeledSingleHeadRules.push_back(false);
         }else if(rules.size() == 1){
             singleHeadForPredicate.addRule(program.getRule(rules[0]));
             //labeledSingleHeadRules.push_back(false);
@@ -911,7 +971,7 @@ void Rewriter::computeCompletion(){
     }
     std::cout << "Applying standard completion on:"<<std::endl;
     for(unsigned i=0; i<completionProgram.getRulesSize(); i++){
-        aspc::Rule rule = completionProgram.getRule(i);
+        aspc::Rule rule(completionProgram.getRule(i));
         if(rule.isConstraint()) {
             propagatorsProgram.addRule(rule);
             //labeledPropgatorRules.push_back(labeledSingleHeadRules[i]);

@@ -11,6 +11,7 @@
 #define FILE_OPT 3
 #define GROUNDING_OPT 4
 #define INSTANCE_OPT 5
+#define CHOICE_COMPILE_OPT 6
 
 const int UNKNOWN = -1;
 const int COMPILE = 0;
@@ -19,6 +20,7 @@ const std::string solver_folder = "glucose-4.2.1";
 class Exec{
     protected:
         std::vector<std::string> commands;
+        bool useNormals;
     public:
         virtual ~Exec(){
             
@@ -33,6 +35,9 @@ class Exec{
                 // }
             }
         }
+        void setUseNormals(bool value){
+          useNormals = value;
+        }
 };
 class Run: public Exec{
     virtual void build(const std::string& src,const std::string& file,std::string ground=""){
@@ -45,9 +50,9 @@ class Run: public Exec{
 class Compile: public Exec{
     virtual void build(const std::string& src,const std::string& file,std::string ground=""){
         commands=std::vector<std::string>({
-            // "make clean -C "+src+"/Compiler",
+            "make clean_compiled -C "+src+"/Compiler",
             // "make -j -C "+src+"/Compiler",
-            src+"/Compiler/output/main "+file+(ground!="" ? " "+ground : ""),
+            src+"/Compiler/output/main "+file+(ground!="" ? " "+ground : "") + (useNormals ? " --choice-rewrite" : ""),
             "make clean -C "+src+"/"+solver_folder+"/sources/simp",
             "make -j -C "+src+"/"+solver_folder+"/sources/simp"
         });
@@ -71,7 +76,7 @@ int main (int argc, char **argv)
   std::string grounding = "";
   std::string instance = "";
   int c;
-
+  bool rewriteChoiceRules = false;
   while (1)
     {
       static struct option long_options[] =
@@ -79,6 +84,7 @@ int main (int argc, char **argv)
           /* These options set a flag. */
           {"compile", no_argument,       0, COMPILE_OPT},
           {    "run", no_argument,       0, RUN_OPT},
+          {    "choice-rewrite", no_argument,       0, CHOICE_COMPILE_OPT},
           /* These options don’t set a flag.
              We distinguish them by their indices. */
           {      "source",  required_argument, 0, SOURCE_OPT},
@@ -130,7 +136,8 @@ int main (int argc, char **argv)
             }
             else exitError(mode,180,"Error parsing options: run and compile mode are mutually exclusive");
           break;
-
+        case CHOICE_COMPILE_OPT:
+          rewriteChoiceRules = true;
         case '?':
           /* getopt_long already printed an error message. */
           break;
@@ -150,6 +157,7 @@ int main (int argc, char **argv)
       std::cout << "Error launching ProASP in compile mode: "<<argv[0]<<" --compile --source path/to/proasp/home --propagators path/to/rules/for/compilation --grounding path/to/rules/for/grounding"<<std::endl;
     }else{
       std::cout << "Launching ProASP"<< std::endl;
+      mode->setUseNormals(rewriteChoiceRules);
       mode->build(src,mode_flag == RUN ? instance : file,grounding);
       mode->lauch();
       exit (0);

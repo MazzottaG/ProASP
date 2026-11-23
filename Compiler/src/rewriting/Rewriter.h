@@ -11,11 +11,12 @@ struct GroundedAggrData{
     std::vector<aspc::Rule> rules;
     aspc::Atom* aggId;
     bool isEqual;
+    bool isUnequal;
     bool genBound;
     aspc::Literal* aggSet;
 
-    GroundedAggrData(): aggId(NULL), aggSet(NULL), rules({}), isEqual(false), genBound(false){}
-    GroundedAggrData(const GroundedAggrData& other): aggId(NULL), isEqual(other.isEqual), genBound(other.genBound), aggSet(NULL), rules(other.rules){
+    GroundedAggrData(): aggId(NULL), aggSet(NULL), rules({}), isEqual(false), isUnequal(false), genBound(false){}
+    GroundedAggrData(const GroundedAggrData& other): aggId(NULL), isEqual(other.isEqual), isUnequal(other.isUnequal), genBound(other.genBound), aggSet(NULL), rules(other.rules){
         if(other.aggSet != NULL)
             setAggSet(*other.aggSet);
         if(other.aggId != NULL)
@@ -36,6 +37,7 @@ struct GroundedAggrData{
         if(other.aggId != NULL) setAggId(*other.aggId);
         
         isEqual=other.isEqual;
+        isUnequal=other.isUnequal;
         genBound=other.genBound;
 
         if(aggSet != NULL)
@@ -45,7 +47,9 @@ struct GroundedAggrData{
     }
 
     void setEqual(bool equal){this->isEqual=equal;}
+    void setUnequal(bool unequal){this->isUnequal=unequal;}
     bool isEqualAgg()const {return isEqual;}
+    bool isUnequalAgg()const {return isUnequal;}
 
     void setGenBound(bool gen){this->genBound=gen;}
     bool isBoundGen()const {return genBound;}
@@ -167,7 +171,7 @@ class Rewriter{
             inequalitiesWithAggregate.clear();
         }
         void addRuleAfterAggregate(){
-            afterAggregate.addRule(aspc::Rule(buildingHead,buildingBody,inequalities,inequalitiesWithAggregate,false,false));
+            afterAggregate.addRule(aspc::Rule(buildingHead,buildingBody,inequalities,inequalitiesWithAggregate,false,false,false));
             std::cout << "Rule after aggregate: ";afterAggregate.getRules().back().print();
         }
 

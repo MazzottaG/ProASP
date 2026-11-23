@@ -61,10 +61,10 @@ namespace aspc {
         static unsigned rulesCounter;
         static unsigned rulesCounterRewriting;
         static std::string inequalityStrings[];
-        Rule(const std::vector<aspc::Atom> & head, const std::vector<aspc::Literal> & body, const std::vector<ArithmeticRelation> & arithmeticRelation,const std::vector<aspc::ArithmeticRelationWithAggregate> & arithmeticRelationsWithAggregate, bool rewriting);
-        Rule(const std::vector<aspc::Atom> & head, const std::vector<aspc::Literal> & body, const std::vector<ArithmeticRelation> & arithmeticRelation,const std::vector<aspc::ArithmeticRelationWithAggregate> & arithmeticRelationsWithAggregate);
-        Rule(const std::vector<aspc::Atom> & head, const std::vector<aspc::Literal> & body, const std::vector<ArithmeticRelation> & inequalities, bool reorderBody);
-        Rule(const std::vector<aspc::Atom> & head, const std::vector<aspc::Literal> & body, const std::vector<ArithmeticRelation> & inequalities, const std::vector<ArithmeticRelationWithAggregate> & inequalitiesWithAggregate, bool reorderBody, bool rewriting);
+        Rule(const std::vector<aspc::Atom> & head, const std::vector<aspc::Literal> & body, const std::vector<ArithmeticRelation> & arithmeticRelation,const std::vector<aspc::ArithmeticRelationWithAggregate> & arithmeticRelationsWithAggregate, bool rewriting, bool fromChoice);
+        Rule(const std::vector<aspc::Atom> & head, const std::vector<aspc::Literal> & body, const std::vector<ArithmeticRelation> & arithmeticRelation,const std::vector<aspc::ArithmeticRelationWithAggregate> & arithmeticRelationsWithAggregate, bool fromChoice);
+        Rule(const std::vector<aspc::Atom> & head, const std::vector<aspc::Literal> & body, const std::vector<ArithmeticRelation> & inequalities, bool fromChoice);
+        Rule(const std::vector<aspc::Atom> & head, const std::vector<aspc::Literal> & body, const std::vector<ArithmeticRelation> & inequalities, const std::vector<ArithmeticRelationWithAggregate> & inequalitiesWithAggregate, bool reorderBody, bool rewriting, bool fromChoice);
         Rule(const Rule& other);
         bool equalBodyExpect(const Rule& other,const std::unordered_set<std::string>& forbidden);
         virtual ~Rule();
@@ -124,6 +124,8 @@ namespace aspc {
         void updateJoinTupleName(unsigned int formulaIndex,std::string joinTupleName);
         int getSupportAtom()const {return supportAtom;}
         void setSupportAtom(int id){supportAtom=id;}
+        bool isFromChoice()const;
+        void setFromChoice(bool);
         bool extractLabeledFormula(const std::vector<int>& formulaLabeling,std::unordered_map<std::string,int>& predToComponent,const std::vector<int>& sccLabel,int label,std::vector<bool>& extraction,std::unordered_set<std::string>& positiveEDBVar)const;
         int rewriteHead(const std::unordered_map<std::string,std::string>& remapped_predicates){
             std::string headPredicate(head[0].getPredicateName());
@@ -147,7 +149,7 @@ namespace aspc {
 
         std::unordered_map<unsigned, std::vector<const aspc::Formula*> > orderedBodyByStarters;
         std::unordered_map<unsigned, std::vector<unsigned> > orderedBodyIndexesByStarters;
-
+        bool fromChoice;
         int supportAtom;
     };
 }

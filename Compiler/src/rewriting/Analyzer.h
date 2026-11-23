@@ -101,6 +101,7 @@ class Analyzer{
 
         std::unordered_map<int,std::vector<int>> rulesBodyLabeling;
         std::unordered_map<int,int> remappingBodyLabeling;
+        std::unordered_set<std::string> predicatesDefinedOnlyInChoices;
 
         bool fullGrounding;
         bool foundLazyRule;

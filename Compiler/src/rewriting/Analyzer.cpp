@@ -48,6 +48,11 @@ void Analyzer::labelStratified(std::vector<int>& stratLabel,const std::vector<st
             std::vector<unsigned> rulesForPredicate = program.getRulesForPredicate(predicate);
             for(unsigned ruleId : rulesForPredicate){
                 const aspc::Rule* rule = &program.getRule(ruleId);
+                for(auto head : rule->getHead()){
+                    if(rule->isFromChoice()){
+                        stratified = false;
+                    }
+                }
                 const std::vector<const aspc::Formula*>* body = &rule->getFormulas();
                 for(unsigned fId = 0; fId<body->size(); fId++){
                     if(body->at(fId)->isLiteral()){
@@ -351,7 +356,7 @@ bool Analyzer::findMaximalDatalogBody(const aspc::Rule* rule,int ruleId,const st
         f->print();
         std::cout << "   as "<< (formulaLabeling[index] == DATALOG_FORMULA ? "EDB" : (formulaLabeling[index] == NON_DATALOG_FORMULA ? "IDB" : "Unknown"))<<std::endl;
     }
-    if(onlyDatalog){
+    if(onlyDatalog && ! rule->isFromChoice()){
         std::cout << "Only datalog" << std::endl;
         return true;
     }
@@ -506,7 +511,7 @@ void Analyzer::rewriteWithJoin(const aspc::Rule* rule,int ruleId,std::vector<int
     if(!defined){
         dependencyManager.addNewPredicate(joinPredicate);
         joinRuleData[joinPredicate]=edbBodyData;
-        datalogPrg.addRule(aspc::Rule({aspc::Atom(joinPredicate,joinRuleTerms[ruleId])},literalsEDB,ineqsEDB,aggregatesEDB,false,false));
+        datalogPrg.addRule(aspc::Rule({aspc::Atom(joinPredicate,joinRuleTerms[ruleId])},literalsEDB,ineqsEDB,aggregatesEDB,false,false, rule->isFromChoice()));
     }
     
     // literalsIDB.push_back(aspc::Literal(false,aspc::Atom(joinPredicate,joinRuleTerms[ruleId])));
@@ -514,7 +519,7 @@ void Analyzer::rewriteWithJoin(const aspc::Rule* rule,int ruleId,std::vector<int
     reorderedLiterals.push_back(aspc::Literal(false,aspc::Atom(joinPredicate,joinRuleTerms[ruleId])));
     for(unsigned i=0; i<literalsIDB.size(); i++) reorderedLiterals.push_back(aspc::Literal(literalsIDB[i]));
     std::vector<aspc::Atom> emptyhead;
-    eagerPrg.addRule(aspc::Rule(isConstraint ? emptyhead : rule->getHead(),reorderedLiterals,ineqsIDB,aggregatesIDB,false,false));
+    eagerPrg.addRule(aspc::Rule(isConstraint ? emptyhead : rule->getHead(),reorderedLiterals,ineqsIDB,aggregatesIDB,false,false, rule->isFromChoice()));
     eagerLabel.push_back(inputLabel[ruleId]);
 }
 
@@ -531,7 +536,14 @@ void Analyzer::buildPrograms(const std::vector<std::vector<int>>& scc,const std:
                 const aspc::Rule* rule = &program.getRule(ruleId);
                 if(sccLabel[componentId] == TYPE_EAGER){
                     std::vector<int> formulaLabeling(rule->getFormulas().size(),UNK_FORMULA_LABEL);
+                    bool ruleFromChoice = rule->isFromChoice();
                     bool fullDatalog = findMaximalDatalogBody(rule,ruleId,sccLabel,predToComponent,formulaLabeling);
+                    
+                    if(ruleFromChoice){
+                        fullDatalog = false;
+                        findMaximalDatalogBody(rule,ruleId,sccLabel,predToComponent,formulaLabeling);
+                    }else    
+                        fullDatalog = findMaximalDatalogBody(rule,ruleId,sccLabel,predToComponent,formulaLabeling);
 
                     if(fullDatalog)
                         datalogPrg.addRule(*rule);
@@ -561,8 +573,27 @@ void Analyzer::buildPrograms(const std::vector<std::vector<int>>& scc,const std:
                             }
                         }
                         if(datalogAggr || projection || datalogLit > 1){
-                            rewriteWithJoin(rule,ruleId,formulaLabeling,false);
-                            remappingBodyLabeling[eagerLabel.size()-1]=ruleId;
+                            bool toRewriteWithJoin = true;
+                            if(predicatesDefinedOnlyInChoices.count(predicate) > 0){
+                                bool bodyFullEdb = true;
+                                for(const aspc::Literal& lit : rule->getBodyLiterals()){
+                                    if(!isEDB(lit.getPredicateName())){
+                                        bodyFullEdb = false;
+                                    }
+                                }
+                                if(bodyFullEdb)
+                                    toRewriteWithJoin = false;
+                            }
+                            if(toRewriteWithJoin){
+                                rewriteWithJoin(rule,ruleId,formulaLabeling,false);
+                                remappingBodyLabeling[eagerLabel.size()-1]=ruleId;
+                                
+                            }else{
+                                joinRuleTerms.erase(ruleId);
+                                remappingBodyLabeling[eagerLabel.size()]=ruleId;
+                                eagerPrg.addRule(*rule);
+                                eagerLabel.push_back(inputLabel[ruleId]);
+                            }
                         }else{
                             joinRuleTerms.erase(ruleId);
                             remappingBodyLabeling[eagerLabel.size()]=ruleId;
@@ -675,8 +706,24 @@ void Analyzer::splitProgram(){
     
     sccTypeLabel=std::vector<int>(scc.size(),UNK_TYPE);
     labelType(sccTypeLabel,sccStratLabel,sccLazyLabel,scc);
+    
+    for(std::string pred: program.getPredicatesDefinedInChoices()){
+        bool predDefinedOnlyInChoice = true;
+        for(const aspc::Rule& rule : program.getRules()){
+            if(!rule.isConstraint() && !rule.isFromChoice() && rule.getHead().at(0).getPredicateName() == pred){
+                predDefinedOnlyInChoice = false;
+                break;
+            }
+        }
+        if(predDefinedOnlyInChoice)
+            predicatesDefinedOnlyInChoices.insert(pred);
+    }
 
-    buildPrograms(scc,sccTypeLabel,predicateToComponent);        
+    buildPrograms(scc,sccTypeLabel,predicateToComponent);
+    //add predicates defined in choice into eager program
+    for(std::string pred: program.getPredicatesDefinedInChoices()){
+        eagerPrg.addPredicateDefinedInChoiceRule(pred);
+    }
 }
 
 Analyzer::Analyzer(const aspc::Program& p,const std::vector<bool>& labels,bool fullgrounded):program(p),inputLabel(labels),fullGrounding(fullgrounded),foundLazyRule(false){
@@ -690,6 +737,7 @@ const aspc::Program& Analyzer::getLazy()const {return lazyPrg;}
 const std::unordered_map<std::string,unsigned> Analyzer::getPredicateToId()const {return dependencyManager.getPredicateToId();}
 const std::vector<std::string> Analyzer::getIdToPredicate()const {return dependencyManager.getIdToPredicate();}
 bool Analyzer::isEDB(std::string predicate){
+    if(program.getPredicatesDefinedInChoices().count(predicate) != 0) return false;
     if(joinRuleData.find(predicate) != joinRuleData.end()) return true;
     return predicateToComponent.count(predicate) && sccTypeLabel[predicateToComponent[predicate]] == TYPE_DATALOG;
 }

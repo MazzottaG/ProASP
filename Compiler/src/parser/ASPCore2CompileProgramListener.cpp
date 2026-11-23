@@ -19,6 +19,15 @@ std::set<int> ASPCore2CompileProgramListener::watchedTerminalTypes = std::set<in
     
 });
 
+std::set<int> ASPCore2CompileProgramListener::comparisonOperator = std::set<int>({
+    ASPCore2Parser::EQUAL,
+    ASPCore2Parser::UNEQUAL,
+    ASPCore2Parser::LESS,
+    ASPCore2Parser::LESS_OR_EQ,
+    ASPCore2Parser::GREATER,
+    ASPCore2Parser::GREATER_OR_EQ,    
+});
+
 std::set<int> ASPCore2CompileProgramListener::forbiddenTerminalTypes = std::set<int>({
     ASPCore2Parser::SLASH,
     ASPCore2Parser::BACK_SLASH,

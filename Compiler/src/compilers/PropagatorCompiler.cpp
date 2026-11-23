@@ -1876,7 +1876,7 @@ void PropagatorCompiler::compileEagerRuleWithCount(unsigned ruleId, std::ofstrea
     std::unordered_set<std::string> aggrIdVars;
     aspc::Literal(false,*aggrIdAtom).addVariablesToSet(aggrIdVars);
     for(unsigned k = 0; k < aggrSetPred->getAriety(); k++){
-        if(aggrSetPred->isVariableTermAt(k) && aggrIdVars.count(aggrSetPred->getTermAt(k))){
+        if(!aggrSetPred->isVariableTermAt(k) || aggrIdVars.count(aggrSetPred->getTermAt(k))){
             sharedVarAggrIDToAggrSetIndices.push_back(k);
         }
     }
@@ -1905,11 +1905,14 @@ void PropagatorCompiler::compileEagerRuleWithCount(unsigned ruleId, std::ofstrea
                 outfile << ind << "std::vector<int> sharedVar({";
                 if(bodyPred!=NULL){
                     bool first=true;
-                    for(unsigned i : sharedVarAggrIDToBodyIndices){
+                    for(unsigned i : sharedVarAggrIDToAggrSetIndices){
                         if(first)
                             first=false;
                         else outfile <<",";
-                        outfile << "starter->at("<<i<<")";
+                        if(!aggrSetPred->isVariableTermAt(i))
+                            outfile << "ConstantsManager::getInstance().mapConstant(\"" << aggrSetPred->getTermAt(i)<<"\")";
+                        else
+                            outfile << aggrSetPred->getTermAt(i);
                     }
                 }
 
@@ -2097,12 +2100,15 @@ void PropagatorCompiler::compileEagerRuleWithCount(unsigned ruleId, std::ofstrea
                 outfile << ind << "std::vector<int> sharedVar({";
                 if(bodyPred!=NULL){
                     bool first=true;
-                    for(unsigned i : sharedVarAggrIDToBodyIndices){
+                    for(unsigned i : sharedVarAggrIDToAggrSetIndices){
                         if(first)
                             first=false;
                         else outfile <<",";
-
-                        outfile << "currentTuple->at("<<i<<")";
+                        if(!aggrSetPred->isVariableTermAt(i))
+                            outfile << "ConstantsManager::getInstance().mapConstant(\"" << aggrSetPred->getTermAt(i)<<"\")";
+                        else
+                            outfile << aggrSetPred->getTermAt(i);
+                        // outfile << "currentTuple->at("<<i<<")";
                     }
                 }
                 outfile << "});\n";
@@ -2212,12 +2218,14 @@ void PropagatorCompiler::compileEagerRuleWithCount(unsigned ruleId, std::ofstrea
                 outfile << ind << "std::vector<int> sharedVar({";
                 if(bodyPred != NULL){
                     bool first=true;
-                    for(unsigned i : sharedVarAggrIDToBodyIndices){
+                    for(unsigned i : sharedVarAggrIDToAggrSetIndices){
                         if(first)
                             first=false;
                         else outfile <<",";
-
-                        outfile << "currentTuple->at("<<i<<")";
+                        if(!aggrSetPred->isVariableTermAt(i))
+                            outfile << "ConstantsManager::getInstance().mapConstant(\"" << aggrSetPred->getTermAt(i)<<"\")";
+                        else
+                            outfile << aggrSetPred->getTermAt(i);
                     }
                 }
                 outfile << "});\n";
@@ -2314,11 +2322,14 @@ void PropagatorCompiler::compileEagerRuleWithCount(unsigned ruleId, std::ofstrea
                 outfile << ind << "std::vector<int> sharedVar({";
                 if(bodyPred!=NULL){
                     bool first=true;
-                    for(unsigned i : sharedVarAggrIDToBodyIndices){
+                    for(unsigned i : sharedVarAggrIDToAggrSetIndices){
                         if(first)
                             first=false;
                         else outfile <<",";
-                        outfile << "currentTuple->at("<<i<<")";
+                        if(!aggrSetPred->isVariableTermAt(i))
+                            outfile << "ConstantsManager::getInstance().mapConstant(\"" << aggrSetPred->getTermAt(i)<<"\")";
+                        else
+                            outfile << aggrSetPred->getTermAt(i);
                     }
                 }
                 outfile << "});\n";
@@ -2467,7 +2478,7 @@ void PropagatorCompiler::compileEagerRuleWithSum(unsigned ruleId, std::ofstream&
     std::unordered_set<std::string> aggrIdVars;
     aspc::Literal(false,*aggrIdAtom).addVariablesToSet(aggrIdVars);
     for(unsigned k = 0; k < aggrSetPred->getAriety(); k++){
-        if(aggrSetPred->isVariableTermAt(k) && aggrIdVars.count(aggrSetPred->getTermAt(k))){
+        if(!aggrSetPred->isVariableTermAt(k) || aggrIdVars.count(aggrSetPred->getTermAt(k))){
             sharedVarAggrIDToAggrSetIndices.push_back(k);
         }
     }
@@ -2502,11 +2513,14 @@ void PropagatorCompiler::compileEagerRuleWithSum(unsigned ruleId, std::ofstream&
                 outfile << ind << "std::vector<int> sharedVar({";
                 if(bodyPred!=NULL){
                     bool first=true;
-                    for(unsigned i : sharedVarAggrIDToBodyIndices){
+                    for(unsigned i : sharedVarAggrIDToAggrSetIndices){
                         if(first)
                             first=false;
                         else outfile <<",";
-                        outfile << "starter->at("<<i<<")";
+                        if(!aggrSetPred->isVariableTermAt(i))
+                            outfile << "ConstantsManager::getInstance().mapConstant(\"" << aggrSetPred->getTermAt(i)<<"\")";
+                        else
+                            outfile << aggrSetPred->getTermAt(i);
                     }
                 }
 
@@ -2706,12 +2720,14 @@ void PropagatorCompiler::compileEagerRuleWithSum(unsigned ruleId, std::ofstream&
                 outfile << ind << "std::vector<int> sharedVar({";
                 if(bodyPred!=NULL){
                     bool first=true;
-                    for(unsigned i : sharedVarAggrIDToBodyIndices){
+                    for(unsigned i : sharedVarAggrIDToAggrSetIndices){
                         if(first)
                             first=false;
                         else outfile <<",";
-
-                        outfile << "currentTuple->at("<<i<<")";
+                        if(!aggrSetPred->isVariableTermAt(i))
+                            outfile << "ConstantsManager::getInstance().mapConstant(\"" << aggrSetPred->getTermAt(i)<<"\")";
+                        else
+                            outfile << aggrSetPred->getTermAt(i);
                     }
                 }
                 outfile << "});\n";
@@ -2820,12 +2836,14 @@ void PropagatorCompiler::compileEagerRuleWithSum(unsigned ruleId, std::ofstream&
                 outfile << ind << "std::vector<int> sharedVar({";
                 if(bodyPred != NULL){
                     bool first=true;
-                    for(unsigned i : sharedVarAggrIDToBodyIndices){
+                    for(unsigned i : sharedVarAggrIDToAggrSetIndices){
                         if(first)
                             first=false;
                         else outfile <<",";
-
-                        outfile << "currentTuple->at("<<i<<")";
+                        if(!aggrSetPred->isVariableTermAt(i))
+                            outfile << "ConstantsManager::getInstance().mapConstant(\"" << aggrSetPred->getTermAt(i)<<"\")";
+                        else
+                            outfile << aggrSetPred->getTermAt(i);
                     }
                 }
                 outfile << "});\n";
@@ -2932,11 +2950,14 @@ void PropagatorCompiler::compileEagerRuleWithSum(unsigned ruleId, std::ofstream&
                 outfile << ind << "std::vector<int> sharedVar({";
                 if(bodyPred!=NULL){
                     bool first=true;
-                    for(unsigned i : sharedVarAggrIDToBodyIndices){
+                    for(unsigned i : sharedVarAggrIDToAggrSetIndices){
                         if(first)
                             first=false;
                         else outfile <<",";
-                        outfile << "currentTuple->at("<<i<<")";
+                        if(!aggrSetPred->isVariableTermAt(i))
+                            outfile << "ConstantsManager::getInstance().mapConstant(\"" << aggrSetPred->getTermAt(i)<<"\")";
+                        else
+                            outfile << aggrSetPred->getTermAt(i);
                     }
                 }
                 outfile << "});\n";

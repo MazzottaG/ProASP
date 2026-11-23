@@ -6,37 +6,50 @@ void GrounderGenCompiler::printAddConstraintClause(std::vector<unsigned> order,b
     std::vector<int> formulaLabeling = originalRuleId >=0 ? prgAnalizer->getRemappedRuleBodyLabeling(originalRuleId) : std::vector<int>(rule->getFormulas().size(),prgAnalizer->NON_DATALOG_FORMULA);
 
     rule->addBodyVars(boundVars);
-    for(int index : order){
-        if(rule->getFormulas()[index]->isLiteral() && formulaLabeling[index] != prgAnalizer->DATALOG_FORMULA){
-            const aspc::Literal* lit = (const aspc::Literal*)rule->getFormulas()[index];
-            std::string sign = lit->isNegated() ? "":"-";
-            if(lit->isNegated()){
-                outfile << ind++ << "if(tuple_"<<index<<" != NULL){\n";
-                    outfile << ind << "clause.push_back(tuple_"<<index<<"->getId());\n";                        
-                outfile << --ind << "}\n";
-            }else{
-                outfile << ind << "clause.push_back(-tuple_"<<index<<"->getId());\n";                        
-            }
-        }else if(rule->getFormulas()[index]->containsAggregate()){
-            const aspc::ArithmeticRelationWithAggregate* aggr = (const aspc::ArithmeticRelationWithAggregate*)rule->getFormulas()[index];
-            std::string sign = aggr->isNegated() ? "":"-";
-            if(aggregateData.isEqualAgg()){
-                if(aggregateData.isBoundGen()){
-                    outfile << ind << "clause.push_back(-aggId->getId());\n";
-                    outfile << ind << "if(sum_index < subSetSums.size()-1) clause.push_back(nextAggId->getId());\n";
+    unsigned iterations = aggregateData.isUnequalAgg() ? 2 : 1;
+    for(unsigned i = 0; i < iterations; ++i){
+        for(int index : order){
+            if(rule->getFormulas()[index]->isLiteral() && formulaLabeling[index] != prgAnalizer->DATALOG_FORMULA){
+                const aspc::Literal* lit = (const aspc::Literal*)rule->getFormulas()[index];
+                std::string sign = lit->isNegated() ? "":"-";
+                if(lit->isNegated()){
+                    outfile << ind++ << "if(tuple_"<<index<<" != NULL){\n";
+                        outfile << ind << "clause.push_back(tuple_"<<index<<"->getId());\n";                        
+                    outfile << --ind << "}\n";
                 }else{
-                    outfile << ind << "clause.push_back(-aggId->getId());\n";
-                    outfile << ind << "clause.push_back(nextAggId->getId());\n";
+                    outfile << ind << "clause.push_back(-tuple_"<<index<<"->getId());\n";                        
                 }
-            } else outfile << ind << "clause.push_back("<<sign<<"aggId->getId());\n";
+            }else if(rule->getFormulas()[index]->containsAggregate()){
+                const aspc::ArithmeticRelationWithAggregate* aggr = (const aspc::ArithmeticRelationWithAggregate*)rule->getFormulas()[index];
+                std::string sign = aggr->isNegated() ? "":"-";
+                if(aggregateData.isEqualAgg()){
+                    if(aggregateData.isBoundGen()){
+                        outfile << ind << "clause.push_back(-aggId->getId());\n";
+                        outfile << ind << "if(sum_index < subSetSums.size()-1) clause.push_back(nextAggId->getId());\n";
+                    }else{
+                        outfile << ind << "clause.push_back(-aggId->getId());\n";
+                        outfile << ind << "clause.push_back(nextAggId->getId());\n";
+                    }
+                }else if(aggregateData.isUnequalAgg()){
+                    if(i == 0){
+                        outfile << ind << "clause.push_back(aggId->getId());\n";
+                    }else{
+                        outfile << ind << "clause.push_back(-nextAggId->getId());\n";
+                    }
+                }else{
+                    outfile << ind << "clause.push_back("<<sign<<"aggId->getId());\n";
+                }
+            }
         }
+        outfile << ind << "TupleFactory::getInstance().addNewInternalConstraint(clause);\n";
+        outfile << ind << "clause.clear();\n";
     }
-    outfile << ind << "TupleFactory::getInstance().addNewInternalConstraint(clause);\n";
-    outfile << ind << "clause.clear();\n";
 }
 void GrounderGenCompiler::printAddClause(std::vector<unsigned> order,bool starter){
-    std::string terms= !starter ? "" : "starter->getId()";
+    std::string terms1= !starter ? "" : "starter->getId()";
+    std::string terms2= !starter ? "" : "starter->getId()";
     bool missingAggId=false;
+    bool isUnequal = false;
     std::vector<int> formulaLabeling = originalRuleId >=0 ? prgAnalizer->getRemappedRuleBodyLabeling(originalRuleId) : std::vector<int>(rule->getFormulas().size(),prgAnalizer->NON_DATALOG_FORMULA);
     std::vector<int> clauseFormulas;
     std::cout << "Computing formula in body clause"<<std::endl;
@@ -53,10 +66,15 @@ void GrounderGenCompiler::printAddClause(std::vector<unsigned> order,bool starte
     for(int index : clauseFormulas){
         if(rule->getFormulas()[index]->isLiteral()){
             const aspc::Literal* lit = (const aspc::Literal*)rule->getFormulas()[index];
-            if(terms != "")
-                terms+=",";
             std::string sign = lit->isNegated() ? "-":"";
-            terms+=sign+"tuple_"+std::to_string(index)+"->getId()";
+            if(terms1 != "")
+                terms1+=",";
+            terms1+=sign+"tuple_"+std::to_string(index)+"->getId()";
+
+            if(terms2 != "")
+                terms2+=",";
+            terms2+=sign+"tuple_"+std::to_string(index)+"->getId()";
+
 
             if(lit->isNegated()){
                 outfile << ind++ << "if(tuple_"<<index<<" == NULL){\n";
@@ -93,18 +111,25 @@ void GrounderGenCompiler::printAddClause(std::vector<unsigned> order,bool starte
 
             if(aggregateData.isEqualAgg()){
                 if(aggregateData.isBoundGen()){
-                    if(terms != "") terms+=", ";
-                    terms+= "aggId->getId()";
+                    if(terms1 != "") terms1+=", ";
+                    terms1+= "aggId->getId()";
                     missingAggId=true;
                 }else{
-                    if(terms != "") terms+=", ";
-                    terms+= "aggId->getId(),-nextAggId->getId()";
+                    if(terms1 != "") terms1+=", ";
+                    terms1+= "aggId->getId(),-nextAggId->getId()";
                 }
-            }else{
+            }else if(aggregateData.isUnequalAgg()){
+                isUnequal = true;
+                if(terms1 != "") terms1+=", ";
+                    terms1+= "-aggId->getId()";
+                if(terms2 != "") terms2+=", ";
+                    terms2+= "nextAggId->getId()";
+            }
+            else{
                 std::string sign = aggr->isNegated() ? "-":"";
-                if(terms != "")
-                    terms+=",";
-                terms+=sign+"aggId->getId()";
+                if(terms1 != "")
+                    terms1+=",";
+                terms1+=sign+"aggId->getId()";
             }
         }
     }
@@ -117,10 +142,14 @@ void GrounderGenCompiler::printAddClause(std::vector<unsigned> order,bool starte
             outfile << ind << "Tuple* clauseTuple = starter;\n";
         }else{
             if(missingAggId){
-                outfile<<ind << "std::vector<int> terms({"<<terms<<"});\n";
+                outfile<<ind << "std::vector<int> terms({"<<terms1<<"});\n";
                 outfile << ind << "if(sum_index < subSetSums.size()-1) terms.push_back(-nextAggId->getId());\n";
                 outfile << ind << "Tuple* clauseTuple = TupleFactory::getInstance().addNewInternalClause(terms);\n";
-            }else outfile << ind << "Tuple* clauseTuple = TupleFactory::getInstance().addNewInternalClause({"<<terms<<"});\n";
+            }else{
+                outfile << ind << "Tuple* clauseTuple = TupleFactory::getInstance().addNewInternalClause({"<<terms1<<"});\n";
+                if(isUnequal)
+                    outfile << ind << "Tuple* clauseTuple2 = TupleFactory::getInstance().addNewInternalClause({"<<terms2<<"});\n";
+            }
             usedAuxInRuleCompletion=true;
         }
     }else{
@@ -129,10 +158,14 @@ void GrounderGenCompiler::printAddClause(std::vector<unsigned> order,bool starte
             outfile << ind << "Tuple* clauseTuple = tuple_"<<clauseFormulas[0]<<";\n";
         }else{
             if(missingAggId){
-                outfile<<ind << "std::vector<int> terms({"<<terms<<"});\n";
+                outfile<<ind << "std::vector<int> terms({"<<terms1<<"});\n";
                 outfile << ind << "if(sum_index < subSetSums.size()-1) terms.push_back(-nextAggId->getId());\n";
                 outfile << ind << "Tuple* clauseTuple = TupleFactory::getInstance().addNewInternalClause(terms);\n";
-            }else outfile << ind << "Tuple* clauseTuple = TupleFactory::getInstance().addNewInternalClause({"<<terms<<"});\n";
+            }else{
+                outfile << ind << "Tuple* clauseTuple = TupleFactory::getInstance().addNewInternalClause({"<<terms1<<"});\n";
+                if(isUnequal)
+                    outfile << ind << "Tuple* clauseTuple2 = TupleFactory::getInstance().addNewInternalClause({"<<terms2<<"});\n";
+            }
             usedAuxInRuleCompletion=true;
         }
     }
@@ -307,7 +340,21 @@ unsigned GrounderGenCompiler::compileAggregate(std::unordered_set<std::string>& 
             outfile << --ind << "}\n";
         outfile << --ind << "}\n";
         return closingPars;
-    }else{
+    }
+    else if(aggregateData.isUnequalAgg()){
+        std::string guardTerm = aggr->getGuard().getStringRep();
+        outfile << ind << "Tuple* aggId = TupleFactory::getInstance().addNewInternalTuple({" << aggIdTerms << (aggIdTerms != "" ? "," : "")<<guardTerm <<"},AuxMapHandler::getInstance().get_"<<aggregateData.aggId->getPredicateName()<<"(),true);\n";
+        outfile << ind << "Tuple* nextAggId = TupleFactory::getInstance().addNewInternalTuple({" << aggIdTerms << (aggIdTerms != "" ? "," : "")<<guardTerm <<"+1},AuxMapHandler::getInstance().get_"<<aggregateData.aggId->getPredicateName()<<"(),true);\n";
+        outfile << ind++ << "for(Tuple* aggIdTuple: {aggId,nextAggId}){\n";
+            outfile << ind << "auto res = aggIdTuple->setStatus(Undef);\n";
+            outfile << ind++ << "if(res.second){\n";
+                outfile << ind << "while (aggIdTuple->getId() >= solver->nVars()) {solver->setFrozen(solver->newVar(),true);}\n";
+                outfile << ind << "prop.first->second.addBound(aggIdTuple,aggIdTuple->at("<<aggregateData.aggId->getTerms().size()-1<<"),false);\n";
+            outfile << --ind << "}\n";
+        outfile << --ind << "}\n";
+        return 0;
+    }
+    else{
         std::string guardTerm = aggr->getGuard().getStringRep();
         if(aggr->isPlusOne()) guardTerm+="+1";
         outfile << ind << "Tuple* aggId = TupleFactory::getInstance().addNewInternalTuple({" << aggIdTerms << (aggIdTerms != "" ? "," : "")<<guardTerm <<"},AuxMapHandler::getInstance().get_"<<aggregateData.aggId->getPredicateName()<<"(),true);\n";
@@ -333,7 +380,12 @@ unsigned GrounderGenCompiler::printAggregateInitialization(std::unordered_set<st
     return closingPars;
 }
 void GrounderGenCompiler::printAddSP(int index){
-    outfile << ind << "TupleFactory::getInstance()."<<(usedAuxInRuleCompletion ? "addAuxForLiteral" : "addAtomForLiteral")<<"(head_"<<index<<"->getId(),clauseTuple->getId());\n";
+    if(prgAnalizer->getEager().getPredicatesDefinedInChoices().count(rule->getHead().at(0).getPredicateName())){
+        outfile << ind << "TupleFactory::getInstance()."<<(usedAuxInRuleCompletion ? "addAuxForLiteral" : "addAtomForLiteral")<<"(head_"<<index<<"->getId(),clauseTuple->getId(), true);\n";
+    }else
+        outfile << ind << "TupleFactory::getInstance()."<<(usedAuxInRuleCompletion ? "addAuxForLiteral" : "addAtomForLiteral")<<"(head_"<<index<<"->getId(),clauseTuple->getId());\n";
+    if(aggregateData.isUnequalAgg())
+        outfile << ind << "TupleFactory::getInstance()."<<"addAuxForLiteral" <<"(head_"<<index<<"->getId(),clauseTuple2->getId());\n";
 }
 
 int GrounderGenCompiler::printTrackedCheck(std::string tuplename){

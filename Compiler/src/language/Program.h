@@ -40,7 +40,7 @@
 #include <list>
 #include <set>
 #include "Rule.h"
-
+#include "ChoiceRule.h"
 
 namespace aspc {
 
@@ -51,6 +51,8 @@ namespace aspc {
         virtual ~Program();
         void newRule(){}
         void addRule(const aspc::Rule & r);
+        void addChoiceRule(const aspc::ChoiceRule& r);
+        void addPredicateDefinedInChoiceRule(std::string);
         void addFact(const aspc::Atom & f);
         void addPredicate(const std::string& name, const unsigned ariety);
         void addAggregatePredicate(const std::string& name, const unsigned ariety);
@@ -59,10 +61,14 @@ namespace aspc {
         const std::set< std::pair<std::string, unsigned> >& getPredicates() const;
         const std::set< std::pair<std::string, unsigned> >& getAggregatePredicates() const;
         unsigned getRulesSize() const;
+        unsigned getChoiceRulesSize() const;
         const std::vector<aspc::Rule>& getRules() const;
+        const std::vector<aspc::ChoiceRule>& getChoiceRules() const;
+        bool containsChoice() const;
         std::vector<aspc::Rule>& getRules();
         unsigned getFactsSize() const;
         const aspc::Rule & getRule(unsigned i) const;
+        const aspc::ChoiceRule& getChoiceRule(unsigned i) const;
         const aspc::Atom & getFact(unsigned i) const;
         const std::vector<aspc::Atom> & getFacts() const;
         const std::map<RuleType, std::map<std::string, std::set<unsigned> > > & getRulesByType() const;
@@ -70,7 +76,7 @@ namespace aspc {
         void clearFacts();
         void print() const;
         std::set<std::string> getBodyPredicates() const;
-        std::set<std::string> getHeadPredicates() const;
+        std::unordered_set<std::string> getHeadPredicates() const;
         bool hasConstraintWithLiteral()const;
         bool hasConstraint() const;
         bool clear();
@@ -80,6 +86,7 @@ namespace aspc {
         bool isStratified()const { return this->stratified;}
         const std::vector<unsigned>& getRulesForPredicate(std::string predicate);
         bool isHeadPredicate(std::string predicate);
+        const std::unordered_set<std::string>& getPredicatesDefinedInChoices() const;
         void printRuleForComponent()const;
         void findPredicates(std::unordered_set<std::string>& preds)const{
             for(const aspc::Rule& r : rules){
@@ -106,6 +113,14 @@ namespace aspc {
                     preds.insert(a.getPredicateName());
                 }
             }
+            for(const aspc::ChoiceRule& r : choiceRules){
+                for(const aspc::ChoiceElement& elem : r.getHead()){
+                    preds.insert(elem.getAtom().getPredicateName());
+                    for(const aspc::Literal& lit : elem.getBodyLiterals()){
+                        preds.insert(lit.getPredicateName());
+                    }
+                }
+            }
         }
         
         int rewriteHead(std::string predicate,int ruleId, const std::unordered_map<std::string,std::string>& remapped_predicates){
@@ -114,12 +129,14 @@ namespace aspc {
         }
     private:
         std::vector<aspc::Rule> rules; //only rules are compiled
+        std::vector<aspc::ChoiceRule> choiceRules; //only the program constructed from aspc listener contains choices
         std::vector<aspc::Atom> facts; //not compiled
         std::set< std::pair<std::string, unsigned> > predicates;
         std::set< std::pair<std::string, unsigned> > aggregatePredicates;
 
         std::unordered_map<std::string, std::vector<unsigned> > rulesForPredicate;
         std::map<RuleType, std::map<std::string, std::set<unsigned> > > rules_by_type;
+        std::unordered_set<std::string> predicatesDefinedInChoices;
         bool stratified;
         bool tight;
     };

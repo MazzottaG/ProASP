@@ -43,9 +43,12 @@ using namespace std;
 
 aspc::Program::Program():rules({}),facts({}),predicates({}),aggregatePredicates({}),rulesForPredicate({}),rules_by_type({}),stratified(true),tight(true) {
 }
-aspc::Program::Program(const aspc::Program& p):facts(p.facts),predicates(p.predicates),aggregatePredicates(p.aggregatePredicates),stratified(p.stratified),tight(p.tight){
+aspc::Program::Program(const aspc::Program& p):facts(p.facts),predicates(p.predicates),aggregatePredicates(p.aggregatePredicates),stratified(p.stratified),tight(p.tight),predicatesDefinedInChoices(p.predicatesDefinedInChoices){
     for(int i=0;i<p.getRulesSize();i++){
         addRule(p.getRule(i));
+    }
+    for(int i=0;i<p.getChoiceRulesSize();i++){
+        addChoiceRule(p.getChoiceRule(i));
     }
     for(auto pair: p.rulesForPredicate){
         rulesForPredicate[pair.first]=pair.second;
@@ -53,6 +56,7 @@ aspc::Program::Program(const aspc::Program& p):facts(p.facts),predicates(p.predi
     for(auto pair: p.rules_by_type){
         rules_by_type[pair.first]=pair.second;
     }
+    // std::cout <<"COPY CONSTRUCTOR CALLED - CHOICE RULES SIZE " << p.getChoiceRules().size() << " " << getChoiceRules().size()<< "\n";
 }
 
 aspc::Program::~Program() {
@@ -61,6 +65,11 @@ aspc::Program::~Program() {
 bool aspc::Program::isHeadPredicate(std::string predicate){
     return rulesForPredicate.find(predicate) != rulesForPredicate.end();
 }
+
+const std::unordered_set<std::string>& aspc::Program::getPredicatesDefinedInChoices() const{
+    return predicatesDefinedInChoices;
+}
+
 const std::vector<unsigned>& aspc::Program::getRulesForPredicate(std::string predicate) {
     return rulesForPredicate[predicate];
 }
@@ -75,6 +84,17 @@ void aspc::Program::addRule(const Rule & r) {
 
 }
 
+void aspc::Program::addChoiceRule(const aspc::ChoiceRule& r){
+    for(const aspc::ChoiceElement& elem : r.getHead()){
+        predicatesDefinedInChoices.insert(elem.getAtom().getPredicateName());
+    }
+    choiceRules.push_back(r);   
+}
+
+void aspc::Program::addPredicateDefinedInChoiceRule(std::string pred){
+    predicatesDefinedInChoices.insert(pred);
+}
+
 void aspc::Program::addFact(const aspc::Atom & r) {
     facts.push_back(r);
 }
@@ -83,12 +103,28 @@ const aspc::Rule & aspc::Program::getRule(unsigned i) const {
     return rules[i];
 }
 
+const aspc::ChoiceRule& aspc::Program::getChoiceRule(unsigned i) const{
+    return choiceRules[i];
+}
+
 unsigned aspc::Program::getRulesSize() const {
     return rules.size();
 }
 
+unsigned aspc::Program::getChoiceRulesSize() const{
+    return choiceRules.size();
+}
+
 const vector<aspc::Rule>& aspc::Program::getRules() const{
     return rules;
+}
+
+const std::vector<aspc::ChoiceRule>& aspc::Program::getChoiceRules() const{
+    return choiceRules;
+}
+
+bool aspc::Program::containsChoice() const{
+    return choiceRules.size() > 0;
 }
 
 vector<aspc::Rule>& aspc::Program::getRules() {
@@ -131,6 +167,8 @@ void aspc::Program::print() const {
     for (const Rule & rule : rules) {
         rule.print();
     }
+    for(const ChoiceRule& rule : choiceRules)
+        rule.print();
 }
 
 void aspc::Program::addPredicate(const string& name, const unsigned ariety) {
@@ -169,14 +207,19 @@ set<string> aspc::Program::getBodyPredicates() const {
     return res;
 }
 
-set<string> aspc::Program::getHeadPredicates() const {
+unordered_set<string> aspc::Program::getHeadPredicates() const {
 
-    set<string> res;
+    unordered_set<string> res;
     for(const Rule & r:rules) {
        for(const Atom & a: r.getHead()) {
            res.insert(a.getPredicateName());
        }
     }
+    for(const ChoiceRule& r : choiceRules){
+        for(const aspc::ChoiceElement& elem : r.getHead()){
+            res.insert(elem.getAtom().getPredicateName());
+        }        
+    }    
     return res;
 }
 bool aspc::Program::hasConstraintWithLiteral() const{

@@ -11,6 +11,7 @@
 #include "../parser/ASPCore2Parser.h"
 #include "../parser/ASPCore2CompileProgramListener.h"
 #include "DependencyManager.h"
+#include "../rewriting/ChoiceRewriter.h"
 
 class ProgramReader{
 
@@ -23,14 +24,16 @@ class ProgramReader{
         const std::unordered_set<std::string>& getOriginalPredicates(){ return originalPredicates;}
         bool isFullGrounding()const {return fullGrounding;}
         void rewriteRuleForComponent();
+        const ChoiceRewriter& getChoiceRewriter() const;
         std::pair<std::unordered_map<std::string,std::string>,bool> getVariableMapping(const aspc::Rule* r1,const aspc::Rule* r2)const;
 
 private:
 
         bool label;
         bool fullGrounding;
+        bool rewriteChoiceRules;
         ASPCore2CompileProgramListener listener;
-        std::vector<bool> ruleLabel;
+        std::vector<bool> ruleLabels;
         std::unordered_set<std::string> originalPredicates;
         std::unordered_set<std::string> toGroundPredicates;
 		std::unordered_set<std::string> propagatorPredicates;
@@ -42,7 +45,7 @@ private:
 
         aspc::Program rewrittenProgram;
         std::vector<bool> rewrittenRuleLabel;
-
+        ChoiceRewriter choiceRewriter;
 
 };
 #endif

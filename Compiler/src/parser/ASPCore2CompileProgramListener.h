@@ -20,23 +20,28 @@ class  ASPCore2CompileProgramListener : public ASPCore2BaseListener {
   private:
     static std::set<int> watchedTerminalTypes;
     static std::set<int> forbiddenTerminalTypes;
-
+    static std::set<int> comparisonOperator;
     std::vector<std::string> terminals;
     std::vector<aspc::Atom> buildingAtoms;
     std::vector<bool> buildingAtomsPolarity;
     std::vector<aspc::ArithmeticRelation> buildingRels;
     std::vector<aspc::ArithmeticExpression> buildingExpression;
     std::vector<aspc::ArithmeticRelationWithAggregate> buildingAggregates;
+    aspc::ComparisonType comparisonType; 
     aspc::ComparisonType aggrComparison;
+    aspc::ComparisonType leftGuardChoiceComparisonType;
+    aspc::ComparisonType rightGuardChoiceComparisonType;
     aspc::ArithmeticExpression guard;
-    bool lowerGuard;
-    bool upperGuard;
+    aspc::ArithmeticExpression leftGuardChoice;
+    aspc::ArithmeticExpression rightGuardChoice;
+    bool guardIsLeft;
+
     bool equalAggregate;
-    
     aspc::Program program;
     std::vector<aspc::Atom> head;
     std::unordered_set<std::string> headVars;
     std::vector<aspc::Literal> bodyLiterals;
+    std::vector<aspc::ChoiceElement> choiceElements;
     std::unordered_set<std::string> positiveBodyVars;
     std::unordered_set<std::string> negativeBodyVars;
     GraphWithTarjanAlgorithm dg;
@@ -46,6 +51,7 @@ class  ASPCore2CompileProgramListener : public ASPCore2BaseListener {
     std::vector<std::string> predicateNames;
     std::vector<std::string> freshvariables;
     
+    bool buildingChoice;
     bool addedAtom;
     int atomStart;
     bool naf;
@@ -73,34 +79,55 @@ public:
       readingAggregate=false;
       aggregateStartIndex=-1;
       guardStartIndex=-1;
+      guardIsLeft = false;
   }
   
   bool checkTight(){
     bool tight = true;
     auto scc = pdg.SCC();
     for(int component = scc.size()-1; component>=0; component--){
-        if(scc[component].size() > 1){
-            tight=false;
-            break;
+      if(scc[component].size() > 1){
+          tight=false;
+          break;
+      }
+      int currentPredId = scc[component][0];
+      if(tight && scc[component].size() == 1){
+        if(program.isHeadPredicate(predicateNames[currentPredId])){
+          auto rules = program.getRulesForPredicate(predicateNames[currentPredId]);
+          for(unsigned ruleIndex: rules){
+            const aspc::Rule* rule = &program.getRule(ruleIndex);
+                const std::vector<aspc::Literal>& body = rule->getBodyLiterals();
+              for(int i=0;i<body.size();i++){
+                if(!body[i].isNegated() && predicateNames[currentPredId] == body[i].getPredicateName()){
+                    tight=false;
+                    break;
+                }
+              }
+              if(!tight) break;                    
+          }
         }
-        if(tight && scc[component].size() == 1){
-            int currentPredId = scc[component][0];
-            if(program.isHeadPredicate(predicateNames[currentPredId])){
-              auto rules = program.getRulesForPredicate(predicateNames[currentPredId]);
-              for(unsigned ruleIndex: rules){
-                const aspc::Rule* rule = &program.getRule(ruleIndex);
-                    const std::vector<aspc::Literal>& body = rule->getBodyLiterals();
-                  for(int i=0;i<body.size();i++){
-                    if(!body[i].isNegated() && predicateNames[currentPredId] == body[i].getPredicateName()){
-                        tight=false;
-                        break;
-                    }
-                  }
-                  if(!tight) break;                    
+
+        const std::vector<aspc::ChoiceRule>& choiceRules = program.getChoiceRules();
+        for(const aspc::ChoiceRule& rule: choiceRules){
+          for(const aspc::ChoiceElement& elem : rule.getHead()){
+            if(predicateId[elem.getAtom().getPredicateName()] == currentPredId){
+              for(const aspc::Literal& lit : elem.getBodyLiterals()){
+                if(!lit.isNegated() && predicateNames[currentPredId] == lit.getPredicateName()){
+                  tight=false;
+                  break;
+                }
+              }
+              for(const aspc::Literal& lit : rule.getBodyLiterals()){
+                if(!lit.isNegated() && predicateNames[currentPredId] == lit.getPredicateName()){
+                  tight=false;
+                  break;
+                }
               }
             }
+          }
         }
-        if(!tight) break;                    
+      }
+      if(!tight) break;                    
     }
     return tight;
   }
@@ -113,6 +140,8 @@ public:
   
   bool checkStratified(){
     bool stratified = true;
+    if(program.containsChoice())
+      return false;
     auto scc = dg.SCC();
     for(int component = scc.size()-1; component>=0; component--){
       std::unordered_set<int> componentSet;
@@ -156,6 +185,7 @@ public:
     // program.newRule();
     // currentRule = program.lastRule();
     freshvariables.clear();
+    buildingChoice = false;
   }
   virtual void exitSimple_rule(ASPCore2Parser::Simple_ruleContext * /*ctx*/) override {
     // std::cout << "Found Body Literals: ";
@@ -167,29 +197,47 @@ public:
     // std::cout << "Found Body Aggregates: ";
     // for(aspc::ArithmeticRelationWithAggregate body : buildingAggregates) body.print(); 
     // std::cout << std::endl;
-    aspc::Rule rule(head,bodyLiterals,buildingRels,buildingAggregates,false,false);
-    bool safe = true;
-    for(int i=0;i<buildingRels.size();i++){
-      if(!buildingRels[i].isBoundedRelation(positiveBodyVars)){
-        safe=false;
-      }
-    }
-    if(safe)
-      for(std::unordered_set<std::string> vars : {negativeBodyVars,headVars}){
-        for(std::string var : vars){
-          if(!positiveBodyVars.count(var)){
-            safe=false;
-            break;
-          }
+    if(!buildingChoice){
+      aspc::Rule rule(head,bodyLiterals,buildingRels,buildingAggregates,false,false);
+      bool safe = true;
+      for(int i=0;i<buildingRels.size();i++){
+        if(!buildingRels[i].isBoundedRelation(positiveBodyVars)){
+          safe=false;
         }
-        if(!safe) break;
       }
-    if(!safe){
-      std::cout << "Safety Error :";rule.print();
-      exit(180);
+      if(safe)
+        for(std::unordered_set<std::string> vars : {negativeBodyVars,headVars}){
+          for(std::string var : vars){
+            if(!positiveBodyVars.count(var)){
+              safe=false;
+              break;
+            }
+          }
+          if(!safe) break;
+        }
+      if(!safe){
+        std::cout << "Safety Error :";rule.print();
+        exit(180);
+      }
+      addDependencies(rule);
+      program.addRule(rule);
+      std::cout << "parsed rule: ";
+      program.getRule(program.getRulesSize()-1).print();
+      
     }
-    addDependencies(rule);    
-    program.addRule(rule);
+    else{
+      aspc::ChoiceRule rule(leftGuardChoice, rightGuardChoice, choiceElements, bodyLiterals, buildingRels, leftGuardChoiceComparisonType, rightGuardChoiceComparisonType);
+      choiceElements.clear();
+      program.addChoiceRule(rule);
+      addDependencies(rule);
+      std::cout << "parsed Choice rule ";
+      rule.print();
+      if(!rule.isSafe()){
+        std::cout << "Safety Error :";
+        rule.print();
+        exit(180);
+      }
+    }
     buildingAtoms.clear();
     buildingExpression.clear();
     buildingRels.clear();
@@ -197,7 +245,7 @@ public:
     head.clear();
     buildingAtomsPolarity.clear();
     bodyLiterals.clear();
-    std::cout << "parsed rule ";rule.print();
+  
   }
   void addDependencies(aspc::Rule& r) {
     if(!r.isConstraint()){
@@ -214,21 +262,51 @@ public:
       }
     }
   }
+
+  void addDependencies(aspc::ChoiceRule& r) {
+    std::cout << "Adding dependencies for choice rule\n";
+    std::vector<unsigned> headPredicateIds;
+    for(const aspc::ChoiceElement& elem : r.getHead()){
+      unsigned headPredicateId = predicateId[elem.getAtom().getPredicateName()];
+      headPredicateIds.push_back(headPredicateId);
+      
+      for(const aspc::Literal& literal : elem.getBodyLiterals()){
+        unsigned bodyPredId = predicateId[literal.getAtom().getPredicateName()];
+        if(!literal.isNegated()){
+          std::cout <<"Added dependency: <" << bodyPredId << ", " << headPredicateId << ">\n";
+          pdg.addEdge(bodyPredId,headPredicateId);
+        }
+        dg.addEdge(bodyPredId,headPredicateId);
+      }
+    
+    }
+    for(const aspc::Literal& literal : r.getBodyLiterals()){
+      unsigned bodyPredId = predicateId[literal.getAtom().getPredicateName()];
+      for(unsigned i = 0; i < headPredicateIds.size(); ++i){
+        unsigned headPredicateId = headPredicateIds.at(i);
+        if(!literal.isNegated()){
+          std::cout <<"Added dependency: <" << bodyPredId << ", " << headPredicateId << ">\n";
+          pdg.addEdge(bodyPredId,headPredicateId);
+        }
+        dg.addEdge(bodyPredId,headPredicateId);
+      }
+    }
+  }
+
   virtual void enterHead(ASPCore2Parser::HeadContext * /*ctx*/) override { 
     buildingAtoms.clear();
     buildingExpression.clear();
     buildingRels.clear();
+    headVars.clear();
     head.clear();
 
   }
-  virtual void exitHead(ASPCore2Parser::HeadContext * /*ctx*/) override { 
-    if(buildingAtoms.size() > 1){
-      std::cout << "Disjunctive rules not supported yet"<<std::endl;
-      exit(180);
-    }
-    for(int i=0; i<buildingAtoms.size();i++){
-      head.push_back(aspc::Atom(buildingAtoms[i]));
-      aspc::Literal(false,head.back()).addVariablesToSet(headVars);
+  virtual void exitHead(ASPCore2Parser::HeadContext * /*ctx*/) override {
+    if(!buildingChoice){
+      for(int i=0; i<buildingAtoms.size();i++){
+        head.push_back(aspc::Atom(buildingAtoms[i]));
+        aspc::Literal(false,head.back()).addVariablesToSet(headVars);
+      }
     }
   }
 
@@ -243,20 +321,22 @@ public:
       bodyLiterals.push_back(aspc::Literal(buildingAtomsPolarity[i],buildingAtoms[i]));
       bodyLiterals.back().addVariablesToSet(buildingAtomsPolarity[i] ? negativeBodyVars : positiveBodyVars);
     }
-    unsigned size=0;
-    do{
-      size=positiveBodyVars.size();
-      for(int i=0;i<buildingRels.size();i++){
-        if(buildingRels[i].isBoundedValueAssignment(positiveBodyVars)){
-          positiveBodyVars.insert(buildingRels[i].getAssignedVariable(positiveBodyVars));
+    if(!buildingChoice){
+      unsigned size=0;
+      do{
+        size=positiveBodyVars.size();
+        for(int i=0;i<buildingRels.size();i++){
+          if(buildingRels[i].isBoundedValueAssignment(positiveBodyVars)){
+            positiveBodyVars.insert(buildingRels[i].getAssignedVariable(positiveBodyVars));
+          }
         }
-      }
-      for(int i=0;i<buildingAggregates.size();i++){
-        if(buildingAggregates[i].isBoundedValueAssignment(positiveBodyVars)){
-          positiveBodyVars.insert(buildingAggregates[i].getAssignedVariable(positiveBodyVars));
+        for(int i=0;i<buildingAggregates.size();i++){
+          if(buildingAggregates[i].isBoundedValueAssignment(positiveBodyVars)){
+            positiveBodyVars.insert(buildingAggregates[i].getAssignedVariable(positiveBodyVars));
+          }
         }
-      }
-    }while (size!=positiveBodyVars.size());
+      }while (size!=positiveBodyVars.size());
+    }
   }
 
   virtual void enterWeight_at_levels(ASPCore2Parser::Weight_at_levelsContext * /*ctx*/) override { }
@@ -277,23 +357,66 @@ public:
   virtual void exitConjunction(ASPCore2Parser::ConjunctionContext * /*ctx*/) override { 
   }
 
-  virtual void enterChoice_atom(ASPCore2Parser::Choice_atomContext * /*ctx*/) override { }
+  virtual void enterChoice_atom(ASPCore2Parser::Choice_atomContext * /*ctx*/) override {
+    buildingChoice = true;
+    leftGuardChoice = aspc::ArithmeticExpression();
+    rightGuardChoice = aspc::ArithmeticExpression();
+    leftGuardChoiceComparisonType = aspc::ComparisonType::UNASSIGNED;
+    rightGuardChoiceComparisonType = aspc::ComparisonType::UNASSIGNED; 
+  }
   virtual void exitChoice_atom(ASPCore2Parser::Choice_atomContext * /*ctx*/) override { }
 
-  virtual void enterLower_guard(ASPCore2Parser::Lower_guardContext * /*ctx*/) override { }
-  virtual void exitLower_guard(ASPCore2Parser::Lower_guardContext * /*ctx*/) override { }
+  virtual void enterLower_guard(ASPCore2Parser::Lower_guardContext * /*ctx*/) override {
+    guardIsLeft = true;
+    startGuard();
+  }
 
-  virtual void enterUpper_guard(ASPCore2Parser::Upper_guardContext * /*ctx*/) override { }
-  virtual void exitUpper_guard(ASPCore2Parser::Upper_guardContext * /*ctx*/) override { }
+  virtual void exitLower_guard(ASPCore2Parser::Lower_guardContext * /*ctx*/) override {
+    endGuard();
+  }
 
-  virtual void enterChoice_elements(ASPCore2Parser::Choice_elementsContext * /*ctx*/) override { }
+  virtual void enterUpper_guard(ASPCore2Parser::Upper_guardContext * /*ctx*/) override { 
+    guardIsLeft = false;
+    startGuard();
+  }
+
+  virtual void exitUpper_guard(ASPCore2Parser::Upper_guardContext * /*ctx*/) override {
+    endGuard();
+  }
+
+  virtual void enterChoice_elements(ASPCore2Parser::Choice_elementsContext * /*ctx*/) override {}
   virtual void exitChoice_elements(ASPCore2Parser::Choice_elementsContext * /*ctx*/) override { }
 
-  virtual void enterChoice_element(ASPCore2Parser::Choice_elementContext * /*ctx*/) override { }
-  virtual void exitChoice_element(ASPCore2Parser::Choice_elementContext * /*ctx*/) override { }
+  virtual void enterChoice_element(ASPCore2Parser::Choice_elementContext * /*ctx*/) override {  }
+
+  virtual void exitChoice_element(ASPCore2Parser::Choice_elementContext * /*ctx*/) override {
+    assert(buildingAtoms.size() == buildingAtomsPolarity.size());
+    for(int i=0; i<buildingAtoms.size();i++){
+      bodyLiterals.push_back(aspc::Literal(buildingAtomsPolarity[i],buildingAtoms[i]));
+    }
+    choiceElements.push_back(aspc::ChoiceElement(head.at(0), bodyLiterals, buildingRels));
+    if(buildingAggregates.size() > 0){
+      std::cout <<"Aggregates in choice rules are not supported\n";
+    }
+    buildingAtoms.clear();
+    buildingExpression.clear();
+    buildingRels.clear();
+    positiveBodyVars.clear();
+    negativeBodyVars.clear();
+    buildingAtomsPolarity.clear();
+    bodyLiterals.clear();
+  }
 
   virtual void enterChoice_element_atom(ASPCore2Parser::Choice_element_atomContext * /*ctx*/) override { }
-  virtual void exitChoice_element_atom(ASPCore2Parser::Choice_element_atomContext * /*ctx*/) override { }
+  virtual void exitChoice_element_atom(ASPCore2Parser::Choice_element_atomContext * /*ctx*/) override {
+    head.clear();
+    head.push_back(aspc::Atom(buildingAtoms[0]));
+    //do the same as enterBody
+    buildingAtoms.clear();
+    buildingAtomsPolarity.clear();
+    buildingExpression.clear();
+    bodyLiterals.clear();
+  }
 
   virtual void enterChoice_elements_literals(ASPCore2Parser::Choice_elements_literalsContext * /*ctx*/) override { }
   virtual void exitChoice_elements_literals(ASPCore2Parser::Choice_elements_literalsContext * /*ctx*/) override { }
@@ -444,7 +567,7 @@ public:
   virtual void exitTerm(ASPCore2Parser::TermContext * /*ctx*/) override { }
 
   virtual void enterExpr(ASPCore2Parser::ExprContext * /*ctx*/) override {
-    if(guardStartIndex > 0) isGuardExpression=true;
+    if(guardStartIndex >= 0) isGuardExpression=true;
     expNestingLevel++;
     if(expNestingLevel>1){
       std::cout << "Error parsing expression: accepted format X+Y where X and Y are either symbolic or numberic terms"<<std::endl;
@@ -454,7 +577,7 @@ public:
       lastTerminalSize = terminals.size();
     }
   }
-  virtual void exitExpr(ASPCore2Parser::ExprContext * /*ctx*/) override { 
+  virtual void exitExpr(ASPCore2Parser::ExprContext * /*ctx*/) override {
       expNestingLevel--;
       if(expNestingLevel < 0){
         int expLength = terminals.size()-lastTerminalSize;
@@ -545,7 +668,6 @@ public:
     for(std::string t : terminals) std::cout << " " << t;
     std::cout << std::endl;
     std::cout << "Exiting from lower_guard_compare_aggregate"<<std::endl;
-    lowerGuard=true;
 
   }
 
@@ -555,12 +677,9 @@ public:
     for(std::string t : terminals) std::cout << " " << t;
     std::cout << std::endl;
     std::cout << "Exiting from upper_guard_compare_aggregate"<<std::endl;
-    upperGuard=true;
   }
 
   virtual void enterCompare_aggregate(ASPCore2Parser::Compare_aggregateContext * /*ctx*/) override { 
-    lowerGuard=false;
-    upperGuard=false;
     equalAggregate=true;
   }
   virtual void exitCompare_aggregate(ASPCore2Parser::Compare_aggregateContext * /*ctx*/) override { }
@@ -568,7 +687,9 @@ public:
   virtual void enterLower_guard_leftward_left_aggregate(ASPCore2Parser::Lower_guard_leftward_left_aggregateContext * /*ctx*/) override { }
   virtual void exitLower_guard_leftward_left_aggregate(ASPCore2Parser::Lower_guard_leftward_left_aggregateContext * /*ctx*/) override { }
 
-  virtual void enterLeftward_left_aggregate(ASPCore2Parser::Leftward_left_aggregateContext * /*ctx*/) override { }
+  virtual void enterLeftward_left_aggregate(ASPCore2Parser::Leftward_left_aggregateContext * /*ctx*/) override {
+    guardIsLeft = true;
+  }
   virtual void exitLeftward_left_aggregate(ASPCore2Parser::Leftward_left_aggregateContext * /*ctx*/) override { }
 
   virtual void enterLeft_aggregate(ASPCore2Parser::Left_aggregateContext * /*ctx*/) override { std::cout << "Error: leftward not supported yet. Coming soon ..."<<std::endl; exit(180); }
@@ -581,29 +702,43 @@ public:
   virtual void exitRightward_left_aggregate(ASPCore2Parser::Rightward_left_aggregateContext * /*ctx*/) override { }
 
   void startGuard(){
-    guardStartIndex=terminals.size(); 
+    guardStartIndex = terminals.size();
     isGuardExpression=false;
-    std::cout << "start reading guard"<<std::endl;
+    comparisonType = aspc::ComparisonType::UNASSIGNED;
   }
   void endGuard(){
-    aggrComparison = aspc::ArithmeticRelation::string2ComparisonType[terminals[guardStartIndex]];
+    if(!guardIsLeft)
+      comparisonType = aspc::ArithmeticRelation::string2ComparisonType[terminals[guardStartIndex]];
     if(isGuardExpression) {
       aspc::ArithmeticExpression* exp = &buildingExpression.back();
-      std::cout << "Found expression guard ";
       guard.copy(exp);
       buildingExpression.pop_back();
-      std::cout << guard.getStringRep();
     }else{
       // terminals should be of the form ...... operator guard
       assert(terminals.size()-guardStartIndex == 2);
-      aspc::ArithmeticExpression exp(terminals.back());
-      std::cout << "Found term guard ";
-      guard.copy(&exp);
-      std::cout << guard.getStringRep();
+      if(guardIsLeft){
+        aspc::ArithmeticExpression exp(terminals.at(terminals.size()-2));
+        guard.copy(&exp);
+      }
+      else{
+        aspc::ArithmeticExpression exp(terminals.back());
+        guard.copy(&exp);
+      }
     }
     while(terminals.size()>guardStartIndex) terminals.pop_back();
-    std::cout << std::endl;
     guardStartIndex=-1;
+    if(buildingChoice){
+      if(guardIsLeft){
+        leftGuardChoiceComparisonType = comparisonType;
+        leftGuardChoice.copy(&guard);
+        
+      }
+      else{
+        rightGuardChoiceComparisonType = comparisonType;
+        rightGuardChoice = guard;
+      }
+    }
+    guardIsLeft = false;
   }
   virtual void enterUpper_guard_leftward_right_aggregate(ASPCore2Parser::Upper_guard_leftward_right_aggregateContext * /*ctx*/) override { 
     startGuard(); 
@@ -640,7 +775,8 @@ public:
 
       aggrComparison = aspc::ArithmeticRelation::string2ComparisonType[terminals.back()];
       terminals.pop_back();
-    }
+    }else
+      aggrComparison = comparisonType;
     std::vector<std::string> variables;
     for(int i=aggregateStartIndex+1; i<terminals.size(); i++){
       variables.push_back(terminals[i]);
@@ -825,8 +961,15 @@ public:
         std::cout << "Symbol not supported "<< node->getText() << std::endl;
         exit(180);
       }
-      if(watchedTerminalTypes.count(node->getSymbol()->getType()) != 0)
+      if(watchedTerminalTypes.count(node->getSymbol()->getType()) != 0){
         terminals.push_back(node->getText());
+        if(guardIsLeft){
+          //Building leftguard and found comparison operator
+          if(comparisonOperator.count(node->getSymbol()->getType())){
+            comparisonType = aspc::ArithmeticRelation::string2ComparisonType[terminals.back()];
+          }
+        }
+      }
       if(node->getSymbol()->getType() == ASPCore2Parser::NAF){
         std::cout << "Found negation"<<std::endl;
         naf=true;

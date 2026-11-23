@@ -95,6 +95,12 @@ $(MAIN): $(OBJECTS)
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $<  -o $@
 
 .PHONY: clean
+
+clean_compiled:
+	$(call $(CLEANAUX))
+	$(call $(CLEANGEN))
+	$(call $(CLEANPROP))
+
 clean:
 	$(call $(CLEANAUX))
 	$(call $(CLEANGEN))

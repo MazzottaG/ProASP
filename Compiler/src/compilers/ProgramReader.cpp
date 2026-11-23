@@ -4,13 +4,32 @@ ProgramReader::ProgramReader(int argc, char *argv[]){
     // True -> toGroundRule
 	// False -> toCompileRule
 	// std::vector<std::string> files({"encoding.compile","encoding.ground"});
+   
+    CompileChoiceOption compileChoiceOption = CompileChoiceOption::NO_OPTION;
+    rewriteChoiceRules = false;
+    //Take choice option
+    for(unsigned i = 0; i < argc; ++i){
+        if(argv[i] == ChoiceRewriter::CHOICE_OPTION_SPECIFIER){
+            if(i == argc-1 || ( ChoiceRewriter::CHOICE_COMPILE_OPTIONS.count(argv[i+1]) == 0)){
+                std::cout << "Unrecognized or non-specified choice compilation\n";
+                exit(180);
+            }else{
+                compileChoiceOption = ChoiceRewriter::CHOICE_COMPILE_OPTIONS[argv[i+1]];
+                // break;
+            }
+        }else if(argv[i] == ChoiceRewriter::CHOICE_OPTION_REWRITE){
+            rewriteChoiceRules = true;
+        }
+    }
 
 	label = false;
-	fullGrounding=true;
+	fullGrounding=false;
 	unsigned programSize=0;
+    choiceRewriter.setCompileChoiceOption(compileChoiceOption);
+    choiceRewriter.setRewriteOption(rewriteChoiceRules);
     for(int fileIndex = 1; fileIndex<3; fileIndex++){
     // for(int fileIndex = 0; fileIndex<2; fileIndex++){
-		std::string filename(argv[fileIndex]);
+        std::string filename(argv[fileIndex]);
 		antlr4::ANTLRFileStream input;
 		input.loadFromFile(filename);
 		ASPCore2Lexer lexer (&input);
@@ -18,24 +37,32 @@ ProgramReader::ProgramReader(int argc, char *argv[]){
 		ASPCore2Parser parser (&tokens);
 		parser.addParseListener(&listener);
 		parser.program();
-		for(unsigned i=programSize; i<listener.getProgram().getRulesSize(); i++){
-			if(!label) fullGrounding=false;
-			ruleLabel.push_back(label);
-			
-			if(listener.getProgram().getRule(i).isConstraint()) continue;
-			for(aspc::Atom h : listener.getProgram().getRule(i).getHead()){
+        //here the rewriting for choices
+        choiceRewriter.rewriteChoiceRules(listener.getProgram(), label);
+		label=!label;
+	}
+    ruleLabels = choiceRewriter.getRuleLabels(); 
+    for(unsigned i = 0; i < ruleLabels.size(); ++i)
+        if(!ruleLabels[i])
+            fullGrounding = false;
+    programSize = choiceRewriter.getRewrittenProgram().getRulesSize();
+    for(unsigned i=programSize; i<programSize; i++){
+        const aspc::Rule& rule = choiceRewriter.getRewrittenProgram().getRule(i);
+        if(rule.isConstraint()) continue;
+			for(aspc::Atom h : rule.getHead()){
 				if(label)
 					toGroundPredicates.insert(h.getPredicateName());
 				else propagatorPredicates.insert(h.getPredicateName());
 			}
-			
-		}
-		programSize=listener.getProgram().getRulesSize();
-		label=!label;
-	}
-	listener.getProgram().findPredicates(originalPredicates);
-	std::cout << "%%%%%%%%%%%%%%%%%%%%%% "<<(fullGrounding ? "Full Grounding ": "")<<"Input Program %%%%%%%%%%%%%%%%%%%%%%" <<std::endl;
-    listener.getProgram().print();
+    }
+    for(auto pred : choiceRewriter.getRewrittenProgram().getPredicatesDefinedInChoices())
+        rewrittenProgram.addPredicateDefinedInChoiceRule(pred);
+
+    assert(ruleLabels.size() == programSize);
+	// choiceRewriter. getRewrittenProgram().findPredicates(originalPredicates);
+	listener.getProgram().findHeadPredicates(originalPredicates);
+    std::cout << "%%%%%%%%%%%%%%%%%%%%%% "<<(fullGrounding ? "Full Grounding ": "")<<"Input Program %%%%%%%%%%%%%%%%%%%%%%" <<std::endl;
+    choiceRewriter.getRewrittenProgram().print();
 	std::cout << "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%" <<std::endl;
     rewriteRuleForComponent();
     std::cout << "%%%%%%%%%%%%%%%%%%%%%% "<<(fullGrounding ? "Full Grounding ": "")<<"Rewritten Input Program %%%%%%%%%%%%%%%%%%%%%%" <<std::endl;
@@ -90,7 +117,7 @@ void ProgramReader::rewriteGroundingPredicate(aspc::Program& program, std::vecto
     }
 }
 void ProgramReader::rewriteRuleForComponent(){
-    aspc::Program inputProgram (listener.getProgram());
+    aspc::Program inputProgram(choiceRewriter.getRewrittenProgram());
     dependencyManager.buildDependecyGraph(inputProgram);
     auto components = dependencyManager.getSCC();
     std::unordered_set<unsigned> remappedRule;
@@ -100,7 +127,7 @@ void ProgramReader::rewriteRuleForComponent(){
         if(pair.second) {
             for(auto ruleData : pair.first) {
                 rewrittenProgram.addRule(ruleData.first);
-                rewrittenRuleLabel.push_back(ruleLabel[ruleData.second]);
+                rewrittenRuleLabel.push_back(ruleLabels[ruleData.second]);
                 remappedRule.insert(ruleData.second);
             }
         }
@@ -115,7 +142,11 @@ void ProgramReader::rewriteRuleForComponent(){
             std::cout << "   ";
             r->print();
             rewrittenProgram.addRule(*r);
-            rewrittenRuleLabel.push_back(ruleLabel[ruleId]);
+            rewrittenRuleLabel.push_back(ruleLabels[ruleId]);
         }
     }
+}
+
+const ChoiceRewriter& ProgramReader::getChoiceRewriter() const{
+    return choiceRewriter;
 }

@@ -76,6 +76,8 @@ class TupleFactory{
 
         std::unordered_map<int,std::set<int>> auxAtomsForLiteral;
         std::unordered_map<int,std::set<int>> atomsForLiteral;
+        std::unordered_set<int> auxForLiteralChoice;
+        std::unordered_set<int> atomsForLiteralChoice;
         std::unordered_set<int> trackedForSupport;
 
         // std::vector<std::vector<AbstractPropagator*>> negativeWatcher;
@@ -108,14 +110,24 @@ class TupleFactory{
         std::unordered_map<int,std::set<int>>& getAuxsForLiteral(){
             return auxAtomsForLiteral;
         }
-        void addAuxForLiteral(int var,int auxVar){
+        void addAuxForLiteral(int var,int auxVar, bool isFromChoice=false){
+            if(isFromChoice)
+                auxForLiteralChoice.insert(auxVar);
             auxAtomsForLiteral[var].insert(auxVar);
         }
         std::unordered_map<int,std::set<int>>& getAtomsForLiteral(){
             return atomsForLiteral;
         }
-        void addAtomForLiteral(int var,int atom){
+        void addAtomForLiteral(int var,int atom, bool isFromChoice=false){
+            if(isFromChoice)
+                atomsForLiteralChoice.insert(atom);
             atomsForLiteral[var].insert(atom);
+        }
+        bool hasAtomFromChoice(int var){
+            return atomsForLiteralChoice.count(var) > 0;
+        }
+        bool hasAuxFromChoice(int var){
+            return auxForLiteralChoice.count(var) > 0;
         }
         int addExtraSymbol(){
             internalIDToTuple.push_back(new TupleLight());
