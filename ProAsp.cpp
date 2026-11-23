@@ -77,6 +77,7 @@ int main (int argc, char **argv)
   std::string instance = "";
   int c;
   bool rewriteChoiceRules = false;
+  
   while (1)
     {
       static struct option long_options[] =
